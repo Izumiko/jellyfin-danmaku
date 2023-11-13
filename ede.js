@@ -27,6 +27,7 @@
         const debugInfoLoc = 'ui'; // 'console' or 'ui'
         let logQueue = [];
         let logLines = 0;
+        let serverVersion = '10.8.12'
         const baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
         const check_interval = 200;
         const chConverTtitle = ['当前状态: 未启用', '当前状态: 转换为简体', '当前状态: 转换为繁体'];
@@ -394,48 +395,62 @@
             }
         }
 
-        async function initConfig() {
-            showDebugInfo('serverInfo');
-            // let srvInfo = await fetch(baseUrl + '/System/Info/Public').then(res => res.json());
-            // let token = '';
-            // let serverId = srvInfo.Id;
-            // serversInfo.forEach(data => {
-            //     if (data.Id == serverId) {
-            //         token = data.AccessToken;
-            //         userId = data.UserId;
-            //     }
-            // });
-            let token = serversInfo[0].AccessToken;
-            userId = serversInfo[0].UserId;
-
-            let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId
-            if (deviceId) {
-                sessionUrl += '&DeviceId=' + deviceId;
+        async function getServerVersion() {
+            let versionUrl = baseUrl + '/System/Info/Public';
+            showDebugInfo('Get version');
+            try {
+                let systemInfo = await fetch(versionUrl, {
+                    "credentials": "include",
+                    "headers": {
+                        "Accept": "*/*",
+                        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                        "Proxy-Connection": "keep-alive",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                    },
+                    "method": "GET",
+                    "mode": "cors"
+                }).then(res => res.json());
+                return systemInfo.Version;
+            } catch (error) {
+                // 处理获取版本信息时的错误
+                console.error('获取服务器版本时出错：', error);
+                return null;
             }
-
-            showDebugInfo('Get DevId');
-            let sessionInfo = await fetch(sessionUrl, {
-                "credentials": "include",
-                "headers": {
-                    "Accept": "application/json",
-                    "Authorization": "MediaBrowser Token=\"" + token + "\""
-                },
-                "method": "GET",
-                "mode": "cors"
-            }).then(res => res.json());
-
-            if (!deviceId) {
-                deviceId = sessionInfo[0].DeviceId;
-                localStorage.setItem('_deviceId2', deviceId);
-            }
-
-            let clientName = sessionInfo[0].Client;
-            let deviceName = sessionInfo[0].DeviceName;
-            let serverVersion = sessionInfo[0].ApplicationVersion;
-            // Ref: https://gist.github.com/nielsvanvelzen/ea047d9028f676185832e51ffaf12a6f
-            authorization = "MediaBrowser Client=\"" + clientName + "\", Device=\"" + deviceName + "\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\"";
         }
+        
 
+        async function initConfig() {
+            try {
+                showDebugInfo('serverInfo');
+                let token = serversInfo[0].AccessToken;
+                userId = serversInfo[0].UserId;
+                let serverVersion = await getServerVersion(); // 等待版本信息获取完成
+                let sessionUrl = baseUrl + '/Sessions'
+                showDebugInfo('Get DevId');
+                let sessionInfo = await fetch(sessionUrl, {
+                    "credentials": "include",
+                    "headers": {
+                        "Accept": "application/json",
+                        "Authorization": "MediaBrowser Token=\"" + token + "\"",
+                        "X-Emby-Authorization": "MediaBrowser Client=\"Jellyfin Web\", Device=\"Chrome\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\""
+                    },
+                    "method": "GET",
+                    "mode": "cors"
+                }).then(res => res.json());
+
+                if (!deviceId) {
+                    deviceId = sessionInfo[0].DeviceId;
+                    localStorage.setItem('_deviceId2', deviceId);
+                }
+
+                let clientName = sessionInfo[0].Client;
+                let deviceName = sessionInfo[0].DeviceName;
+                authorization = "MediaBrowser Client=\"" + clientName + "\", Device=\"" + deviceName + "\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\"";
+            } catch (error) {
+                // 处理初始化过程中的错误
+                console.error('初始化配置时出错：', error);
+            }
+        }
 
         async function getEmbyItemInfo() {
             showDebugInfo('准备获取Item信息');
@@ -444,7 +459,7 @@
                 let playingInfo = null;
                 while (!playingInfo) {
                     await new Promise((resolve) => setTimeout(resolve, 200));
-                    let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
+                    let sessionUrl = baseUrl + '/Sessions';
                     showDebugInfo(sessionUrl);
                     let sessionInfo = await fetch(sessionUrl, {
                         "credentials": "include",
@@ -456,6 +471,7 @@
                         "mode": "cors"
                     }).then(res => res.json());
                     playingInfo = sessionInfo[0].NowPlayingItem;
+                    
                 }
                 showDebugInfo('成功 ' + playingInfo.SeriesName);
                 return playingInfo;
