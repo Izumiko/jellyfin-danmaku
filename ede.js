@@ -297,6 +297,8 @@
                 return;
             }
             showDebugInfo('正在初始化UI');
+            //Reload
+            reloadDanmaku('reload');
             // 弹幕按钮容器div
             let uiEle = null;
             document.querySelectorAll(uiQueryStr).forEach(function (element) {
