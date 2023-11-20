@@ -19,14 +19,14 @@
 
 ### 反向代理处理(推荐)
 #### Nginx
-使用Nginx反向代理Jellyfin并在location块中插入
+使用Nginx反向代理`Jellyfin`并在`location`块中插入
 ```
 #禁用与后端压缩并侧载脚本
 proxy_set_header Accept-Encoding "";
 sub_filter '</body>' '<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>';
 sub_filter_once on;
 ```
-即可由Nginx完成代码插入并移交浏览器处理 #[详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
+即可由Nginx完成代码插入并移交浏览器处理  - [#详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
 
 #### Caddy
 
