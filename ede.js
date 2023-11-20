@@ -171,11 +171,11 @@
                             throw EvalError('输入无效，请输入有效的数字。');
                         }
                         // 设置透明度
-                        window.ede.danmaku.container.lastChild.style.opacity = window.ede.opacity = tmpOpacity;
+                        window.ede.opacity = tmpOpacity;
                         showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
                         window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
                         // 设置弹幕速度
-                        window.ede.danmaku.speed = window.ede.speed = tmpSpeed;
+                        window.ede.speed = tmpSpeed;
                         showDebugInfo(`设置弹幕速度：${window.ede.speed}`);
                         window.localStorage.setItem('danmakuspeed', window.ede.speed.toString());
                         // 设置弹幕大小
@@ -775,23 +775,23 @@
         function danmakuParser($obj) {
             //const $xml = new DOMParser().parseFromString(string, 'text/xml')
             // const fontSize = Math.round(((window.screen.height > window.screen.width ? window.screen.width : window.screen.height) / 1080) * 18);
-            // 检查 danmakuOpacity 是否已存储，如果没有，则设置默认值为 0.6
-            if (window.localStorage.getItem('danmakuOpacity') === null) {
+            // 检查 danmakuopacity 是否已存储，如果没有，则设置默认值为 0.6
+            if (window.localStorage.getItem('danmakuopacity') === null) {
                 window.ede.opacity = '0.6';
             } else {
-                window.ede.opacity = parseFloat(window.localStorage.getItem('danmakuOpacity'));
+                window.ede.opacity = parseFloat(window.localStorage.getItem('danmakuopacity'));
             }
-            // 检查 danmakuSpeed 是否已存储，如果没有，则设置默认值为 200
-            if (window.localStorage.getItem('danmakuSpeed') === null) {
+            // 检查 danmakuspeed 是否已存储，如果没有，则设置默认值为 200
+            if (window.localStorage.getItem('danmakuspeed') === null) {
                 window.ede.speed = '200';
             } else {
-                window.ede.speed = parseFloat(window.localStorage.getItem('danmakuSpeed'));
+                window.ede.speed = parseFloat(window.localStorage.getItem('danmakuspeed'));
             }
-            // 检查 danmakuSize 是否已存储，如果没有，则设置默认值为 18
-            if (window.localStorage.getItem('danmakuSize') === null) {
+            // 检查 danmakusize 是否已存储，如果没有，则设置默认值为 18
+            if (window.localStorage.getItem('danmakusize') === null) {
                 window.ede.size = '18';
             } else {
-                window.ede.size = parseFloat(window.localStorage.getItem('danmakuSize'));
+                window.ede.size = parseFloat(window.localStorage.getItem('danmakusize'));
             }
             const fontSize = window.ede.size; // font size is buggy on mobile, fixed to 18
             showDebugInfo('Screen: ' + window.screen.width + 'x' + window.screen.height);
