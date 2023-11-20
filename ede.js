@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.14
+// @version      1.13
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -158,9 +158,9 @@
             id: 'danmakuSettings',
             class: settings_icon,
             onclick: () => {
-                let opacityStr = prompt("请输入0-1之间的透明度值（如0.6）", 0.6);
+                let opacityStr = prompt("请输入0-1之间的透明度值（如0.7）", 0.7);
                 let speedStr = prompt("请输入0-1000弹幕速度（如200）", 200);
-                let sizeStr = prompt("请输入1-30弹幕大小（如16）", 16);
+                let sizeStr = prompt("请输入1-30弹幕大小（如18）", 18);
                 if (!opacityStr || !speedStr) return;
                 if (window.ede) {
                     try {
@@ -237,9 +237,11 @@
                     this.logSwitch = parseInt(window.localStorage.getItem('logSwitch'));
                 }
                 let opacityRecord = window.localStorage.getItem('danmakuopacity')
-                this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 1.0
+                this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7
                 let speedRecord = window.localStorage.getItem('danmakuspeed')
-                this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 1000.0
+                this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200
+                let sizeRecord = window.localStorage.getItem('danmakusize')
+                this.size = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
                 this.danmaku = null;
                 this.episode_info = null;
                 this.ob = null;
@@ -775,24 +777,6 @@
         function danmakuParser($obj) {
             //const $xml = new DOMParser().parseFromString(string, 'text/xml')
             // const fontSize = Math.round(((window.screen.height > window.screen.width ? window.screen.width : window.screen.height) / 1080) * 18);
-            // 检查 danmakuopacity 是否已存储，如果没有，则设置默认值为 0.6
-            if (window.localStorage.getItem('danmakuopacity') === null) {
-                window.ede.opacity = '0.6';
-            } else {
-                window.ede.opacity = parseFloat(window.localStorage.getItem('danmakuopacity'));
-            }
-            // 检查 danmakuspeed 是否已存储，如果没有，则设置默认值为 200
-            if (window.localStorage.getItem('danmakuspeed') === null) {
-                window.ede.speed = '200';
-            } else {
-                window.ede.speed = parseFloat(window.localStorage.getItem('danmakuspeed'));
-            }
-            // 检查 danmakusize 是否已存储，如果没有，则设置默认值为 18
-            if (window.localStorage.getItem('danmakusize') === null) {
-                window.ede.size = '18';
-            } else {
-                window.ede.size = parseFloat(window.localStorage.getItem('danmakusize'));
-            }
             const fontSize = window.ede.size; // font size is buggy on mobile, fixed to 18
             showDebugInfo('Screen: ' + window.screen.width + 'x' + window.screen.height);
             showDebugInfo('fontSize: ' + fontSize);
