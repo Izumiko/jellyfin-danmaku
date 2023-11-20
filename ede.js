@@ -811,7 +811,7 @@
                         },
                     };
                 })
-                。filter((x) => x);
+                .filter((x) => x);
         }
 
         function list2string($obj2) {
