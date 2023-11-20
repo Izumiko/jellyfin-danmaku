@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.12
+// @version      1.13
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -12,6 +12,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      *
 // @match        *://*/*/web/index.html
+// @match        *://*/web/index.html
 // ==/UserScript==
 
 (async function () {
@@ -121,7 +122,7 @@
         };
 
         const filterButtonOpts = {
-            title: '过滤等级(下次加载生效)',
+            title: '过滤等级',
             id: 'filteringDanmaku',
             //innerText: null,
             class: '',
@@ -131,6 +132,8 @@
                 level = ((level ? parseInt(level) : 0) + 1) % 4;
                 window.localStorage.setItem('danmakuFilterLevel', level);
                 document.querySelector('#filteringDanmaku').children[0].className = spanClass + filter_icons[level];
+                reloadDanmaku('reload');
+                
             },
         };
 

@@ -1,32 +1,59 @@
 # jellyfin-danmaku
 
 ## Jellyfin danmaku extension
-![截图](https://raw.githubusercontent.com/RyoLee/dd-danmaku/res/S0.png)
+![image](/Simple.png)
+
+
+
 
 ## 安装
 
-任选以下一种方式安装即可
+任选以下一种方式安装即可，前两种推荐方式可以持久化
 
 **注：** 安装完首次使用时，确保只有当前一个客户端访问服务器，以方便根据当前用户id获取Session时能唯一定位到当前客户端设备id。（主要是由于非Jellyfin Web客户端没有默认在localstorage中存储deviceid）
 
 ### 浏览器插件(推荐)
 
-1. [Tampermonkey](https://www.tampermonkey.net/)
+1. [安装Tampermonkey插件](https://www.tampermonkey.net/)
 2. [添加脚本](https://jellyfin-danmaku.pages.dev/ede.user.js)
+
+### Nginx反向代理处理(推荐)
+使用Nginx反向代理Jellyfin并在location块中插入
+```
+#禁用与后端压缩并侧载脚本
+proxy_set_header Accept-Encoding "";
+sub_filter '</body>' '<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>';
+sub_filter_once on;
+```
+即可由Nginx完成代码插入并移交浏览器处理 #[详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
 
 ### 修改服务端
 
-修改文件 `/jellyfin/jellyfin-web/index.html` (Docker版,其他类似,比如Debian下是`/usr/share/jellyfin/web/index.html`),在`</body>`前添加如下标签
+修改文件 `/usr/share/jellyfin/web/index.html`
+
+(Default)
+
+或 `/jellyfin/jellyfin-web/index.html`
+
+(Official Docker)
+
+在`</body>`前添加如下标签
 
 ```html
 <script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script>
 ```
 
-Docker中的操作方式为，用root进入容器终端后，运行以下命令
+Shell中的操作命令为
 
 ```bash
 sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>#' /jellyfin/jellyfin-web/index.html
 ```
+(Official Docker)
+
+```bash
+sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>#' /usr/share/jellyfin/web/index.html
+```
+(Default)
 
 该方式安装与浏览器插件安装**可同时使用不冲突**
 
@@ -45,6 +72,8 @@ sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" d
 - 简繁转换: 在原始弹幕/简体中文/繁体中文3种模式切换
 - 过滤等级: 过滤弹幕强度,等级越高强度越大,0级无限制*
 - 弹幕信息: 通过通知(以及后台log)显示当前匹配弹幕信息
+- 添加弹幕源: 手动添加自定义弹幕源
+- 修改透明度: 设置弹幕透明度[0,1]
 
     **除0级外均带有每3秒6条的垂直方向弹幕密度限制,高于该限制密度的顶部/底部弹幕将会被转为普通弹幕*
 
@@ -60,7 +89,7 @@ sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" d
 
 1. 译名导致的异常: 如『よふかしのうた』 Emby 识别为《彻夜之歌》后因为弹弹 play 中为《夜曲》导致无法匹配
 2. 存在多季/剧场版/OVA 等导致的异常: 如『OVERLORD』第四季若使用S[N]格式归档(如OVERLORD/S4E1.mkv或OVERLORD/S4/E1.mkv),可能出现匹配失败/错误等现象
-3. 其他加载BUG: ~~鉴定为后端程序猿不会前端还要硬写JS~~,有BUG麻烦 [开个issue](https://github.com/RyoLee/emby-danmaku/issues/new/choose) THX
+3. 其他加载BUG: ~~鉴定为后端程序猿不会前端还要硬写JS~~,有BUG麻烦 [开个issue](https://github.com/Izumiko/jellyfin-danmaku/issues/new/choose) THX
 
 **首次播放时请检查当前弹幕信息是否正确匹配,若匹配错误请尝试手动匹配**
 
