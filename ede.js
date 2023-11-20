@@ -273,7 +273,7 @@
             if (!container.getAttribute('ede_listening')) {
                 showDebugInfo('正在初始化Listener');
                 container.setAttribute('ede_listening', true);
-                container.addEventListener('play', reloadDanmaku);
+                container.addEventListener('play', reloadDanmaku('init'));
                 showDebugInfo('Listener初始化完成');
             }
         }
@@ -327,6 +327,16 @@
             menubar.appendChild(createButton(sourceButtonOpts));
             menubar.appendChild(createButton(danmakuOpacityOpts));
             
+            // 安卓端手动点击图片或者按钮播放视频不会触发video监听器，所以需要手动给按钮加上监听器，苹果端暂时不确定
+            if (window.innerWidth < 768) {
+                var elements = document.querySelectorAll('[data-action="play"], [data-action="resume"]');
+                // 为每个元素添加点击事件监听器
+                elements.forEach(function(element) {
+                    element.addEventListener('click', reloadDanmaku);
+                });
+            }
+
+
             if (debugInfoLoc == 'ui') {
                 menubar.appendChild(createButton(logButtonOpts));
 
@@ -418,38 +428,53 @@
             }
         }
         
-
-        async function initConfig() {
+        async function getSessionInfo(token, sessionUrl) {
             try {
-                showDebugInfo('serverInfo');
-                let token = serversInfo[0].AccessToken;
-                userId = serversInfo[0].UserId;
-                let serverVersion = await getServerVersion(); // 等待版本信息获取完成
-                let sessionUrl = baseUrl + '/Sessions'
-                showDebugInfo('Get DevId');
                 let sessionInfo = await fetch(sessionUrl, {
                     "credentials": "include",
                     "headers": {
                         "Accept": "application/json",
                         "Authorization": "MediaBrowser Token=\"" + token + "\"",
-                        "X-Emby-Authorization": "MediaBrowser Client=\"Jellyfin Web\", Device=\"Chrome\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\""
+                        "X-Emby-Authorization": "MediaBrowser Client=\"Jellyfin Web\", Device=\"Chrome\", Token=\"" + token + "\""
                     },
                     "method": "GET",
                     "mode": "cors"
                 }).then(res => res.json());
-
+        
                 if (!deviceId) {
                     deviceId = sessionInfo[0].DeviceId;
                     localStorage.setItem('_deviceId2', deviceId);
                 }
-
-                let clientName = sessionInfo[0].Client;
-                let deviceName = sessionInfo[0].DeviceName;
-                authorization = "MediaBrowser Client=\"" + clientName + "\", Device=\"" + deviceName + "\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\"";
+                return sessionInfo;
             } catch (error) {
-                // 处理初始化过程中的错误
-                console.error('初始化配置时出错：', error);
+                console.error('获取会话信息时出错：', error);
+                throw error; // 重新抛出错误
             }
+        }
+        
+
+        async function initConfig() {
+            let sessionInfo = ''; 
+            showDebugInfo('serverInfo');
+            let token = serversInfo[0].AccessToken;
+            userId = serversInfo[0].UserId;
+            // let serverVersion = await getServerVersion(); // 等待版本信息获取完成
+            let sessionUrl = baseUrl + '/Sessions'
+            showDebugInfo('Get DevId');
+            try {
+                sessionInfo = await getSessionInfo(token, sessionUrl);
+            } catch (error) {
+                //token可能不是最新的
+                console.log("获取sessionInfo错误，尝试重新获取:", error)
+                let storedCredentials = JSON.parse(localStorage.getItem('jellyfin_credentials'));
+                token = storedCredentials.Servers[0].AccessToken;
+                userId = storedCredentials.Servers[0].UserId;
+                // 重新发起请求或者执行其他操作
+                sessionInfo = await getSessionInfo(token, sessionUrl);
+            }
+            let clientName = sessionInfo[0].Client;
+            let deviceName = sessionInfo[0].DeviceName;
+            authorization = "MediaBrowser Client=\"" + clientName + "\", Device=\"" + deviceName  + "\", Token=\"" + token + "\"";
         }
 
         async function getEmbyItemInfo() {
@@ -461,15 +486,21 @@
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     let sessionUrl = baseUrl + '/Sessions';
                     showDebugInfo(sessionUrl);
-                    let sessionInfo = await fetch(sessionUrl, {
-                        "credentials": "include",
-                        "headers": {
-                            "Accept": "application/json",
-                            "Authorization": authorization
-                        },
-                        "method": "GET",
-                        "mode": "cors"
-                    }).then(res => res.json());
+                    let sessionInfo = null;
+                    try{
+                        sessionInfo = await fetch(sessionUrl, {
+                            "credentials": "include",
+                            "headers": {
+                                "Accept": "application/json",
+                                "Authorization": authorization
+                            },
+                            "method": "GET",
+                            "mode": "cors"
+                        }).then(res => res.json());
+                    }catch(error){
+                        console.error('获取Item信息错误：', error);
+                        throw error;
+                    }
                     playingInfo = sessionInfo[0].NowPlayingItem;
                     
                 }
@@ -512,7 +543,15 @@
         }
 
         async function getEpisodeInfo(is_auto = true) {
-            let item = await getEmbyItemInfo();
+            let item = null;
+            try{
+                item = await getEmbyItemInfo();
+            }catch(error){
+                //token可能不是最新的
+                await initConfig();
+                item = await getEmbyItemInfo();
+                console.log("尝试重新获取embyItemInfo")
+            }
             if (!item) {
                 return null;
             }
