@@ -188,8 +188,6 @@
                         window.ede.heightRatio = tmpHeightRatio;
                         showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
                         window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
-                        const wrapper = document.getElementById('danmakuWrapper');
-                        wrapper && (wrapper.style.height = `${window.ede.heightRatio * 100}%`);
                         //Reload
                         reloadDanmaku('reload');
                     } catch (e) {
@@ -309,8 +307,6 @@
                 return;
             }
             showDebugInfo('正在初始化UI');
-            //Reload
-            reloadDanmaku('reload');
             // 弹幕按钮容器div
             let uiEle = null;
             document.querySelectorAll(uiQueryStr).forEach(function (element) {
@@ -717,6 +713,7 @@
 
             wrapper.lastChild.style.opacity = window.ede.opacity;
             window.ede.danmaku.speed = window.ede.speed
+            wrapper.style.height = `${window.ede.heightRatio * 100}%`;
 
             window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
             if (window.ede.obResize) {
@@ -872,7 +869,7 @@
                         },
                     };
                 })
-                .filter((x) => x);
+                。filter((x) => x);
         }
 
         function list2string($obj2) {
