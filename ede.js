@@ -691,7 +691,7 @@
             wrapper.style.height = window.ede.heightRatio * 100 + '%';
             wrapper.style.top = '0';
             wrapper.style.overflow = 'hidden';
-            _container.appendChild(wrapper);
+            _container.prepend(wrapper);
 
             window.ede.danmaku = new Danmaku({
                 container: wrapper,
