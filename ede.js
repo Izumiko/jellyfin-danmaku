@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.17
+// @version      1.18
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -446,7 +446,7 @@
                         method: "GET",
                         url: url,
                         headers: {
-                            "Accept-Encoding": "gzip",
+                            "Accept-Encoding": "gzip,br",
                             "Accept": "application/json"
                         },
                         onload: function (response) {
@@ -461,7 +461,7 @@
                 return fetch(url, {
                     method: 'GET',
                     headers: {
-                        "Accept-Encoding": "gzip",
+                        "Accept-Encoding": "gzip,br",
                         "Accept": "application/json",
                         "User-Agent": navigator.userAgent
                     }
@@ -478,13 +478,13 @@
             let animeName;
             let anime_id = -1;
             let episode;
-            if (item.Type == 'Episode') {
+            if (item.SeriesName != null) {
                 _id = item.SeasonId;
                 animeName = item.SeriesName;
                 episode = item.IndexNumber;
                 let session = item.ParentIndexNumber;
                 if (session != 1) {
-                    animeName += ' ' + session;
+                    animeName += session;
                 }
             } else {
                 _id = item.Id;
@@ -512,9 +512,6 @@
             }
 
             let searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
-            if (is_auto && episode.toString().length > 0) {
-                searchUrl += '&episode=' + episode;
-            }
             let animaInfo = await makeGetRequest(searchUrl)
                 .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
                 .catch((error) => {
@@ -547,7 +544,7 @@
                 episode = parseInt(episode) - 1;
             } else {
                 selecAnime_id = parseInt(selecAnime_id) - 1;
-                episode = 0;
+                episode = parseInt(episode) - 1;
             }
             let episodeInfo = {
                 episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
