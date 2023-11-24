@@ -5,7 +5,7 @@
 
 ## 安装
 
-任选以下一种方式安装即可，前两种推荐方式可以持久化。
+任选以下一种方式安装即可，**前两种推荐方式可以持久化。**
 
 **注：** 安装完首次使用时，确保只有当前一个客户端访问服务器，以方便根据当前用户id获取Session时能唯一定位到当前客户端设备id。（主要是由于非Jellyfin Web客户端没有默认在localstorage中存储DeviceID）
 
@@ -17,13 +17,13 @@
 ### 反向代理处理(推荐)
 
 #### Nginx
-使用Nginx反向代理`Jellyfin`并在`location`块中插入
+使用Nginx反向代理`Jellyfin`并在`location`块中插入:
 ```
 proxy_set_header Accept-Encoding "";
 sub_filter '</body>' '<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>';
 sub_filter_once on;
 ```
-即可由Nginx完成代码插入并移交浏览器处理 - [#详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
+- [`完整示例`](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
 
 #### Caddy
 
@@ -51,30 +51,28 @@ example.com {
 ### 修改服务端
 
 修改文件 `/usr/share/jellyfin/web/index.html`
-
-(Default)
+*(Default)*
 
 或 `/jellyfin/jellyfin-web/index.html`
+*(Official Docker)*
 
-(Official Docker)
-
-在`</body>`前添加如下标签
+**在`</body>`前添加如下标签**
 
 ```html
 <script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script>
 ```
 
-Shell中的操作命令为
+**Shell中的操作命令为**
 
 ```bash
 sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>#' /jellyfin/jellyfin-web/index.html
 ```
-(Official Docker)
+*(Official Docker)*
 
 ```bash
 sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>#' /usr/share/jellyfin/web/index.html
 ```
-(Default)
+*(Default)*
 
 该方式安装与浏览器插件安装**可同时使用不冲突**
 
