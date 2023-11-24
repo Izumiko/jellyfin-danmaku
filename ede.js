@@ -47,7 +47,6 @@
         const uiAnchorStr = 'pause';
         const uiQueryStr = '.osdTimeText';
         const mediaContainerQueryStr = "div[data-type='video-osd']";
-        // const mediaContainerQueryStr = "div[class='videoPlayerContainer']";
         const mediaQueryStr = 'video';
         const displayButtonOpts = {
             title: '弹幕开关',
