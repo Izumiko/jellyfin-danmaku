@@ -30,7 +30,7 @@
         let logLines = 0;
         const baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
         const check_interval = 200;
-        const chConverTtitle = ['当前状态: 未启用', '当前状态: 转换为简体', '当前状态: 转换为繁体'];
+        const chConverTtitle = ['当前状态: 未启用翻译', '当前状态: 转换为简体', '当前状态: 转换为繁体'];
         // 0:当前状态关闭 1:当前状态打开
         const danmaku_icons = ['comments_disabled', 'comment'];
         const search_icon = 'find_replace';
