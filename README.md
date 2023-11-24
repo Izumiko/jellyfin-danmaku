@@ -1,16 +1,13 @@
 # jellyfin-danmaku
 
-## Jellyfin danmaku extension
+## Jellyfin弹幕插件
 ![image](/Simple.png)
-
-
-
 
 ## 安装
 
-任选以下一种方式安装即可，前两种推荐方式可以持久化
+任选以下一种方式安装即可，前两种推荐方式可以持久化。
 
-**注：** 安装完首次使用时，确保只有当前一个客户端访问服务器，以方便根据当前用户id获取Session时能唯一定位到当前客户端设备id。（主要是由于非Jellyfin Web客户端没有默认在localstorage中存储deviceid）
+**注：** 安装完首次使用时，确保只有当前一个客户端访问服务器，以方便根据当前用户id获取Session时能唯一定位到当前客户端设备id。（主要是由于非Jellyfin Web客户端没有默认在localstorage中存储DeviceID）
 
 ### 浏览器插件(推荐)
 
@@ -18,15 +15,15 @@
 2. [添加脚本](https://jellyfin-danmaku.pages.dev/ede.user.js)
 
 ### 反向代理处理(推荐)
+
 #### Nginx
 使用Nginx反向代理`Jellyfin`并在`location`块中插入
 ```
-#禁用与后端压缩并侧载脚本
 proxy_set_header Accept-Encoding "";
 sub_filter '</body>' '<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" defer></script></body>';
 sub_filter_once on;
 ```
-即可由Nginx完成代码插入并移交浏览器处理  - [#详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
+即可由Nginx完成代码插入并移交浏览器处理 - [#详细说明](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
 
 #### Caddy
 
@@ -96,12 +93,13 @@ sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" d
 - 简繁转换: 在原始弹幕/简体中文/繁体中文3种模式切换
 - 过滤等级: 过滤弹幕强度,等级越高强度越大,0级无限制*
 - 添加弹幕源: 手动添加自定义弹幕源
-- 弹幕设置: - 设置弹幕透明度[0,1]
-           - 设置弹幕速度[0,1000]
-           - 设置弹幕大小[0,30]
-           - 设置弹幕区域占屏幕的高度比例[0,1]
+- 弹幕设置:
+  - 设置弹幕透明度[0,1]
+  - 设置弹幕速度[0,1000]
+  - 设置弹幕大小[0,30]
+  - 设置弹幕区域占屏幕的高度比例[0,1]
 
-    **除0级外均带有每3秒6条的垂直方向弹幕密度限制,高于该限制密度的顶部/底部弹幕将会被转为普通弹幕*
+ **除0级外均带有每3秒6条的垂直方向弹幕密度限制,高于该限制密度的顶部/底部弹幕将会被转为普通弹幕*
 
 ## 弹幕
 
