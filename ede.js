@@ -469,23 +469,18 @@
             let animeName;
             let anime_id = -1;
             let episode;
-            if (item.SeriesName != null) {
-                _id = item.SeasonId;
-                animeName = item.SeriesName;
-                episode = item.IndexNumber;
-                let session = item.ParentIndexNumber;
-                if (session != 1) {
-                    animeName += session;
-                }
-            } else {
-                _id = item.Id;
-                animeName = item.Name;
-                episode = '1';
+            _id = item.SeasonId || item.Id;
+            animeName = item.SeriesName || item.Name;
+            episode = item.IndexNumber || 1;
+            let session = item.ParentIndexNumber;
+            if (session > 1) {
+                animeName += session;
             }
             let _id_key = '_anime_id_rel_' + _id;
             let _name_key = '_anime_name_rel_' + _id;
             let _episode_key = '_episode_id_rel_' + _id + '_' + episode;
             if (is_auto) {
+                //优先使用记忆设置
                 if (window.localStorage.getItem(_episode_key)) {
                     const episodeInfo = JSON.parse(window.localStorage.getItem(_episode_key));
                     window.ede.episode_info_str = episodeInfo.animeTitle + '\n' + episodeInfo.episodeTitle;
@@ -526,21 +521,24 @@
             if (!is_auto) {
                 let anime_lists_str = list2string(animaInfo);
                 showDebugInfo(anime_lists_str);
-                selecAnime_id = prompt('选择:\n' + anime_lists_str, selecAnime_id);
+                selecAnime_id = prompt('选择节目:\n' + anime_lists_str, selecAnime_id);
                 selecAnime_id = parseInt(selecAnime_id) - 1;
                 window.localStorage.setItem(_id_key, animaInfo.animes[selecAnime_id].animeId);
                 window.localStorage.setItem(_name_key, animaInfo.animes[selecAnime_id].animeTitle);
                 let episode_lists_str = ep2string(animaInfo.animes[selecAnime_id].episodes);
-                episode = prompt('确认集数:\n' + episode_lists_str, parseInt(episode) || 1);
+                episode = prompt('选择剧集:\n' + episode_lists_str, parseInt(episode) || 1);
                 episode = parseInt(episode) - 1;
             } else {
                 selecAnime_id = parseInt(selecAnime_id) - 1;
-                episode = parseInt(episode) - 1;
+                let initialTitle = animaInfo.animes[selecAnime_id].episodes[0].episodeTitle;
+                const match = initialTitle.match(/第(\d+)话/);
+                const initialep = match ? parseInt(match[1]) : 0;
+                episode = (parseInt(episode) < initialep) ? parseInt(episode) - 1 : (parseInt(episode) - initialep);
             }
             let episodeInfo = {
                 episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
                 animeTitle: animaInfo.animes[selecAnime_id].animeTitle,
-                episodeTitle: animaInfo.animes[selecAnime_id].type == 'tvseries' ? animaInfo.animes[selecAnime_id].episodes[episode].episodeTitle : '剧场版',
+                episodeTitle: animaInfo.animes[selecAnime_id].type === 'tvseries' ? animaInfo.animes[selecAnime_id].episodes[episode].episodeTitle : (animaInfo.animes[selecAnime_id].type === 'movie' ? '剧场版' : 'Other'),
             };
             window.localStorage.setItem(_episode_key, JSON.stringify(episodeInfo));
             window.ede.episode_info_str = episodeInfo.animeTitle + '\n' + episodeInfo.episodeTitle;
