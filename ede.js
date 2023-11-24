@@ -489,7 +489,7 @@
             } else {
                 _id = item.Id;
                 animeName = item.Name;
-                episode = '';
+                episode = '1';
             }
             let _id_key = '_anime_id_rel_' + _id;
             let _name_key = '_anime_name_rel_' + _id;
