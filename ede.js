@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.18
+// @version      1.19
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -764,7 +764,7 @@
             showDebugInfo('字号大小: ' + fontSize);
             return $obj
                 .filter(($comment) => {
-                    const senderInfo = $comment.p.split(',', 3).pop();
+                    const senderInfo = $comment.p.split(',', 1).pop();
                     if (danmakuFiltersender.includes('D')) {
                         if (!/^\[/.test(senderInfo)) {
                           return false;
@@ -804,8 +804,7 @@
                             lineWidth: 2.0,
                         },
                     };
-                })
-                .back((x) => x);
+                });
         }
 
         function list2string($obj2) {
