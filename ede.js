@@ -156,7 +156,7 @@
                 let speedStr = prompt("请输入0-1000弹幕速度（如200）", window.ede.speed || 200);
                 let sizeStr = prompt("请输入1-30弹幕大小（如18）", window.ede.fontSize || 18);
                 let heightRatio = prompt("请输入0-1之间的弹幕高度屏幕占比（如0.7）", window.ede.heightRatio || 0.7)
-                let tmpFiltersender = prompt("请输入需要过滤的弹幕来源（如bgdo）", window.ede.heightRatio || o)
+                let tmpFiltersender = prompt("请输入需要过滤的弹幕来源（如bgdo）", window.ede.danmakufilter || '00')
                 if (window.ede) {
                     try {
                         let tmpOpacity = parseFloatOfRange(opacityStr, 0, 1);
@@ -183,9 +183,9 @@
                         showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
                         window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
                         //设置弹幕过滤
-                        Filtersender = tmpFiltersender.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                        showDebugInfo(`设置弹幕过滤：Filtersender`);
-                        window.localStorage.setItem('danmakuFiltersender', Filtersender);
+                        window.ede.danmakufilter = tmpFiltersender.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                        showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
+                        window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
                         //Reload
                         reloadDanmaku('reload');
                     } catch (e) {
@@ -235,6 +235,7 @@
                 this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
                 let heightRecord = window.localStorage.getItem('danmakuheight')
                 this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.7
+                this.danmakufilter = window.localStorage.getItem('danmakufilter') ?? 'ZZZ000';
                 this.danmaku = null;
                 this.episode_info = null;
                 this.episode_info_str = '';
@@ -600,6 +601,7 @@
             showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
             showDebugInfo(`弹幕速度：${window.ede.speed}`);
             showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
+            showDebugInfo(`弹幕来源过滤：${window.ede.danmakufilter}`);
 
             while (!document.querySelector(mediaContainerQueryStr)) {
                 await new Promise((resolve) => setTimeout(resolve, 200));
@@ -764,29 +766,29 @@
             showDebugInfo('字号大小: ' + fontSize);
             return $obj
                 .filter(($comment) => {
-                    const senderInfo = $comment.p.split(',', 1).pop();
-                    if (danmakuFiltersender.includes('D')) {
+                    const senderInfo = $comment.p.split(',').pop();
+                    if (window.ede.danmakufilter.includes('D')) {
                         if (!/^\[/.test(senderInfo)) {
-                          return false;
-                      }
-                  }
-                  if (danmakuFiltersender.includes('O')) {
-                      if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
-                          return false;
-                      }
-                  }
-                  if (danmakuFiltersender.includes('B')) {
-                      if (senderInfo.startsWith('[BiliBili]')) {
-                          return false;
-                      }
-                  }
-                  if (danmakuFiltersender.includes('G')) {
-                      if (senderInfo.startsWith('[Gamer]')) {
-                          return false;
-                      }
-                  }
-                  return true;
-              });
+                            return false;
+                        }
+                    }
+                    if (window.ede.danmakufilter.includes('O')) {
+                        if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
+                            return false;
+                        }
+                    }
+                    if (window.ede.danmakufilter.includes('B')) {
+                        if (senderInfo.startsWith('[BiliBili]')) {
+                            return false;
+                        }
+                    }
+                    if (window.ede.danmakufilter.includes('G')) {
+                        if (senderInfo.startsWith('[Gamer]')) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
                 .map(($comment) => {
                     const p = $comment.p;
                     const values = p.split(',');
@@ -834,6 +836,7 @@
         while (!document.querySelector('.htmlvideoplayer')) {
             await new Promise((resolve) => setTimeout(resolve, 200));
         }
+
         if (!window.ede) {
             window.ede = new EDE();
             setInterval(() => {
