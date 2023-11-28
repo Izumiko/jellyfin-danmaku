@@ -596,7 +596,6 @@
                 window.ede.danmaku = null;
             }
             let _comments = danmakuFilter(danmakuParser(comments));
-            let _comments = danmakuFilter2(_comments);
             showDebugInfo('弹幕加载成功: ' + _comments.length);
             showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
             showDebugInfo(`弹幕速度：${window.ede.speed}`);
@@ -758,39 +757,36 @@
             return arr_comments.flat();
         }
 
-        function danmakuFilter2(comments) {
-            for (let index = 0; index < comments.length; index++) {
-                // 过滤发送者信息
-                let senderInfo = element.p.split(',', 4).pop();
-                if (danmakuFiltersender.includes('D')) {
-                    if (!/^\[/.test(senderInfo)) {
-                        continue;
-                    }
-                }
-                if (danmakuFiltersender.includes('O')) {
-                    // 有O过滤[开头但不是bilibili或者gamer的
-                    if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
-                        continue;
-                    }
-                }
-                if (danmakuFiltersender.includes('B')) {
-                    if (senderInfo.startsWith('[BiliBili]')) {
-                        continue;
-                    }
-                }
-                if (danmakuFiltersender.includes('G')) {
-                    if (senderInfo.startsWith('[Gamer]')) {
-                        continue;
-                    }
-                }
-            }
-        }
 
         function danmakuParser($obj) {
             const fontSize = window.ede.fontSize;
             showDebugInfo('Screen: ' + window.screen.width + 'x' + window.screen.height);
             showDebugInfo('字号大小: ' + fontSize);
             return $obj
+                .filter(($comment) => {
+                    const senderInfo = $comment.p.split(',', 3).pop();
+                    if (danmakuFiltersender.includes('D')) {
+                        if (!/^\[/.test(senderInfo)) {
+                          return false;
+                      }
+                  }
+                  if (danmakuFiltersender.includes('O')) {
+                      if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
+                          return false;
+                      }
+                  }
+                  if (danmakuFiltersender.includes('B')) {
+                      if (senderInfo.startsWith('[BiliBili]')) {
+                          return false;
+                      }
+                  }
+                  if (danmakuFiltersender.includes('G')) {
+                      if (senderInfo.startsWith('[Gamer]')) {
+                          return false;
+                      }
+                  }
+                  return true;
+              });
                 .map(($comment) => {
                     const p = $comment.p;
                     const values = p.split(',');
@@ -809,7 +805,7 @@
                         },
                     };
                 })
-                .filter((x) => x);
+                .back((x) => x);
         }
 
         function list2string($obj2) {
