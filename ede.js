@@ -534,7 +534,7 @@
                 selecAnime_id = parseInt(selecAnime_id) - 1;
                 let initialTitle = animaInfo.animes[selecAnime_id].episodes[0].episodeTitle;
                 const match = initialTitle.match(/第(\d+)话/);
-                const initialep = match ? parseInt(match[1]) : 0;
+                const initialep = match ? parseInt(match[1]) : 1;
                 episode = (parseInt(episode) < initialep) ? parseInt(episode) - 1 : (parseInt(episode) - initialep);
             }
             let episodeInfo = {
