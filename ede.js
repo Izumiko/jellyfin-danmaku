@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.20
+// @version      1.21
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -625,7 +625,8 @@
             wrapper.id = 'danmakuWrapper';
             wrapper.style.position = 'absolute';
             wrapper.style.width = '100%';
-            wrapper.style.height = window.ede.heightRatio * 100 + '%';
+            wrapper.style.height = `${window.ede.heightRatio * 98}%`;
+            wrapper.style.opacity = window.ede.opacity;
             wrapper.style.top = '18px';
             wrapper.style.overflow = 'hidden';
             _container.prepend(wrapper);
@@ -635,11 +636,8 @@
                 media: _media,
                 comments: _comments,
                 engine: 'canvas',
+                speed: window.ede.speed,
             });
-
-            wrapper.lastChild.style.opacity = window.ede.opacity;
-            window.ede.danmaku.speed = window.ede.speed
-            wrapper.style.height = `${window.ede.heightRatio * 100}%`;
 
             window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
             if (window.ede.obResize) {
