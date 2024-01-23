@@ -625,7 +625,7 @@
             wrapper.id = 'danmakuWrapper';
             wrapper.style.position = 'absolute';
             wrapper.style.width = '100%';
-            wrapper.style.height = `${window.ede.heightRatio * 98}%`;
+            wrapper.style.height = `calc(${window.ede.heightRatio * 100}% - 18px)`;
             wrapper.style.opacity = window.ede.opacity;
             wrapper.style.top = '18px';
             wrapper.style.overflow = 'hidden';
