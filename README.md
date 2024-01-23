@@ -131,13 +131,13 @@ sed -i 's#</body>#<script src="https://jellyfin-danmaku.pages.dev/ede.user.js" d
   - 设置弹幕大小[0,30]
   - 设置弹幕区域占屏幕的高度比例[0,1]
   - 设置弹幕用户名过滤,支持选项[B.G.D.O]:
-    - 分别对应:哔哩哔哩,巴哈姆特,纯数字ID,其他ID
+    - 分别对应:哔哩哔哩,巴哈姆特,弹弹Play,其他
 
  **除0级外均带有每3秒6条的垂直方向弹幕密度限制,高于该限制密度的顶部/底部弹幕将会被转为普通弹幕*
 
 ## 弹幕
 
-弹幕来源为 [弹弹 play](https://www.dandanplay.com/) ,已开启弹幕聚合(Acfun/Bili/Tucao/Baha/5dm/Iqiyi站等不知名网站弹幕融合)
+弹幕来源为 [弹弹 play](https://www.dandanplay.com/) ,已开启弹幕聚合(Acfun/Bili/Tucao/Baha/5DM/iQIYI等不知名网站弹幕融合)
 
 ## 数据
 
