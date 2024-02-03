@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.21
+// @version      1.23
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -142,7 +142,7 @@
                 window.localStorage.setItem('logSwitch', window.ede.logSwitch);
                 let logSpan = document.querySelector('#debugInfo');
                 if (logSpan) {
-                    window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') : (logSpan.style.display = 'none');
+                    window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') && showDebugInfo('开启日志显示') : (logSpan.style.display = 'none');
                 }
             }
         };
@@ -163,9 +163,6 @@
                         let tmpSpeed = parseFloatOfRange(speedStr, 0, 1000);
                         let tmpSize = parseFloatOfRange(sizeStr, 1, 30);
                         let tmpHeightRatio = parseFloatOfRange(heightRatio, 0, 1);
-                        if (isNaN(tmpOpacity) || isNaN(tmpSpeed) || isNaN(tmpSize) || isNaN(tmpHeightRatio)) {
-                            throw EvalError('输入无效，请输入有效的数字。');
-                        }
                         // 设置透明度
                         window.ede.opacity = tmpOpacity;
                         showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
@@ -245,8 +242,13 @@
             }
         }
 
-        const parseFloatOfRange = (str, lb, hb) => Math.min(Math.max(parseFloat(str), lb), hb)
-
+        const parseFloatOfRange = (str, lb, hb) => {
+            let parsedValue = parseFloat(str);
+            if (isNaN(parsedValue)) {
+                throw new Error('输入无效!');
+            }
+            return Math.min(Math.max(parsedValue, lb), hb);
+        };
 
         function createButton(opt) {
             let button = document.createElement('button');
@@ -345,6 +347,7 @@
             }
 
             showDebugInfo('UI初始化完成');
+            reloadDanmaku('init');
         }
 
         async function showDebugInfo(msg) {
@@ -354,7 +357,20 @@
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     span = document.getElementById('debugInfo');
                 }
-                if (logLines < 10) {
+                if (logQueue.length > 0) {
+                    let lastLine = logQueue[logQueue.length - 1];
+                    let baseLine = lastLine.replace(/ X\d+$/, '');
+                    if (baseLine === msg) {
+                        let count = 2;
+                        if (lastLine.match(/ X(\d+)$/)) {
+                            count = parseInt(lastLine.match(/ X(\d+)$/)[1]) + 1;
+                        }
+                        msg = `${msg} X${count}`;
+                        logQueue.pop();
+                        logLines--
+                    }
+                }
+                if (logLines < 15) {
                     logLines++;
                     logQueue.push(msg);
                 } else {
@@ -590,35 +606,45 @@
             }
 
             let wrapper = document.getElementById('danmakuWrapper');
-            wrapper && wrapper.parentNode.removeChild(wrapper);
-            if (window.ede.danmaku != null) {
+            wrapper && wrapper.remove();
+
+            if (window.ede.danmaku) {
                 window.ede.danmaku.clear();
                 window.ede.danmaku.destroy();
                 window.ede.danmaku = null;
             }
+
             let _comments = danmakuFilter(danmakuParser(comments));
-            showDebugInfo('弹幕加载成功: ' + _comments.length);
+            showDebugInfo(`弹幕加载成功: ${_comments.length}`);
             showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
             showDebugInfo(`弹幕速度：${window.ede.speed}`);
             showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
             showDebugInfo(`弹幕来源过滤：${window.ede.danmakufilter}`);
 
-            while (!document.querySelector(mediaContainerQueryStr)) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
-            }
+            const waitForMediaContainer = async () => {
+                while (!document.querySelector(mediaContainerQueryStr)) {
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                }
+            };
+
+            await waitForMediaContainer();
 
             let _container = null;
-            document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
+            document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
                 if (!element.classList.contains('hide')) {
                     _container = element;
                 }
             });
+
             if (!_container) {
                 showDebugInfo('未找到播放器');
+                return;
             }
+
             let _media = document.querySelector(mediaQueryStr);
             if (!_media) {
                 showDebugInfo('未找到video');
+                return;
             }
 
             wrapper = document.createElement('div');
@@ -639,27 +665,34 @@
                 speed: window.ede.speed,
             });
 
-            window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
-            if (window.ede.obResize) {
-                window.ede.obResize.disconnect();
-            }
-            window.ede.obResize = new ResizeObserver(() => {
+            window.ede.danmakuSwitch === 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
+
+            const resizeObserverCallback = () => {
                 if (window.ede.danmaku) {
                     showDebugInfo('重设容器大小');
                     window.ede.danmaku.resize();
                 }
-            });
+            };
+
+            if (window.ede.obResize) {
+                window.ede.obResize.disconnect();
+            }
+
+            window.ede.obResize = new ResizeObserver(resizeObserverCallback);
             window.ede.obResize.observe(_container);
 
-            if (window.ede.obMutation) {
-                window.ede.obMutation.disconnect();
-            }
-            window.ede.obMutation = new MutationObserver(() => {
+            const mutationObserverCallback = () => {
                 if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                     showDebugInfo('探测播放媒体变化');
                     reloadDanmaku('reload');
                 }
-            });
+            };
+
+            if (window.ede.obMutation) {
+                window.ede.obMutation.disconnect();
+            }
+
+            window.ede.obMutation = new MutationObserver(mutationObserverCallback);
             window.ede.obMutation.observe(_media, { attributes: true });
 
             if (!window.obVideo) {
@@ -676,6 +709,7 @@
                         }
                     }
                 });
+
                 window.obVideo.observe(document.body, { childList: true });
             }
         }
@@ -831,22 +865,38 @@
             return ep_lists_str;
         }
 
-        while (!document.querySelector('.htmlvideoplayer')) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-        }
+        const waitForElement = (selector) => {
+            return new Promise((resolve) => {
+                const observer = new MutationObserver(() => {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        observer.disconnect();
+                        resolve(element);
+                    }
+                });
 
-        if (!window.ede) {
-            window.ede = new EDE();
-            setInterval(() => {
-                initUI();
-            }, check_interval);
-            while (!(await initConfig())) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        };
+
+        waitForElement('.htmlvideoplayer').then(() => {
+            if (!window.ede) {
+                window.ede = new EDE();
+
+                (async () => {
+                    while (!(await initConfig())) {
+                        await new Promise((resolve) => setTimeout(resolve, 200));
+                    }
+
+                    setInterval(() => {
+                        initUI();
+                    }, check_interval);
+
+                    setInterval(() => {
+                        initListener();
+                    }, check_interval);
+                })();
             }
-            reloadDanmaku('init');
-            setInterval(() => {
-                initListener();
-            }, check_interval);
-        }
+        });
     }
 })();
