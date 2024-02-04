@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.23
+// @version      1.24
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -326,64 +326,61 @@
             // 弹幕设置
             menubar.appendChild(createButton(danmakuInteractionOpts));
 
-            if (debugInfoLoc == 'ui') {
-                menubar.appendChild(createButton(logButtonOpts));
 
-                let _container = null;
-                document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
-                    if (!element.classList.contains('hide')) {
-                        _container = element;
-                    }
-                });
-                let span = document.createElement('span');
-                span.id = 'debugInfo';
-                span.style.position = 'absolute';
-                span.style.overflow = 'auto';
-                span.style.zIndex = '99';
-                span.style.left = '10px';
-                span.style.top = '50px';
-                window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
-                _container.appendChild(span);
-            }
+            menubar.appendChild(createButton(logButtonOpts));
+
+            let _container = null;
+            document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
+                if (!element.classList.contains('hide')) {
+                    _container = element;
+                }
+            });
+            let span = document.createElement('span');
+            span.id = 'debugInfo';
+            span.style.position = 'absolute';
+            span.style.overflow = 'auto';
+            span.style.zIndex = '99';
+            span.style.left = '10px';
+            span.style.top = '50px';
+            window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
+            _container.appendChild(span);
+
 
             showDebugInfo('UI初始化完成');
             reloadDanmaku('init');
         }
 
         async function showDebugInfo(msg) {
-            if (debugInfoLoc == 'ui') {
-                let span = document.getElementById('debugInfo');
-                while (!span) {
-                    await new Promise((resolve) => setTimeout(resolve, 200));
-                    span = document.getElementById('debugInfo');
-                }
-                if (logQueue.length > 0) {
-                    let lastLine = logQueue[logQueue.length - 1];
-                    let baseLine = lastLine.replace(/ X\d+$/, '');
-                    if (baseLine === msg) {
-                        let count = 2;
-                        if (lastLine.match(/ X(\d+)$/)) {
-                            count = parseInt(lastLine.match(/ X(\d+)$/)[1]) + 1;
-                        }
-                        msg = `${msg} X${count}`;
-                        logQueue.pop();
-                        logLines--
-                    }
-                }
-                if (logLines < 15) {
-                    logLines++;
-                    logQueue.push(msg);
-                } else {
-                    logQueue.shift();
-                    logQueue.push(msg);
-                }
-                span.innerText = '';
-                logQueue.forEach((line) => {
-                    span.innerText += line + '\n';
-                });
-            } else if (debugInfoLoc == 'console') {
-                console.log(msg);
+            let span = document.getElementById('debugInfo');
+            while (!span) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                span = document.getElementById('debugInfo');
             }
+            if (logQueue.length > 0) {
+                let lastLine = logQueue[logQueue.length - 1];
+                let baseLine = lastLine.replace(/ X\d+$/, '');
+                if (baseLine === msg) {
+                    let count = 2;
+                    if (lastLine.match(/ X(\d+)$/)) {
+                        count = parseInt(lastLine.match(/ X(\d+)$/)[1]) + 1;
+                    }
+                    msg = `${msg} X${count}`;
+                    logQueue.pop();
+                    logLines--
+                }
+            }
+            if (logLines < 15) {
+                logLines++;
+                logQueue.push(msg);
+            } else {
+                logQueue.shift();
+                logQueue.push(msg);
+            }
+            span.innerText = '';
+            logQueue.forEach((line) => {
+                span.innerText += line + '\n';
+            });
+            console.log(msg);
         }
 
         async function initConfig() {
@@ -761,76 +758,75 @@
         }
 
         function danmakuFilter(comments) {
-            let level = parseInt(window.localStorage.getItem('danmakuFilterLevel') ? window.localStorage.getItem('danmakuFilterLevel') : 0);
-            if (level == 0) {
+            const level = parseInt(window.localStorage.getItem('danmakuFilterLevel') || 0);
+            if (level === 0) {
                 return comments;
             }
-            let limit = 9 - level * 2;
-            let vertical_limit = 6;
-            let arr_comments = [];
-            let vertical_comments = [];
-            for (let index = 0; index < comments.length; index++) {
-                let element = comments[index];
-                let i = Math.ceil(element.time);
-                let i_v = Math.ceil(element.time / 3);
-                if (!arr_comments[i]) {
-                    arr_comments[i] = [];
+        
+            const limit = 9 - level * 2;
+            const verticalLimit = 6;
+            const resultComments = [];
+        
+            const timeBuckets = {};
+            const verticalTimeBuckets = {};
+        
+            comments.forEach(comment => {
+                const timeIndex = Math.ceil(comment.time);
+                const verticalTimeIndex = Math.ceil(comment.time / 3);
+        
+                if (!timeBuckets[timeIndex]) {
+                    timeBuckets[timeIndex] = [];
                 }
-                if (!vertical_comments[i_v]) {
-                    vertical_comments[i_v] = [];
+                if (!verticalTimeBuckets[verticalTimeIndex]) {
+                    verticalTimeBuckets[verticalTimeIndex] = [];
                 }
-                if (vertical_comments[i_v].length < vertical_limit) {
-                    vertical_comments[i_v].push(element);
+        
+                if (comment.mode === 'top' || comment.mode === 'bottom') {
+                    if (verticalTimeBuckets[verticalTimeIndex].length < verticalLimit) {
+                        verticalTimeBuckets[verticalTimeIndex].push(comment);
+                        resultComments.push(comment);
+                    }
                 } else {
-                    element.mode = 'rtl';
+                    if (timeBuckets[timeIndex].length < limit) {
+                        timeBuckets[timeIndex].push(comment);
+                        resultComments.push(comment);
+                    }
                 }
-                if (arr_comments[i].length < limit) {
-                    arr_comments[i].push(element);
-                }
-            }
-            return arr_comments.flat();
+            });
+        
+            return resultComments;
         }
 
-
         function danmakuParser($obj) {
-            const fontSize = window.ede.fontSize;
-            showDebugInfo('Screen: ' + window.screen.width + 'x' + window.screen.height);
-            showDebugInfo('字号大小: ' + fontSize);
+            const { fontSize, danmakufilter } = window.ede;
+            showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
+            showDebugInfo(`字号大小: ${fontSize}`);
+        
             return $obj
                 .filter(($comment) => {
                     const senderInfo = $comment.p.split(',').pop();
-                    if (window.ede.danmakufilter.includes('D')) {
-                        if (!/^\[/.test(senderInfo)) {
-                            return false;
-                        }
+                    if (danmakufilter.includes('D') && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
+                        return false;
                     }
-                    if (window.ede.danmakufilter.includes('O')) {
-                        if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
-                            return false;
-                        }
+                    if (danmakufilter.includes('O') && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
+                        return false;
                     }
-                    if (window.ede.danmakufilter.includes('B')) {
-                        if (senderInfo.startsWith('[BiliBili]')) {
-                            return false;
-                        }
-                    }
-                    if (window.ede.danmakufilter.includes('G')) {
-                        if (senderInfo.startsWith('[Gamer]')) {
-                            return false;
-                        }
-                    }
+                    if ((danmakufilter.includes('B') && senderInfo.startsWith('[BiliBili]')) ||
+                        (danmakufilter.includes('G') && senderInfo.startsWith('[Gamer]'))) {
+                        return false;
+                    }                    
                     return true;
                 })
                 .map(($comment) => {
-                    const p = $comment.p;
-                    const values = p.split(',');
-                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[values[1]];
+                    const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
+                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
                     if (!mode) return null;
-                    const color = `000000${Number(values[2]).toString(16)}`.slice(-6);
+        
+                    const color = `000000${colorValue.toString(16)}`.slice(-6);
                     return {
                         text: $comment.m,
                         mode,
-                        time: values[0] * 1,
+                        time,
                         style: {
                             font: `${fontSize}px sans-serif`,
                             fillStyle: `#${color}`,
@@ -839,7 +835,7 @@
                         },
                     };
                 });
-        }
+        }        
 
         function list2string($obj2) {
             const $animes = $obj2.animes;
