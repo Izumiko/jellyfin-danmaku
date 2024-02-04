@@ -25,7 +25,6 @@
         let userId = '';
         let isInTampermonkey = true;
         let apiPrefix = 'https://ddplay-api.930524.xyz/cors/';
-        const debugInfoLoc = 'ui'; // 'console' or 'ui'
         let logQueue = [];
         let logLines = 0;
         const baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
