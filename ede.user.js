@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.21
+// @version      1.24
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -25,7 +25,6 @@
         let userId = '';
         let isInTampermonkey = true;
         let apiPrefix = 'https://ddplay-api.930524.xyz/cors/';
-        const debugInfoLoc = 'ui'; // 'console' or 'ui'
         let logQueue = [];
         let logLines = 0;
         const baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
@@ -142,7 +141,7 @@
                 window.localStorage.setItem('logSwitch', window.ede.logSwitch);
                 let logSpan = document.querySelector('#debugInfo');
                 if (logSpan) {
-                    window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') : (logSpan.style.display = 'none');
+                    window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') && showDebugInfo('开启日志显示') : (logSpan.style.display = 'none');
                 }
             }
         };
@@ -163,9 +162,6 @@
                         let tmpSpeed = parseFloatOfRange(speedStr, 0, 1000);
                         let tmpSize = parseFloatOfRange(sizeStr, 1, 30);
                         let tmpHeightRatio = parseFloatOfRange(heightRatio, 0, 1);
-                        if (isNaN(tmpOpacity) || isNaN(tmpSpeed) || isNaN(tmpSize) || isNaN(tmpHeightRatio)) {
-                            throw EvalError('输入无效，请输入有效的数字。');
-                        }
                         // 设置透明度
                         window.ede.opacity = tmpOpacity;
                         showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
@@ -245,8 +241,13 @@
             }
         }
 
-        const parseFloatOfRange = (str, lb, hb) => Math.min(Math.max(parseFloat(str), lb), hb)
-
+        const parseFloatOfRange = (str, lb, hb) => {
+            let parsedValue = parseFloat(str);
+            if (isNaN(parsedValue)) {
+                throw new Error('输入无效!');
+            }
+            return Math.min(Math.max(parsedValue, lb), hb);
+        };
 
         function createButton(opt) {
             let button = document.createElement('button');
@@ -324,50 +325,61 @@
             // 弹幕设置
             menubar.appendChild(createButton(danmakuInteractionOpts));
 
-            if (debugInfoLoc == 'ui') {
-                menubar.appendChild(createButton(logButtonOpts));
 
-                let _container = null;
-                document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
-                    if (!element.classList.contains('hide')) {
-                        _container = element;
-                    }
-                });
-                let span = document.createElement('span');
-                span.id = 'debugInfo';
-                span.style.position = 'absolute';
-                span.style.overflow = 'auto';
-                span.style.zIndex = '99';
-                span.style.left = '10px';
-                span.style.top = '50px';
-                window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
-                _container.appendChild(span);
-            }
+            menubar.appendChild(createButton(logButtonOpts));
+
+            let _container = null;
+            document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
+                if (!element.classList.contains('hide')) {
+                    _container = element;
+                }
+            });
+            let span = document.createElement('span');
+            span.id = 'debugInfo';
+            span.style.position = 'absolute';
+            span.style.overflow = 'auto';
+            span.style.zIndex = '99';
+            span.style.left = '10px';
+            span.style.top = '50px';
+            window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
+            _container.appendChild(span);
+
 
             showDebugInfo('UI初始化完成');
+            reloadDanmaku('init');
         }
 
         async function showDebugInfo(msg) {
-            if (debugInfoLoc == 'ui') {
-                let span = document.getElementById('debugInfo');
-                while (!span) {
-                    await new Promise((resolve) => setTimeout(resolve, 200));
-                    span = document.getElementById('debugInfo');
-                }
-                if (logLines < 10) {
-                    logLines++;
-                    logQueue.push(msg);
-                } else {
-                    logQueue.shift();
-                    logQueue.push(msg);
-                }
-                span.innerText = '';
-                logQueue.forEach((line) => {
-                    span.innerText += line + '\n';
-                });
-            } else if (debugInfoLoc == 'console') {
-                console.log(msg);
+            let span = document.getElementById('debugInfo');
+            while (!span) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                span = document.getElementById('debugInfo');
             }
+            if (logQueue.length > 0) {
+                let lastLine = logQueue[logQueue.length - 1];
+                let baseLine = lastLine.replace(/ X\d+$/, '');
+                if (baseLine === msg) {
+                    let count = 2;
+                    if (lastLine.match(/ X(\d+)$/)) {
+                        count = parseInt(lastLine.match(/ X(\d+)$/)[1]) + 1;
+                    }
+                    msg = `${msg} X${count}`;
+                    logQueue.pop();
+                    logLines--
+                }
+            }
+            if (logLines < 15) {
+                logLines++;
+                logQueue.push(msg);
+            } else {
+                logQueue.shift();
+                logQueue.push(msg);
+            }
+            span.innerText = '';
+            logQueue.forEach((line) => {
+                span.innerText += line + '\n';
+            });
+            console.log(msg);
         }
 
         async function initConfig() {
@@ -590,35 +602,45 @@
             }
 
             let wrapper = document.getElementById('danmakuWrapper');
-            wrapper && wrapper.parentNode.removeChild(wrapper);
-            if (window.ede.danmaku != null) {
+            wrapper && wrapper.remove();
+
+            if (window.ede.danmaku) {
                 window.ede.danmaku.clear();
                 window.ede.danmaku.destroy();
                 window.ede.danmaku = null;
             }
+
             let _comments = danmakuFilter(danmakuParser(comments));
-            showDebugInfo('弹幕加载成功: ' + _comments.length);
+            showDebugInfo(`弹幕加载成功: ${_comments.length}`);
             showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
             showDebugInfo(`弹幕速度：${window.ede.speed}`);
             showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
             showDebugInfo(`弹幕来源过滤：${window.ede.danmakufilter}`);
 
-            while (!document.querySelector(mediaContainerQueryStr)) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
-            }
+            const waitForMediaContainer = async () => {
+                while (!document.querySelector(mediaContainerQueryStr)) {
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                }
+            };
+
+            await waitForMediaContainer();
 
             let _container = null;
-            document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
+            document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
                 if (!element.classList.contains('hide')) {
                     _container = element;
                 }
             });
+
             if (!_container) {
                 showDebugInfo('未找到播放器');
+                return;
             }
+
             let _media = document.querySelector(mediaQueryStr);
             if (!_media) {
                 showDebugInfo('未找到video');
+                return;
             }
 
             wrapper = document.createElement('div');
@@ -639,27 +661,34 @@
                 speed: window.ede.speed,
             });
 
-            window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
-            if (window.ede.obResize) {
-                window.ede.obResize.disconnect();
-            }
-            window.ede.obResize = new ResizeObserver(() => {
+            window.ede.danmakuSwitch === 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
+
+            const resizeObserverCallback = () => {
                 if (window.ede.danmaku) {
                     showDebugInfo('重设容器大小');
                     window.ede.danmaku.resize();
                 }
-            });
+            };
+
+            if (window.ede.obResize) {
+                window.ede.obResize.disconnect();
+            }
+
+            window.ede.obResize = new ResizeObserver(resizeObserverCallback);
             window.ede.obResize.observe(_container);
 
-            if (window.ede.obMutation) {
-                window.ede.obMutation.disconnect();
-            }
-            window.ede.obMutation = new MutationObserver(() => {
+            const mutationObserverCallback = () => {
                 if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                     showDebugInfo('探测播放媒体变化');
                     reloadDanmaku('reload');
                 }
-            });
+            };
+
+            if (window.ede.obMutation) {
+                window.ede.obMutation.disconnect();
+            }
+
+            window.ede.obMutation = new MutationObserver(mutationObserverCallback);
             window.ede.obMutation.observe(_media, { attributes: true });
 
             if (!window.obVideo) {
@@ -676,6 +705,7 @@
                         }
                     }
                 });
+
                 window.obVideo.observe(document.body, { childList: true });
             }
         }
@@ -727,76 +757,75 @@
         }
 
         function danmakuFilter(comments) {
-            let level = parseInt(window.localStorage.getItem('danmakuFilterLevel') ? window.localStorage.getItem('danmakuFilterLevel') : 0);
-            if (level == 0) {
+            const level = parseInt(window.localStorage.getItem('danmakuFilterLevel') || 0);
+            if (level === 0) {
                 return comments;
             }
-            let limit = 9 - level * 2;
-            let vertical_limit = 6;
-            let arr_comments = [];
-            let vertical_comments = [];
-            for (let index = 0; index < comments.length; index++) {
-                let element = comments[index];
-                let i = Math.ceil(element.time);
-                let i_v = Math.ceil(element.time / 3);
-                if (!arr_comments[i]) {
-                    arr_comments[i] = [];
+        
+            const limit = 9 - level * 2;
+            const verticalLimit = 6;
+            const resultComments = [];
+        
+            const timeBuckets = {};
+            const verticalTimeBuckets = {};
+        
+            comments.forEach(comment => {
+                const timeIndex = Math.ceil(comment.time);
+                const verticalTimeIndex = Math.ceil(comment.time / 3);
+        
+                if (!timeBuckets[timeIndex]) {
+                    timeBuckets[timeIndex] = [];
                 }
-                if (!vertical_comments[i_v]) {
-                    vertical_comments[i_v] = [];
+                if (!verticalTimeBuckets[verticalTimeIndex]) {
+                    verticalTimeBuckets[verticalTimeIndex] = [];
                 }
-                if (vertical_comments[i_v].length < vertical_limit) {
-                    vertical_comments[i_v].push(element);
+        
+                if (comment.mode === 'top' || comment.mode === 'bottom') {
+                    if (verticalTimeBuckets[verticalTimeIndex].length < verticalLimit) {
+                        verticalTimeBuckets[verticalTimeIndex].push(comment);
+                        resultComments.push(comment);
+                    }
                 } else {
-                    element.mode = 'rtl';
+                    if (timeBuckets[timeIndex].length < limit) {
+                        timeBuckets[timeIndex].push(comment);
+                        resultComments.push(comment);
+                    }
                 }
-                if (arr_comments[i].length < limit) {
-                    arr_comments[i].push(element);
-                }
-            }
-            return arr_comments.flat();
+            });
+        
+            return resultComments;
         }
 
-
         function danmakuParser($obj) {
-            const fontSize = window.ede.fontSize;
-            showDebugInfo('Screen: ' + window.screen.width + 'x' + window.screen.height);
-            showDebugInfo('字号大小: ' + fontSize);
+            const { fontSize, danmakufilter } = window.ede;
+            showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
+            showDebugInfo(`字号大小: ${fontSize}`);
+        
             return $obj
                 .filter(($comment) => {
                     const senderInfo = $comment.p.split(',').pop();
-                    if (window.ede.danmakufilter.includes('D')) {
-                        if (!/^\[/.test(senderInfo)) {
-                            return false;
-                        }
+                    if (danmakufilter.includes('D') && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
+                        return false;
                     }
-                    if (window.ede.danmakufilter.includes('O')) {
-                        if (/^\[(?!BiliBili|Gamer\])/.test(senderInfo)) {
-                            return false;
-                        }
+                    if (danmakufilter.includes('O') && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
+                        return false;
                     }
-                    if (window.ede.danmakufilter.includes('B')) {
-                        if (senderInfo.startsWith('[BiliBili]')) {
-                            return false;
-                        }
-                    }
-                    if (window.ede.danmakufilter.includes('G')) {
-                        if (senderInfo.startsWith('[Gamer]')) {
-                            return false;
-                        }
-                    }
+                    if ((danmakufilter.includes('B') && senderInfo.startsWith('[BiliBili]')) ||
+                        (danmakufilter.includes('G') && senderInfo.startsWith('[Gamer]'))) {
+                        return false;
+                    }                    
                     return true;
                 })
                 .map(($comment) => {
-                    const p = $comment.p;
-                    const values = p.split(',');
-                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[values[1]];
+                    const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
+                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
                     if (!mode) return null;
-                    const color = `000000${Number(values[2]).toString(16)}`.slice(-6);
+        
+                    const color = `000000${colorValue.toString(16)}`.slice(-6);
                     return {
                         text: $comment.m,
                         mode,
-                        time: values[0] * 1,
+                        time,
                         style: {
                             font: `${fontSize}px sans-serif`,
                             fillStyle: `#${color}`,
@@ -805,7 +834,7 @@
                         },
                     };
                 });
-        }
+        }        
 
         function list2string($obj2) {
             const $animes = $obj2.animes;
@@ -831,22 +860,38 @@
             return ep_lists_str;
         }
 
-        while (!document.querySelector('.htmlvideoplayer')) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-        }
+        const waitForElement = (selector) => {
+            return new Promise((resolve) => {
+                const observer = new MutationObserver(() => {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        observer.disconnect();
+                        resolve(element);
+                    }
+                });
 
-        if (!window.ede) {
-            window.ede = new EDE();
-            setInterval(() => {
-                initUI();
-            }, check_interval);
-            while (!(await initConfig())) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        };
+
+        waitForElement('.htmlvideoplayer').then(() => {
+            if (!window.ede) {
+                window.ede = new EDE();
+
+                (async () => {
+                    while (!(await initConfig())) {
+                        await new Promise((resolve) => setTimeout(resolve, 200));
+                    }
+
+                    setInterval(() => {
+                        initUI();
+                    }, check_interval);
+
+                    setInterval(() => {
+                        initListener();
+                    }, check_interval);
+                })();
             }
-            reloadDanmaku('init');
-            setInterval(() => {
-                initListener();
-            }, check_interval);
-        }
+        });
     }
 })();
