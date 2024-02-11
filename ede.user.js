@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.24
+// @version      1.25
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -13,6 +13,7 @@
 // @connect      *
 // @match        *://*/*/web/index.html
 // @match        *://*/web/index.html
+// @match        https://jellyfin-web.pages.dev/
 // ==/UserScript==
 
 (async function () {
@@ -27,7 +28,11 @@
         let apiPrefix = 'https://ddplay-api.930524.xyz/cors/';
         let logQueue = [];
         let logLines = 0;
-        const baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
+        const jellyfinCredentials = JSON.parse(localStorage.getItem('jellyfin_credentials'));
+        let baseUrl = jellyfinCredentials.Servers[0].ManualAddress;
+        if (!baseUrl) {
+            baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
+        }
         const check_interval = 200;
         const chConverTtitle = ['当前状态: 未启用翻译', '当前状态: 转换为简体', '当前状态: 转换为繁体'];
         // 0:当前状态关闭 1:当前状态打开
@@ -202,7 +207,7 @@
         /* eslint-enable */
 
         // 检测是否在Tampermonkey中运行
-        if (typeof GM_addStyle === 'undefined') {
+        if (typeof GM_xmlhttpRequest === 'undefined') {
             isInTampermonkey = false;
         } else {
             apiPrefix = '';
@@ -382,6 +387,33 @@
             console.log(msg);
         }
 
+        async function getSessionInfo(sessionUrl, Authorization) {
+            let sessionInfo = null;
+            if (isInTampermonkey) {
+                const result = await GM.xmlHttpRequest({
+                    method: 'GET',
+                    url: sessionUrl,
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: Authorization,
+                    },
+                });
+                sessionInfo = JSON.parse(result.responseText);
+            } else {
+                sessionInfo = await fetch(sessionUrl, {
+                    credentials: 'include',
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: Authorization,
+                    },
+                    method: 'GET',
+                    mode: 'cors',
+                }).then((res) => res.json());
+            }
+
+            return sessionInfo;
+        }
+
         async function initConfig() {
             showDebugInfo('获取服务器信息');
             let token = serversInfo[0].AccessToken;
@@ -393,15 +425,7 @@
             }
 
             showDebugInfo('尝试获取DevId');
-            let sessionInfo = await fetch(sessionUrl, {
-                "credentials": "include",
-                "headers": {
-                    "Accept": "application/json",
-                    "Authorization": "MediaBrowser Token=\"" + token + "\""
-                },
-                "method": "GET",
-                "mode": "cors"
-            }).then(res => res.json());
+            let sessionInfo = await getSessionInfo(sessionUrl, "MediaBrowser Token=\"" + token + "\"");
 
             if (!deviceId) {
                 deviceId = sessionInfo[0].DeviceId;
@@ -425,15 +449,7 @@
                 while (!playingInfo) {
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
-                    let sessionInfo = await fetch(sessionUrl, {
-                        "credentials": "include",
-                        "headers": {
-                            "Accept": "application/json",
-                            "Authorization": authorization
-                        },
-                        "method": "GET",
-                        "mode": "cors"
-                    }).then(res => res.json());
+                    let sessionInfo = await getSessionInfo(sessionUrl, authorization);
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
                 showDebugInfo('成功 ' + (playingInfo.SeriesName || playingInfo.Name));
