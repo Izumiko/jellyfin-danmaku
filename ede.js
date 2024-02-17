@@ -158,18 +158,13 @@
             onclick: () => {
                 const modal = document.createElement('div');
                 modal.innerHTML = `
-                    <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); margin: 20px; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                    <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
-                            <label for="opacity">透明度 (0~1):</label>
-                            <input type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}">
-                            <label for="speed">速度 (0~1000):</label>
-                            <input type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}">
-                            <label for="fontSize">大小 (1~30):</label>
-                            <input type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}">
-                            <label for="heightRatio">高度比例 (0~1):</label>
-                            <input type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}">
-                            <label for="danmakufilter">弹幕过滤:</label>
-                            <input id="danmakufilter" value="${window.ede.danmakufilter || '00'}">
+                            <label for="opacity">透明度 (0~1):</label><input type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}">
+                            <label for="speed">弹幕速度 (0~1000):</label><input type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}">
+                            <label for="fontSize">字体大小 (1~30):</label><input type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}">
+                            <label for="heightRatio">高度比例 (0~1):</label><input type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}">
+                            <label for="danmakufilter">弹幕过滤:</label><input id="danmakufilter" value="${window.ede.danmakufilter || '00'}">
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
                             <button id="saveSettings">保存设置</button>
@@ -189,21 +184,25 @@
                     try {
                         window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
                         window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
+                        showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
                         window.ede.speed = parseFloatOfRange(document.getElementById('speed').value, 0, 1000);
                         window.localStorage.setItem('danmakuspeed', window.ede.speed.toString());
+                        showDebugInfo(`设置弹幕速度：${window.ede.speed}`);
                         window.ede.fontSize = parseFloatOfRange(document.getElementById('fontSize').value, 1, 30);
                         window.localStorage.setItem('danmakusize', window.ede.fontSize.toString());
+                        showDebugInfo(`设置弹幕大小：${window.ede.fontSize}`);
                         window.ede.heightRatio = parseFloatOfRange(document.getElementById('heightRatio').value, 0, 1);
                         window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
+                        showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
                         window.ede.danmakufilter = document.getElementById('danmakufilter').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                         window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
                         reloadDanmaku('reload');
+                        showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
                         document.body.removeChild(modal);
                     } catch (e) {
                         alert(`Invalid input: ${e.message}`);
                     }
                 };
-
                 document.getElementById('cancelSettings').onclick = closeModal;
             }
         };
