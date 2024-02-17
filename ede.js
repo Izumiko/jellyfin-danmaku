@@ -156,7 +156,11 @@
             id: 'danmakuSettings',
             class: settings_icon,
             onclick: () => {
+                if (document.getElementById('danmakuModal')) {
+                    return;
+                }
                 const modal = document.createElement('div');
+                modal.id = 'danmakuModal';
                 modal.innerHTML = `
                     <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
