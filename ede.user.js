@@ -128,7 +128,7 @@
                 modal.id = 'danmakuModal';
                 modal.className = 'dialogContainer';
                 modal.innerHTML = `
-                <div style="background: rgba(28, 28, 28, .8); color: #fff; padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
                                 <span id="lbopacity" style="flex: auto;">透明度:</span>
