@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.27
+// @version      1.28
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -128,8 +128,8 @@
                 modal.id = 'danmakuModal';
                 modal.className = 'dialogContainer';
                 modal.innerHTML = `
-                    <div style="background: #101010; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-                        <div style="display: flex; flex-direction: column; gap: 5px; color: inherit;">
+                <div style="background: rgba(28, 28, 28, .8); color: #fff; padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
                                 <span id="lbopacity" style="flex: auto;">透明度:</span>
                                 <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
@@ -398,8 +398,12 @@
             span.style.position = 'absolute';
             span.style.overflow = 'auto';
             span.style.zIndex = '99';
-            span.style.left = '10px';
+            span.style.right = '50px';
             span.style.top = '50px';
+            span.style.background = 'rgba(28, 28, 28, .8)';
+            span.style.color = '#fff';
+            span.style.padding = '20px';
+            span.style.borderRadius = '.3em';
             window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
             _container.appendChild(span);
 
