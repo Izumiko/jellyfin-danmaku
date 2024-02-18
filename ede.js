@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.27
+// @version      1.28
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -140,7 +140,8 @@
                             </div>
                             <div style="display: flex;">
                                 <span id="lbfontSize" style="flex: auto;">字体大小:</span>
-                                <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />                            </div>
+                                <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />
+                            </div>
                             <div style="display: flex;">
                                 <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
                                 <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}" />
