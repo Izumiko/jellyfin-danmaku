@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.26
+// @version      1.27
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -129,11 +129,26 @@
                 modal.innerHTML = `
                     <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
-                            <div style="display: flex;"><label for="opacity" style="flex: auto;">透明度 (0~1):</label><input style="width: 30%;" type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}"></div>
-                            <div style="display: flex;"><label for="speed" style="flex: auto;">弹幕速度 (0~1000):</label><input style="width: 30%;" type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}"></div>
-                            <div style="display: flex;"><label for="fontSize" style="flex: auto;">字体大小 (1~30):</label><input style="width: 30%;" type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}"></div>
-                            <div style="display: flex;"><label for="heightRatio" style="flex: auto;">高度比例 (0~1):</label><input style="width: 30%;" type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}"></div>
-                            <div style="display: flex;"><label for="danmakuDensityLimit" style="flex: auto;">密度限制等级 (0~3):</label><input style="width: 30%;" type="number" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}"></div>
+                            <div style="display: flex;">
+                                <span id="lbopacity" style="flex: auto;">透明度:</span>
+                                <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbspeed" style="flex: auto;">弹幕速度:</span>
+                                <input style="width: 50%;" type="range" id="speed" min="100" max="600" step="10" value="${window.ede.speed || 200}" />
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbfontSize" style="flex: auto;">字体大小:</span>
+                                <input style="width: 50%;" type="range" id="fontSize" min="8" max="32" step="1" value="${window.ede.fontSize || 18}" />
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
+                                <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}" />
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbdanmakuDensityLimit" style="flex: auto;">密度限制等级:</span>
+                                <input style="width: 50%;" type="range" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}" />
+                            </div>
                             <div style="display: flex;">
                                 <label style="flex: auto;">弹幕过滤:</label>
                                 <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" />
@@ -168,6 +183,28 @@
                 (window.ede.danmakufilter & 2) === 2 ? document.getElementById('filterGamer').checked = true : document.getElementById('filterGamer').checked = false;
                 (window.ede.danmakufilter & 4) === 4 ? document.getElementById('filterDanDanPlay').checked = true : document.getElementById('filterDanDanPlay').checked = false;
                 (window.ede.danmakufilter & 8) === 8 ? document.getElementById('filterOthers').checked = true : document.getElementById('filterOthers').checked = false;
+
+                function showCurrentVal(id, ticks) {
+                    const val = document.getElementById(id).value;
+                    const span = document.getElementById('lb' + id);
+                    const prefix = span.innerText.split(':')[0];
+                    if (ticks) {
+                        span.innerText = prefix + ': ' + ticks[val];
+                    } else {
+                        span.innerText = prefix + ': ' + val;
+                    }
+                }
+
+                document.getElementById('opacity').oninput = () => showCurrentVal('opacity');
+                document.getElementById('speed').oninput = () => showCurrentVal('speed');
+                document.getElementById('fontSize').oninput = () => showCurrentVal('fontSize');
+                document.getElementById('heightRatio').oninput = () => showCurrentVal('heightRatio');
+                document.getElementById('danmakuDensityLimit').oninput = () => showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
+                showCurrentVal('opacity');
+                showCurrentVal('speed');
+                showCurrentVal('fontSize');
+                showCurrentVal('heightRatio');
+                showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
 
                 modal.addEventListener('keydown', event => event.stopPropagation(), true);
 
