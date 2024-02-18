@@ -41,7 +41,7 @@
         const translate_icon = 'g_translate';
         const filter_icons = ['filter_none', 'filter_1', 'filter_2', 'filter_3'];
         const source_icon = 'library_add';
-        const log_icon = 'import_contacts';
+        const log_icons = ['code_off', 'code'];
         const settings_icon = 'tune'
         const spanClass = 'xlargePaperIconButton material-icons ';
         const buttonOptions = {
@@ -55,7 +55,6 @@
         const displayButtonOpts = {
             title: '弹幕开关',
             id: 'displayDanmaku',
-            class: '',
             onclick: () => {
                 if (window.ede.loading) {
                     showDebugInfo('正在加载,请稍后再试');
@@ -104,7 +103,6 @@
         const filterButtonOpts = {
             title: '密度限制',
             id: 'filteringDanmaku',
-            class: '',
             onclick: () => {
                 showDebugInfo('切换弹幕密度限制等级');
                 let level = window.localStorage.getItem('danmakuFilterLevel');
@@ -135,7 +133,6 @@
         const logButtonOpts = {
             title: '日志开关',
             id: 'displayLog',
-            class: log_icon,
             onclick: () => {
                 if (window.ede.loading) {
                     showDebugInfo('正在加载,请稍后再试');
@@ -144,6 +141,7 @@
                 // showDebugInfo('切换日志开关');
                 window.ede.logSwitch = (window.ede.logSwitch + 1) % 2;
                 window.localStorage.setItem('logSwitch', window.ede.logSwitch);
+                document.querySelector('#displayLog').children[0].className = spanClass + log_icons[window.ede.logSwitch]
                 let logSpan = document.querySelector('#debugInfo');
                 if (logSpan) {
                     window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') && showDebugInfo('开启日志显示') : (logSpan.style.display = 'none');
@@ -156,7 +154,11 @@
             id: 'danmakuSettings',
             class: settings_icon,
             onclick: () => {
+                if (document.getElementById('danmakuModal')) {
+                    return;
+                }
                 const modal = document.createElement('div');
+                modal.id = 'danmakuModal';
                 modal.innerHTML = `
                     <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
@@ -339,8 +341,8 @@
             menubar.appendChild(createButton(sourceButtonOpts));
             // 弹幕设置
             menubar.appendChild(createButton(danmakuInteractionOpts));
-
-
+            // 日志开关
+            logButtonOpts.class = log_icons[window.ede.logSwitch];
             menubar.appendChild(createButton(logButtonOpts));
 
             let _container = null;
