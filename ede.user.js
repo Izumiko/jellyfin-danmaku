@@ -81,7 +81,7 @@
         };
 
         const sourceButtonOpts = {
-            title: '手动增加弹幕源',
+            title: '临时增加弹幕源',
             id: 'addDanmakuSource',
             class: source_icon,
             onclick: () => {
@@ -129,20 +129,30 @@
                 modal.innerHTML = `
                     <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
-                            <div style="display: flex;"><label for="opacity" style="width: 70%;">透明度 (0~1):</label><input style="width: 30%;" type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}"></div>
-                            <div style="display: flex;"><label for="speed" style="width: 70%;">弹幕速度 (0~1000):</label><input style="width: 30%;" type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}"></div>
-                            <div style="display: flex;"><label for="fontSize" style="width: 70%;">字体大小 (1~30):</label><input style="width: 30%;" type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}"></div>
-                            <div style="display: flex;"><label for="heightRatio" style="width: 70%;">高度比例 (0~1):</label><input style="width: 30%;" type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}"></div>
-                            <div style="display: flex;"><label for="danmakufilter" style="width: 70%;">弹幕过滤:</label><input style="width: 30%;" id="danmakufilter" value="${window.ede.danmakufilter || '00'}"></div>
-                            <div style="display: flex;"><label for="danmakuDensityLimit" style="width: 70%;">密度限制等级 (0~3):</label><input style="width: 30%;" type="number" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}"></div>
+                            <div style="display: flex;"><label for="opacity" style="flex: auto;">透明度 (0~1):</label><input style="width: 30%;" type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}"></div>
+                            <div style="display: flex;"><label for="speed" style="flex: auto;">弹幕速度 (0~1000):</label><input style="width: 30%;" type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}"></div>
+                            <div style="display: flex;"><label for="fontSize" style="flex: auto;">字体大小 (1~30):</label><input style="width: 30%;" type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}"></div>
+                            <div style="display: flex;"><label for="heightRatio" style="flex: auto;">高度比例 (0~1):</label><input style="width: 30%;" type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}"></div>
+                            <div style="display: flex;"><label for="danmakuDensityLimit" style="flex: auto;">密度限制等级 (0~3):</label><input style="width: 30%;" type="number" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}"></div>
                             <div style="display: flex;">
-                                <label style="width: 40%;">简繁转换:</label>
-                                <input type="radio" id="chConvert0" name="chConvert" value="0">
-                                <label for="chConvert0">不转换</label>
-                                <input type="radio" id="chConvert1" name="chConvert" value="1">
-                                <label for="chConvert1">简体</label>
-                                <input type="radio" id="chConvert2" name="chConvert" value="2">
-                                <label for="chConvert2">繁体</label>
+                                <label style="flex: auto;">弹幕过滤:</label>
+                                <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" />
+                                <label for="filterBilibili">B站</label></div>
+                                <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" />
+                                <label for="filterGamer">巴哈</label></div>
+                                <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" />
+                                <label for="filterDanDanPlay">弹弹</label></div>
+                                <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" />
+                                <label for="filterOthers">其他</label></div>
+                            </div>
+                            <div style="display: flex;">
+                                <label style="flex: auto;">简繁转换:</label>
+                                <div><input type="radio" id="chConvert0" name="chConvert" value="0">
+                                <label for="chConvert0">不转换</label></div>
+                                <div><input type="radio" id="chConvert1" name="chConvert" value="1">
+                                <label for="chConvert1">简体</label></div>
+                                <div><input type="radio" id="chConvert2" name="chConvert" value="2">
+                                <label for="chConvert2">繁体</label></div>
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
@@ -153,6 +163,11 @@
                 document.body.appendChild(modal);
 
                 document.getElementById(`chConvert${window.ede.chConvert}`).checked = true;
+
+                (window.ede.danmakufilter & 1) === 1 ? document.getElementById('filterBilibili').checked = true : document.getElementById('filterBilibili').checked = false;
+                (window.ede.danmakufilter & 2) === 2 ? document.getElementById('filterGamer').checked = true : document.getElementById('filterGamer').checked = false;
+                (window.ede.danmakufilter & 4) === 4 ? document.getElementById('filterDanDanPlay').checked = true : document.getElementById('filterDanDanPlay').checked = false;
+                (window.ede.danmakufilter & 8) === 8 ? document.getElementById('filterOthers').checked = true : document.getElementById('filterOthers').checked = false;
 
                 modal.addEventListener('keydown', event => event.stopPropagation(), true);
 
@@ -175,13 +190,16 @@
                         window.ede.heightRatio = parseFloatOfRange(document.getElementById('heightRatio').value, 0, 1);
                         window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
                         showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
-                        window.ede.danmakufilter = document.getElementById('danmakufilter').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                        window.ede.danmakufilter = 0;
+                        document.querySelectorAll('input[name="danmakufilter"]:checked').forEach(element => {
+                            window.ede.danmakufilter += parseInt(element.value, 10);
+                        });
                         window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
                         showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
-                        window.ede.danmakuDensityLimit = document.getElementById('danmakuDensityLimit').value;
-                        window.localStorage.setItem('danmakuDensityLimit', danmakuDensityLimit);
+                        window.ede.danmakuDensityLimit = parseInt(document.getElementById('danmakuDensityLimit').value);
+                        window.localStorage.setItem('danmakuDensityLimit', window.ede.danmakuDensityLimit);
                         showDebugInfo(`设置弹幕密度限制等级：${window.ede.danmakuDensityLimit}`);
-                        window.ede.chConvert = document.querySelector('input[name="chConvert"]:checked').value;
+                        window.ede.chConvert = parseInt(document.querySelector('input[name="chConvert"]:checked').value);
                         window.localStorage.setItem('chConvert', window.ede.chConvert);
                         showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
                         reloadDanmaku('reload');
@@ -234,10 +252,12 @@
                 const heightRecord = window.localStorage.getItem('danmakuheight');
                 this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.7
                 // 弹幕过滤
-                this.danmakufilter = window.localStorage.getItem('danmakufilter') ?? 'ZZZ000';
+                const danmakufilter = window.localStorage.getItem('danmakufilter');
+                this.danmakufilter = danmakufilter ? parseInt(danmakufilter) : 0;
+                this.danmakufilter = this.danmakufilter >= 0 && this.danmakufilter < 16 ? this.danmakufilter : 0;
                 // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
                 const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
-                this.danmakuDensityLimit = danmakuDensityLimit ? parseFloat(danmakuDensityLimit) : 0;
+                this.danmakuDensityLimit = danmakuDensityLimit ? parseInt(danmakuDensityLimit) : 0;
 
                 this.danmaku = null;
                 this.episode_info = null;
@@ -773,25 +793,25 @@
             if (level === 0) {
                 return comments;
             }
-        
+
             const limit = 9 - level * 2;
             const verticalLimit = 6;
             const resultComments = [];
-        
+
             const timeBuckets = {};
             const verticalTimeBuckets = {};
-        
+
             comments.forEach(comment => {
                 const timeIndex = Math.ceil(comment.time);
                 const verticalTimeIndex = Math.ceil(comment.time / 3);
-        
+
                 if (!timeBuckets[timeIndex]) {
                     timeBuckets[timeIndex] = [];
                 }
                 if (!verticalTimeBuckets[verticalTimeIndex]) {
                     verticalTimeBuckets[verticalTimeIndex] = [];
                 }
-        
+
                 if (comment.mode === 'top' || comment.mode === 'bottom') {
                     if (verticalTimeBuckets[verticalTimeIndex].length < verticalLimit) {
                         verticalTimeBuckets[verticalTimeIndex].push(comment);
@@ -804,7 +824,7 @@
                     }
                 }
             });
-        
+
             return resultComments;
         }
 
@@ -812,27 +832,32 @@
             const { fontSize, danmakufilter } = window.ede;
             showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
             showDebugInfo(`字号大小: ${fontSize}`);
-        
+
+            const disableBilibili = (danmakufilter & 1) === 1;
+            const disableGamer = (danmakufilter & 2) === 2;
+            const disableDandan = (danmakufilter & 4) === 4;
+            const disableOther = (danmakufilter & 8) === 8;
+
             return $obj
                 .filter(($comment) => {
                     const senderInfo = $comment.p.split(',').pop();
-                    if (danmakufilter.includes('D') && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
+                    if (disableDandan && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
                         return false;
                     }
-                    if (danmakufilter.includes('O') && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
+                    if (disableOther && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
                         return false;
                     }
-                    if ((danmakufilter.includes('B') && senderInfo.startsWith('[BiliBili]')) ||
-                        (danmakufilter.includes('G') && senderInfo.startsWith('[Gamer]'))) {
+                    if ((disableBilibili && senderInfo.startsWith('[BiliBili]')) ||
+                        (disableGamer && senderInfo.startsWith('[Gamer]'))) {
                         return false;
-                    }                    
+                    }
                     return true;
                 })
                 .map(($comment) => {
                     const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
                     const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
                     if (!mode) return null;
-        
+
                     const color = `000000${colorValue.toString(16)}`.slice(-6);
                     return {
                         text: $comment.m,
@@ -846,7 +871,7 @@
                         },
                     };
                 });
-        }        
+        }
 
         function list2string($obj2) {
             const $animes = $obj2.animes;
