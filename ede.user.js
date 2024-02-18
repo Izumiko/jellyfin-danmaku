@@ -578,6 +578,9 @@
             }
             if (!is_auto) {
                 animeName = prompt('确认动画名:', animeName);
+                if (animeName == null || animeName == '') {
+                    return null;
+                }
             }
 
             let searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
@@ -610,6 +613,9 @@
                 window.localStorage.setItem(_name_key, animaInfo.animes[selecAnime_id].animeTitle);
                 let episode_lists_str = ep2string(animaInfo.animes[selecAnime_id].episodes);
                 episode = prompt('选择剧集:\n' + episode_lists_str, parseInt(episode) || 1);
+                if (episode == null || episode == '') {
+                    return null;
+                }
                 episode = parseInt(episode) - 1;
             } else {
                 selecAnime_id = parseInt(selecAnime_id) - 1;
