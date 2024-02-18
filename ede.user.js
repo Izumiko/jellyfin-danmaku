@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.25
+// @version      1.26
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -34,12 +34,9 @@
             baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
         }
         const check_interval = 200;
-        const chConverTtitle = ['当前状态: 未启用翻译', '当前状态: 转换为简体', '当前状态: 转换为繁体'];
         // 0:当前状态关闭 1:当前状态打开
         const danmaku_icons = ['comments_disabled', 'comment'];
         const search_icon = 'find_replace';
-        const translate_icon = 'g_translate';
-        const filter_icons = ['filter_none', 'filter_1', 'filter_2', 'filter_3'];
         const source_icon = 'library_add';
         const log_icons = ['code_off', 'code'];
         const settings_icon = 'tune'
@@ -80,36 +77,6 @@
                 }
                 showDebugInfo('手动匹配弹幕');
                 reloadDanmaku('search');
-            },
-        };
-        const translateButtonOpts = {
-            title: null,
-            id: 'translateDanmaku',
-            class: translate_icon,
-            onclick: () => {
-                if (window.ede.loading) {
-                    showDebugInfo('正在加载,请稍后再试');
-                    return;
-                }
-                showDebugInfo('切换简繁转换');
-                window.ede.chConvert = (window.ede.chConvert + 1) % 3;
-                window.localStorage.setItem('chConvert', window.ede.chConvert);
-                document.querySelector('#translateDanmaku').setAttribute('title', chConverTtitle[window.ede.chConvert]);
-                reloadDanmaku('reload');
-                showDebugInfo(document.querySelector('#translateDanmaku').getAttribute('title'));
-            },
-        };
-
-        const filterButtonOpts = {
-            title: '密度限制',
-            id: 'filteringDanmaku',
-            onclick: () => {
-                showDebugInfo('切换弹幕密度限制等级');
-                let level = window.localStorage.getItem('danmakuFilterLevel');
-                level = ((level ? parseInt(level) : 0) + 1) % 4;
-                window.localStorage.setItem('danmakuFilterLevel', level);
-                document.querySelector('#filteringDanmaku').children[0].className = spanClass + filter_icons[level];
-                reloadDanmaku('reload');
             },
         };
 
@@ -162,11 +129,21 @@
                 modal.innerHTML = `
                     <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                         <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
-                            <label for="opacity">透明度 (0~1):</label><input type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}">
-                            <label for="speed">弹幕速度 (0~1000):</label><input type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}">
-                            <label for="fontSize">字体大小 (1~30):</label><input type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}">
-                            <label for="heightRatio">高度比例 (0~1):</label><input type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}">
-                            <label for="danmakufilter">弹幕过滤:</label><input id="danmakufilter" value="${window.ede.danmakufilter || '00'}">
+                            <div style="display: flex;"><label for="opacity" style="width: 70%;">透明度 (0~1):</label><input style="width: 30%;" type="number" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}"></div>
+                            <div style="display: flex;"><label for="speed" style="width: 70%;">弹幕速度 (0~1000):</label><input style="width: 30%;" type="number" id="speed" min="0" max="1000" value="${window.ede.speed || 200}"></div>
+                            <div style="display: flex;"><label for="fontSize" style="width: 70%;">字体大小 (1~30):</label><input style="width: 30%;" type="number" id="fontSize" min="1" max="30" value="${window.ede.fontSize || 18}"></div>
+                            <div style="display: flex;"><label for="heightRatio" style="width: 70%;">高度比例 (0~1):</label><input style="width: 30%;" type="number" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}"></div>
+                            <div style="display: flex;"><label for="danmakufilter" style="width: 70%;">弹幕过滤:</label><input style="width: 30%;" id="danmakufilter" value="${window.ede.danmakufilter || '00'}"></div>
+                            <div style="display: flex;"><label for="danmakuDensityLimit" style="width: 70%;">密度限制等级 (0~3):</label><input style="width: 30%;" type="number" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}"></div>
+                            <div style="display: flex;">
+                                <label style="width: 40%;">简繁转换:</label>
+                                <input type="radio" id="chConvert0" name="chConvert" value="0">
+                                <label for="chConvert0">不转换</label>
+                                <input type="radio" id="chConvert1" name="chConvert" value="1">
+                                <label for="chConvert1">简体</label>
+                                <input type="radio" id="chConvert2" name="chConvert" value="2">
+                                <label for="chConvert2">繁体</label>
+                            </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
                             <button id="saveSettings">保存设置</button>
@@ -174,6 +151,8 @@
                         </div>
                     </div>`;
                 document.body.appendChild(modal);
+
+                document.getElementById(`chConvert${window.ede.chConvert}`).checked = true;
 
                 modal.addEventListener('keydown', event => event.stopPropagation(), true);
 
@@ -198,8 +177,14 @@
                         showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
                         window.ede.danmakufilter = document.getElementById('danmakufilter').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                         window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
-                        reloadDanmaku('reload');
                         showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
+                        window.ede.danmakuDensityLimit = document.getElementById('danmakuDensityLimit').value;
+                        window.localStorage.setItem('danmakuDensityLimit', danmakuDensityLimit);
+                        showDebugInfo(`设置弹幕密度限制等级：${window.ede.danmakuDensityLimit}`);
+                        window.ede.chConvert = document.querySelector('input[name="chConvert"]:checked').value;
+                        window.localStorage.setItem('chConvert', window.ede.chConvert);
+                        showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
+                        reloadDanmaku('reload');
                         document.body.removeChild(modal);
                     } catch (e) {
                         alert(`Invalid input: ${e.message}`);
@@ -227,28 +212,33 @@
 
         class EDE {
             constructor() {
-                this.chConvert = 1;
-                if (window.localStorage.getItem('chConvert')) {
-                    this.chConvert = window.localStorage.getItem('chConvert');
-                }
-                // 0:当前状态关闭 1:当前状态打开
-                this.danmakuSwitch = 1;
-                if (window.localStorage.getItem('danmakuSwitch')) {
-                    this.danmakuSwitch = parseInt(window.localStorage.getItem('danmakuSwitch'));
-                }
-                this.logSwitch = 0;
-                if (window.localStorage.getItem('logSwitch')) {
-                    this.logSwitch = parseInt(window.localStorage.getItem('logSwitch'));
-                }
-                let opacityRecord = window.localStorage.getItem('danmakuopacity')
+                // 简繁转换 0:不转换 1:简体 2:繁体
+                const chConvert = window.localStorage.getItem('chConvert');
+                this.chConvert = chConvert ? parseInt(chConvert) : 1;
+                // 开关弹幕 0:关闭 1:打开
+                const danmakuSwitch = window.localStorage.getItem('danmakuSwitch');
+                this.danmakuSwitch = danmakuSwitch ? parseInt(danmakuSwitch) : 1;
+                // 开关日志 0:关闭 1:打开
+                const logSwitch = window.localStorage.getItem('logSwitch');
+                this.logSwitch = logSwitch ? parseInt(logSwitch) : 0;
+                // 弹幕透明度
+                const opacityRecord = window.localStorage.getItem('danmakuopacity');
                 this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7
-                let speedRecord = window.localStorage.getItem('danmakuspeed')
+                // 弹幕速度
+                const speedRecord = window.localStorage.getItem('danmakuspeed');
                 this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200
-                let sizeRecord = window.localStorage.getItem('danmakusize')
+                // 弹幕字体大小
+                const sizeRecord = window.localStorage.getItem('danmakusize');
                 this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
-                let heightRecord = window.localStorage.getItem('danmakuheight')
+                // 弹幕高度
+                const heightRecord = window.localStorage.getItem('danmakuheight');
                 this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.7
+                // 弹幕过滤
                 this.danmakufilter = window.localStorage.getItem('danmakufilter') ?? 'ZZZ000';
+                // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
+                const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
+                this.danmakuDensityLimit = danmakuDensityLimit ? parseFloat(danmakuDensityLimit) : 0;
+
                 this.danmaku = null;
                 this.episode_info = null;
                 this.episode_info_str = '';
@@ -331,12 +321,6 @@
             menubar.appendChild(createButton(displayButtonOpts));
             // 手动匹配
             menubar.appendChild(createButton(searchButtonOpts));
-            // 简繁转换
-            translateButtonOpts.title = chConverTtitle[window.ede.chConvert];
-            menubar.appendChild(createButton(translateButtonOpts));
-            // 屏蔽等级
-            filterButtonOpts.class = filter_icons[parseInt(window.localStorage.getItem('danmakuFilterLevel') ? window.localStorage.getItem('danmakuFilterLevel') : 0)];
-            menubar.appendChild(createButton(filterButtonOpts));
             // 手动增加弹幕源
             menubar.appendChild(createButton(sourceButtonOpts));
             // 弹幕设置
@@ -785,7 +769,7 @@
         }
 
         function danmakuFilter(comments) {
-            const level = parseInt(window.localStorage.getItem('danmakuFilterLevel') || 0);
+            const level = window.ede.danmakuDensityLimit;
             if (level === 0) {
                 return comments;
             }
