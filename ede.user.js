@@ -126,9 +126,10 @@
                 }
                 const modal = document.createElement('div');
                 modal.id = 'danmakuModal';
+                modal.className = 'dialogContainer';
                 modal.innerHTML = `
-                    <div style="background: #f0f0f0; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-                        <div style="display: flex; flex-direction: column; gap: 5px; color: #333;">
+                    <div style="background: #101010; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                        <div style="display: flex; flex-direction: column; gap: 5px; color: inherit;">
                             <div style="display: flex;">
                                 <span id="lbopacity" style="flex: auto;">透明度:</span>
                                 <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
@@ -139,7 +140,7 @@
                             </div>
                             <div style="display: flex;">
                                 <span id="lbfontSize" style="flex: auto;">字体大小:</span>
-                                <input style="width: 50%;" type="range" id="fontSize" min="8" max="32" step="1" value="${window.ede.fontSize || 18}" />
+                                <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />
                             </div>
                             <div style="display: flex;">
                                 <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
@@ -218,10 +219,10 @@
                         window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
                         window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
                         showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
-                        window.ede.speed = parseFloatOfRange(document.getElementById('speed').value, 0, 1000);
+                        window.ede.speed = parseFloatOfRange(document.getElementById('speed').value, 100, 600);
                         window.localStorage.setItem('danmakuspeed', window.ede.speed.toString());
                         showDebugInfo(`设置弹幕速度：${window.ede.speed}`);
-                        window.ede.fontSize = parseFloatOfRange(document.getElementById('fontSize').value, 1, 30);
+                        window.ede.fontSize = parseFloatOfRange(document.getElementById('fontSize').value, 8, 40);
                         window.localStorage.setItem('danmakusize', window.ede.fontSize.toString());
                         showDebugInfo(`设置弹幕大小：${window.ede.fontSize}`);
                         window.ede.heightRatio = parseFloatOfRange(document.getElementById('heightRatio').value, 0, 1);
