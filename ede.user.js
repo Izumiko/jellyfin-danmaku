@@ -354,6 +354,9 @@
                         e.preventDefault();
                         const danmakuText = document.getElementById('danmakuText').value;
                         if (danmakuText === '') {
+                            const txt = document.getElementById('danmakuText');
+                            txt.placeholder = '弹幕内容不能为空！';
+                            txt.focus();
                             return;
                         }
                         const _media = document.querySelector(mediaQueryStr);
@@ -370,10 +373,16 @@
                 }
 
                 if (ddplayStatus.isLogin) {
+                    const txt = document.getElementById('danmakuText');
+                    txt.placeholder = '请输入弹幕内容';
+                    txt.value = '';
+                    txt.focus();
                     document.getElementById('sendDanmakuDialog').style.display = 'block';
                     document.getElementById('sendDanmakuDialog').addEventListener('keydown', event => event.stopPropagation(), true);
-                    document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${window.ede.episode_info.animeTitle}`;
-                    document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${window.ede.episode_info.episodeTitle}`;
+                    const animeTitle = window.ede.episode_info ? window.ede.episode_info.animeTitle : '';
+                    const episodeTitle = window.ede.episode_info ? window.ede.episode_info.episodeTitle : '';
+                    document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${animeTitle || ''}`;
+                    document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${episodeTitle || ''}`;
                 } else {
                     document.getElementById('loginDialog').style.display = 'block';
                     document.getElementById('loginDialog').addEventListener('keydown', event => event.stopPropagation(), true);
@@ -467,12 +476,12 @@
                 }
                 return;
             }
-            if (!container.getAttribute('ede_listening')) {
-                showDebugInfo('正在初始化Listener');
-                container.setAttribute('ede_listening', true);
-                container.addEventListener('play', reloadDanmaku);
-                showDebugInfo('Listener初始化完成');
-            }
+            // if (!container.getAttribute('ede_listening')) {
+            //     showDebugInfo('正在初始化Listener');
+            //     container.setAttribute('ede_listening', true);
+            //     container.addEventListener('play', reloadDanmaku);
+            //     showDebugInfo('Listener初始化完成');
+            // }
         }
 
         function initUI() {
@@ -622,7 +631,7 @@
 
         async function sendDanmaku(danmakuText, time, mode = 1, color = 0xffffff) {
             if (ddplayStatus.isLogin) {
-                if (!window.ede.episode_info.episodeId) {
+                if (!window.ede.episode_info || !window.ede.episode_info.episodeId) {
                     showDebugInfo('发送弹幕失败 未获取到弹幕信息');
                     alert('请先获取弹幕信息');
                     return;
@@ -793,9 +802,7 @@
 
 
         async function getEmbyItemInfo() {
-            showDebugInfo('准备获取Item信息');
             if (authorization.length > 0 && userId.length > 0 && deviceId.length > 0) {
-                showDebugInfo('正在获取Item信息');
                 let playingInfo = null;
                 while (!playingInfo) {
                     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -803,7 +810,7 @@
                     let sessionInfo = await getSessionInfo(sessionUrl, authorization);
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
-                showDebugInfo('成功 ' + (playingInfo.SeriesName || playingInfo.Name));
+                showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
                 return playingInfo;
             } else {
                 showDebugInfo('等待Config');
@@ -906,7 +913,7 @@
                 showDebugInfo('弹幕查询无结果');
                 return null;
             }
-            showDebugInfo('查询成功');
+            showDebugInfo('节目查询成功');
 
             let selecAnime_id = 1;
             if (anime_id != -1) {
@@ -936,7 +943,12 @@
                 const initialep = match ? parseInt(match[1]) : 1;
                 episode = (parseInt(episode) < initialep) ? parseInt(episode) - 1 : (parseInt(episode) - initialep);
             }
-            
+
+            if (episode + 1 > animaInfo.animes[selecAnime_id].episodes.length) {
+                showDebugInfo('剧集不存在');
+                return null;
+            }
+
             const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${season}E${episode + 1}` : (animaInfo.animes[selecAnime_id].type);
             let episodeInfo = {
                 episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
@@ -1069,7 +1081,8 @@
             const mutationObserverCallback = () => {
                 if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                     showDebugInfo('探测播放媒体变化');
-                    reloadDanmaku('reload');
+                    const sleep = new Promise(resolve => setTimeout(resolve, 3000));
+                    sleep.then(() => reloadDanmaku('reload'));
                 }
             };
 
