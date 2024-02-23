@@ -889,6 +889,18 @@
                     return null;
                 });
             if (animaInfo.animes.length == 0) {
+                const seriesUrl = baseUrl + '/Users/' + userId + '/Items/' + item.SeriesId;
+                const seriesInfo = await getSessionInfo(seriesUrl, authorization);
+                animeName = seriesInfo.OriginalTitle;
+                searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
+                animaInfo = await makeGetRequest(searchUrl)
+                    .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
+                    .catch((error) => {
+                        showDebugInfo('查询失败:', error);
+                        return null;
+                    });
+            }
+            if (animaInfo.animes.length == 0) {
                 showDebugInfo('弹幕查询无结果');
                 return null;
             }
