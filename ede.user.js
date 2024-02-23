@@ -956,7 +956,7 @@
                 return null;
             }
 
-            const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${season}E${episode + 1}` : (animaInfo.animes[selecAnime_id].type);
+            const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${session}E${episode + 1}` : (animaInfo.animes[selecAnime_id].type);
             let episodeInfo = {
                 episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
                 animeTitle: animaInfo.animes[selecAnime_id].animeTitle,
