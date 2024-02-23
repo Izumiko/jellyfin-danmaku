@@ -812,6 +812,7 @@
                     let sessionInfo = await getSessionInfo(sessionUrl, authorization);
                     if (!sessionInfo[0].NowPlayingItem) {
                         await initConfig();
+                        await new Promise(resolve => setTimeout(resolve, 150));
                         continue;
                     }
                     playingInfo = sessionInfo[0].NowPlayingItem;
