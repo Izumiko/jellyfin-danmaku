@@ -877,49 +877,56 @@
         }
 
         function danmakuParser($obj) {
-            const { fontSize, danmakufilter } = window.ede;
-            showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
-            showDebugInfo(`字号大小: ${fontSize}`);
+    const { fontSize, danmakufilter } = window.ede;
+    showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
+    showDebugInfo(`字号大小: ${fontSize}`);
 
-            const disableBilibili = (danmakufilter & 1) === 1;
-            const disableGamer = (danmakufilter & 2) === 2;
-            const disableDandan = (danmakufilter & 4) === 4;
-            const disableOther = (danmakufilter & 8) === 8;
+    const disableBilibili = (danmakufilter & 1) === 1;
+    const disableGamer = (danmakufilter & 2) === 2;
+    const disableDandan = (danmakufilter & 4) === 4;
+    const disableOther = (danmakufilter & 8) === 8;
 
-            return $obj
-                .filter(($comment) => {
-                    const senderInfo = $comment.p.split(',').pop();
-                    if (disableDandan && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
-                        return false;
-                    }
-                    if (disableOther && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
-                        return false;
-                    }
-                    if ((disableBilibili && senderInfo.startsWith('[BiliBili]')) ||
-                        (disableGamer && senderInfo.startsWith('[Gamer]'))) {
-                        return false;
-                    }
-                    return true;
-                })
-                .map(($comment) => {
-                    const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
-                    if (!mode) return null;
+    let rule = '';
 
-                    const color = `000000${colorValue.toString(16)}`.slice(-6);
-                    return {
-                        text: $comment.m,
-                        mode,
-                        time,
-                        style: {
-                            font: `${fontSize}px sans-serif`,
-                            fillStyle: `#${color}`,
-                            strokeStyle: color === '000000' ? '#fff' : '#000',
-                            lineWidth: 2.0,
-                        },
-                    };
-                });
-        }
+    if (disableDandan) {
+        rule += '^(?!\\[)\\[.{0,2}\\]';
+    }
+    
+    if (disableBilibili) {
+        rule += (rule ? '|' : '') + '(?!\\[BiliBili\\])';
+    }
+
+    if (disableGamer) {
+        rule += (rule ? '|' : '') + '(?!\\[Gamer\\])';
+    }
+
+    if (disableOther) {
+        rule += (rule ? '|' : '') + '\\[(?!BiliBili|Gamer)[^\\]]{3,}\\]';
+    }
+
+    const danmakufilterule = new RegExp(rule);
+
+    return $obj
+        .filter(($comment) => !danmakufilterule.test($comment.p.split(',').pop()))
+        .map(($comment) => {
+            const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
+            const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
+            if (!mode) return null;
+
+            const color = `000000${colorValue.toString(16)}`.slice(-6);
+            return {
+                text: $comment.m,
+                mode,
+                time,
+                style: {
+                    font: `${fontSize}px sans-serif`,
+                    fillStyle: `#${color}`,
+                    strokeStyle: color === '000000' ? '#fff' : '#000',
+                    lineWidth: 2.0,
+                },
+            };
+        });
+}
 
         function list2string($obj2) {
             const $animes = $obj2.animes;
