@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.28
+// @version      1.29
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -886,20 +886,17 @@
             const disableDandan = (danmakufilter & 4) === 4;
             const disableOther = (danmakufilter & 8) === 8;
 
+            let filterule = '';
+            if (disableDandan) { filterule += '^(?!\\[)|\^.{0,3}\\]'; }
+            if (disableBilibili) { filterule += (filterule ? '|' : '') + '\^\\[BiliBili\\]'; }
+            if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
+            if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
+            if (filterule === '') { filterule = '!.*'; }
+            const danmakufilterule = new RegExp(filterule);
+
             return $obj
                 .filter(($comment) => {
-                    const senderInfo = $comment.p.split(',').pop();
-                    if (disableDandan && (!/^\[/.test(senderInfo) || /^\[.{0,2}\]/.test(senderInfo))) {
-                        return false;
-                    }
-                    if (disableOther && (/^\[(?!BiliBili|Gamer\]).{3,}\]/.test(senderInfo))) {
-                        return false;
-                    }
-                    if ((disableBilibili && senderInfo.startsWith('[BiliBili]')) ||
-                        (disableGamer && senderInfo.startsWith('[Gamer]'))) {
-                        return false;
-                    }
-                    return true;
+                    return !danmakufilterule.test($comment.p.split(',').pop());
                 })
                 .map(($comment) => {
                     const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
