@@ -341,6 +341,38 @@
                                 <label for="danmakuMode5">顶部</label></div>
                             </div>
                             <div style="display: flex;">
+                                <input id="danmakuColor" type="text" value="#FFFFFF" style="width: 80px;">
+                                <span id="danmakuColorDisplay" style="background: rgb(255, 255, 255); width: 50px; margin: 2px;"></span>
+                                <style>
+                                .color-picker {
+                                    border: 1px solid rgba(0,0,0,.3);
+                                    border-radius: 2px;
+                                    box-sizing: border-box;
+                                    cursor: pointer;
+                                    display: inline-block;
+                                    height: 20px;
+                                    margin-right: 6px;
+                                    width: 20px;
+                                }
+                                </style>
+                                <ul id="danmakuColorPicker">
+                                    <li class="color-picker" style="background: #FE0302;" data-value="#FE0302"></li>
+                                    <li class="color-picker" style="background: #FF7204;" data-value="#FF7204"></li>
+                                    <li class="color-picker" style="background: #FFAA02;" data-value="#FFAA02"></li>
+                                    <li class="color-picker" style="background: #FFD302;" data-value="#FFD302"></li>
+                                    <li class="color-picker" style="background: #FFFF00;" data-value="#FFFF00"></li>
+                                    <li class="color-picker" style="background: #A0EE00;" data-value="#A0EE00"></li>
+                                    <li class="color-picker" style="background: #00CD00;" data-value="#00CD00"></li>
+                                    <li class="color-picker" style="background: #019899;" data-value="#019899"></li>
+                                    <li class="color-picker" style="background: #4266BE;" data-value="#4266BE"></li>
+                                    <li class="color-picker" style="background: #89D5FF;" data-value="#89D5FF"></li>
+                                    <li class="color-picker" style="background: #CC0273;" data-value="#CC0273"></li>
+                                    <li class="color-picker" style="background: #222222;" data-value="#222222"></li>
+                                    <li class="color-picker" style="background: #9B9B9B;" data-value="#9B9B9B"></li>
+                                    <li class="color-picker" style="background: #FFFFFF;" data-value="#FFFFFF"></li>
+                                </ul>
+                            </div>
+                            <div style="display: flex;">
                                 <input style="width: 85%;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
                                 <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em;" type="submit">发送</button>
                                 <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em;" type="button">取消</button>
@@ -350,6 +382,33 @@
                     </div>
                     `;
                     document.body.appendChild(modal);
+
+                    document.getElementById('danmakuColor').addEventListener('change', (e) => {
+                        const colorStr = e.target.value;
+                        let c = 0;
+                        if (colorStr.length == 4) {
+                            c = parseInt(colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3], 16) || 0;
+                        } else {
+                            c = parseInt(colorStr.slice(1), 16) || 0;
+                        }
+                        c = Math.min(Math.max(c, 0), 0xffffff);
+                        const color = '#' + c.toString(16).padStart(6, '0').toUpperCase();
+                        document.getElementById('danmakuColor').value = color;
+                        document.getElementById('danmakuColorDisplay').style.backgroundColor = color;
+                    });
+                    document.getElementById('danmakuColor').addEventListener('input', (e) => {
+                        document.getElementById('danmakuColorDisplay').style.backgroundColor = e.target.value;
+                    });
+                    document.getElementById('danmakuColor').addEventListener('keydown', (e) => e.stopPropagation());
+
+                    document.getElementById('danmakuColorPicker').addEventListener('click', (e) => {
+                        const color = e.target.getAttribute('data-value');
+                        if (color) {
+                            document.getElementById('danmakuColor').value = color;
+                            document.getElementById('danmakuColorDisplay').style.backgroundColor = color;
+                        }
+                    });
+
                     document.getElementById('sendDanmakuForm').onsubmit = (e) => {
                         e.preventDefault();
                         const danmakuText = document.getElementById('danmakuText').value;
@@ -362,7 +421,8 @@
                         const _media = document.querySelector(mediaQueryStr);
                         const currentTime = _media.currentTime;
                         const mode = parseInt(document.querySelector('input[name="danmakuMode"]:checked').value);
-                        sendDanmaku(danmakuText, currentTime, mode);
+                        const color = parseInt(document.getElementById('danmakuColor').value.slice(1), 16) || 0xffffff;
+                        sendDanmaku(danmakuText, currentTime, mode, color);
                         // 清空输入框的值
                         document.getElementById('danmakuText').value = '';
                         modal.style.display = 'none';
