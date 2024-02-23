@@ -778,7 +778,7 @@
         }
 
         async function initConfig() {
-            showDebugInfo('获取服务器信息');
+            showDebugInfo('获取服务器信息&Token');
             let token = serversInfo[0].AccessToken;
             userId = serversInfo[0].UserId;
 
@@ -787,7 +787,6 @@
                 sessionUrl += '&DeviceId=' + deviceId;
             }
 
-            showDebugInfo('尝试获取DevId');
             let sessionInfo = await getSessionInfo(sessionUrl, "MediaBrowser Token=\"" + token + "\"");
 
             if (!deviceId) {
