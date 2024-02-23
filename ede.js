@@ -363,6 +363,8 @@
                         const currentTime = _media.currentTime;
                         const mode = parseInt(document.querySelector('input[name="danmakuMode"]:checked').value);
                         sendDanmaku(danmakuText, currentTime, mode);
+                        // 清空输入框的值
+                        document.getElementById('danmakuText').value = '';
                         modal.style.display = 'none';
                         modal.removeEventListener('keydown', event => event.stopPropagation(), true);
                     };
@@ -661,9 +663,10 @@
                 const json = await resp.json();
                 if (json.errorCode == 0) {
                     const colorStr = `000000${color.toString(16)}`.slice(-6);
+                    const modemap = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[mode];
                     const comment = {
                         text: danmakuText,
-                        mode: mode,
+                        mode: modemap,
                         time: time,
                         style: {
                             font: `${window.ede.fontSize}px sans-serif`,
@@ -808,6 +811,10 @@
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
                     let sessionInfo = await getSessionInfo(sessionUrl, authorization);
+                    if (!sessionInfo[0].NowPlayingItem) {
+                        await initConfig();
+                        continue;
+                    }
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
                 showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
