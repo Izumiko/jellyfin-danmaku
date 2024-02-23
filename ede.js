@@ -887,10 +887,11 @@
             const disableOther = (danmakufilter & 8) === 8;
 
             let filterule = '';
-            if (disableDandan) {filterule += '^(?!\\[)\\[.{0,2}\\]';}
-            if (disableBilibili) {filterule += (filterule ? '|' : '') + '(?!\\[BiliBili\\])';}
-            if (disableGamer) {filterule += (filterule ? '|' : '') + '(?!\\[Gamer\\])';}
-            if (disableOther) {filterule += (filterule ? '|' : '') + '\\[(?!BiliBili|Gamer)[^\\]]{3,}\\]';}
+            if (disableDandan) { filterule += '!^\\[|\^\\[.{0,2}\\]'; }
+            if (disableBilibili) { filterule += (filterule ? '|' : '') + '\^\\[BiliBili\\]'; }
+            if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
+            if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
+            if (filterule === '') { filterule = '!.*'; }
             const danmakufilterule = new RegExp(filterule);
 
             return $obj
