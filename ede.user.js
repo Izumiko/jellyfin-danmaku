@@ -298,15 +298,16 @@
                         const account = document.getElementById('ddPlayAccount').value;
                         const password = document.getElementById('ddPlayPassword').value;
                         if (account && password) {
-                            const status = loginDanDanPlay(account, password);
-                            if (status) {
-                                document.getElementById('loginBtn').innerText = '登录✔️';
-                                let sleep = new Promise(resolve => setTimeout(resolve, 1500));
-                                sleep.then(() => {
-                                    document.getElementById('loginDialog').style.display = 'none';
-                                });
-                                modal.removeEventListener('keydown', event => event.stopPropagation(), true);
-                            }
+                            loginDanDanPlay(account, password).then(status => {
+                                if (status) {
+                                    document.getElementById('loginBtn').innerText = '登录✔️';
+                                    let sleep = new Promise(resolve => setTimeout(resolve, 1500));
+                                    sleep.then(() => {
+                                        document.getElementById('loginDialog').style.display = 'none';
+                                    });
+                                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                                }
+                            });
                         }
                     };
                     document.getElementById('cancelBtn').onclick = () => {
@@ -323,7 +324,7 @@
                     modal.style.display = 'none';
                     modal.innerHTML = `
                     <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.75;">
-                    <form id="sendDanmakuForm">
+                    <form id="sendDanmakuForm" autocomplete="off">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
                                 <span id="lbAnimeTitle" style="flex: auto;"></span>
@@ -338,8 +339,6 @@
                                 <label for="danmakuMode4">底部</label></div>
                                 <div><input type="radio" id="danmakuMode5" name="danmakuMode" value="5">
                                 <label for="danmakuMode5">顶部</label></div>
-                                <div><input type="radio" id="danmakuMode6" name="danmakuMode" value="6">
-                                <label for="danmakuMode6">逆向滚动</label></div>
                             </div>
                             <div style="display: flex;">
                                 <input style="width: 85%;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
@@ -354,6 +353,9 @@
                     document.getElementById('sendDanmakuForm').onsubmit = (e) => {
                         e.preventDefault();
                         const danmakuText = document.getElementById('danmakuText').value;
+                        if (danmakuText === '') {
+                            return;
+                        }
                         const _media = document.querySelector(mediaQueryStr);
                         const currentTime = _media.currentTime;
                         const mode = parseInt(document.querySelector('input[name="danmakuMode"]:checked').value);
@@ -562,8 +564,8 @@
             });
 
             if (resp.status != 200) {
-                showDebugInfo('登录失败 http error:' + resp.code);
-                alert('登录失败 http error:' + resp.code);
+                showDebugInfo('登录失败 http error:' + resp.status);
+                alert('登录失败 http error:' + resp.status);
                 return false;
             }
 
@@ -602,7 +604,7 @@
                         }
                     });
                     if (resp.status != 200) {
-                        showDebugInfo('刷新弹弹Play Token失败 http error:' + resp.code);
+                        showDebugInfo('刷新弹弹Play Token失败 http error:' + resp.status);
                         return;
                     }
                     const json = await resp.json();
@@ -620,12 +622,17 @@
 
         async function sendDanmaku(danmakuText, time, mode = 1, color = 0xffffff) {
             if (ddplayStatus.isLogin) {
+                if (!window.ede.episode_info.episodeId) {
+                    showDebugInfo('发送弹幕失败 未获取到弹幕信息');
+                    alert('请先获取弹幕信息');
+                    return;
+                }
                 const danmakuUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + window.ede.episode_info.episodeId;
                 const params = {
                     'time': time,
                     'mode': mode,
                     'color': color,
-                    'text': danmakuText
+                    'comment': danmakuText
                 };
                 const resp = await fetch(danmakuUrl, {
                     method: 'POST',
@@ -639,20 +646,20 @@
                 });
 
                 if (resp.status != 200) {
-                    showDebugInfo('发送弹幕失败 http error:' + resp.code);
+                    showDebugInfo('发送弹幕失败 http error:' + resp.status);
                     return;
                 }
                 const json = await resp.json();
                 if (json.errorCode == 0) {
-                    const colorStr = `000000${colorValue.toString(16)}`.slice(-6);
+                    const colorStr = `000000${color.toString(16)}`.slice(-6);
                     const comment = {
                         text: danmakuText,
                         mode: mode,
                         time: time,
                         style: {
-                            font: `${fontSize}px sans-serif`,
+                            font: `${window.ede.fontSize}px sans-serif`,
                             fillStyle: `#${colorStr}`,
-                            strokeStyle: color === '000000' ? '#fff' : '#000',
+                            strokeStyle: colorStr === '000000' ? '#fff' : '#000',
                             lineWidth: 2.0,
                         },
                     };
