@@ -892,13 +892,15 @@
                 const seriesUrl = baseUrl + '/Users/' + userId + '/Items/' + item.SeriesId;
                 const seriesInfo = await getSessionInfo(seriesUrl, authorization);
                 animeName = seriesInfo.OriginalTitle;
-                searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
-                animaInfo = await makeGetRequest(searchUrl)
-                    .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
-                    .catch((error) => {
-                        showDebugInfo('查询失败:', error);
-                        return null;
-                    });
+                if (animeName.length > 0) {
+                    searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
+                    animaInfo = await makeGetRequest(searchUrl)
+                        .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
+                        .catch((error) => {
+                            showDebugInfo('查询失败:', error);
+                            return null;
+                        });
+                }
             }
             if (animaInfo.animes.length == 0) {
                 showDebugInfo('弹幕查询无结果');
@@ -934,10 +936,12 @@
                 const initialep = match ? parseInt(match[1]) : 1;
                 episode = (parseInt(episode) < initialep) ? parseInt(episode) - 1 : (parseInt(episode) - initialep);
             }
+            
+            const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${season}E${episode + 1}` : (animaInfo.animes[selecAnime_id].type);
             let episodeInfo = {
                 episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
                 animeTitle: animaInfo.animes[selecAnime_id].animeTitle,
-                episodeTitle: animaInfo.animes[selecAnime_id].type === 'tvseries' ? animaInfo.animes[selecAnime_id].episodes[episode].episodeTitle : (animaInfo.animes[selecAnime_id].type === 'movie' ? '剧场版' : 'Other'),
+                episodeTitle: epTitlePrefix + ' ' + animaInfo.animes[selecAnime_id].episodes[episode].episodeTitle,
             };
             window.localStorage.setItem(_episode_key, JSON.stringify(episodeInfo));
             window.ede.episode_info_str = episodeInfo.animeTitle + '\n' + episodeInfo.episodeTitle;
