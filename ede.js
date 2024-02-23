@@ -887,7 +887,7 @@
             const disableOther = (danmakufilter & 8) === 8;
 
             let filterule = '';
-            if (disableDandan) { filterule += '!^\\[|\^\\[.{0,2}\\]'; }
+            if (disableDandan) { filterule += '^(?!\\[)|\^.{0,3}\\]'; }
             if (disableBilibili) { filterule += (filterule ? '|' : '') + '\^\\[BiliBili\\]'; }
             if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
             if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
@@ -895,7 +895,9 @@
             const danmakufilterule = new RegExp(filterule);
 
             return $obj
-                .filter(($comment) => !danmakufilterule.test($comment.p.split(',').pop()))
+                .filter(($comment) => {
+                    return !danmakufilterule.test($comment.p.split(',').pop());
+                })
                 .map(($comment) => {
                     const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
                     const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
