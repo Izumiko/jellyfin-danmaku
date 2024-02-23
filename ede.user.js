@@ -318,7 +318,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%;">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.75;">
                     <form id="sendDanmakuForm">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -326,6 +326,16 @@
                             </div>
                             <div style="display: flex;">
                                 <span id="lbEpisodeTitle" style="flex: auto;"></span>
+                            </div>
+                            <div style="display: flex;">
+                                <div><input type="radio" id="danmakuMode1" name="danmakuMode" value="1" checked>
+                                <label for="danmakuMode1">滚动</label></div>
+                                <div><input type="radio" id="danmakuMode4" name="danmakuMode" value="4">
+                                <label for="danmakuMode4">底部</label></div>
+                                <div><input type="radio" id="danmakuMode5" name="danmakuMode" value="5">
+                                <label for="danmakuMode5">顶部</label></div>
+                                <div><input type="radio" id="danmakuMode6" name="danmakuMode" value="6">
+                                <label for="danmakuMode6">逆向滚动</label></div>
                             </div>
                             <div style="display: flex;">
                                 <input style="width: 85%;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
@@ -342,7 +352,8 @@
                         const danmakuText = document.getElementById('danmakuText').value;
                         const _media = document.querySelector(mediaQueryStr);
                         const currentTime = _media.currentTime;
-                        sendDanmaku(danmakuText, currentTime);
+                        const mode = parseInt(document.querySelector('input[name="danmakuMode"]:checked').value);
+                        sendDanmaku(danmakuText, currentTime, mode);
                         modal.style.display = 'none';
                         modal.removeEventListener('keydown', event => event.stopPropagation(), true);
                     };
