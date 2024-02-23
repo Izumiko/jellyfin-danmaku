@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.28
+// @version      1.29
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -877,56 +877,43 @@
         }
 
         function danmakuParser($obj) {
-    const { fontSize, danmakufilter } = window.ede;
-    showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
-    showDebugInfo(`字号大小: ${fontSize}`);
+            const { fontSize, danmakufilter } = window.ede;
+            showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
+            showDebugInfo(`字号大小: ${fontSize}`);
 
-    const disableBilibili = (danmakufilter & 1) === 1;
-    const disableGamer = (danmakufilter & 2) === 2;
-    const disableDandan = (danmakufilter & 4) === 4;
-    const disableOther = (danmakufilter & 8) === 8;
+            const disableBilibili = (danmakufilter & 1) === 1;
+            const disableGamer = (danmakufilter & 2) === 2;
+            const disableDandan = (danmakufilter & 4) === 4;
+            const disableOther = (danmakufilter & 8) === 8;
 
-    let rule = '';
+            let filterule = '';
+            if (disableDandan) {filterule += '^(?!\\[)\\[.{0,2}\\]';}
+            if (disableBilibili) {filterule += (filterule ? '|' : '') + '(?!\\[BiliBili\\])';}
+            if (disableGamer) {filterule += (filterule ? '|' : '') + '(?!\\[Gamer\\])';}
+            if (disableOther) {filterule += (filterule ? '|' : '') + '\\[(?!BiliBili|Gamer)[^\\]]{3,}\\]';}
+            const danmakufilterule = new RegExp(filterule);
 
-    if (disableDandan) {
-        rule += '^(?!\\[)\\[.{0,2}\\]';
-    }
-    
-    if (disableBilibili) {
-        rule += (rule ? '|' : '') + '(?!\\[BiliBili\\])';
-    }
+            return $obj
+                .filter(($comment) => !danmakufilterule.test($comment.p.split(',').pop()))
+                .map(($comment) => {
+                    const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
+                    const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
+                    if (!mode) return null;
 
-    if (disableGamer) {
-        rule += (rule ? '|' : '') + '(?!\\[Gamer\\])';
-    }
-
-    if (disableOther) {
-        rule += (rule ? '|' : '') + '\\[(?!BiliBili|Gamer)[^\\]]{3,}\\]';
-    }
-
-    const danmakufilterule = new RegExp(rule);
-
-    return $obj
-        .filter(($comment) => !danmakufilterule.test($comment.p.split(',').pop()))
-        .map(($comment) => {
-            const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-            const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
-            if (!mode) return null;
-
-            const color = `000000${colorValue.toString(16)}`.slice(-6);
-            return {
-                text: $comment.m,
-                mode,
-                time,
-                style: {
-                    font: `${fontSize}px sans-serif`,
-                    fillStyle: `#${color}`,
-                    strokeStyle: color === '000000' ? '#fff' : '#000',
-                    lineWidth: 2.0,
-                },
-            };
-        });
-}
+                    const color = `000000${colorValue.toString(16)}`.slice(-6);
+                    return {
+                        text: $comment.m,
+                        mode,
+                        time,
+                        style: {
+                            font: `${fontSize}px sans-serif`,
+                            fillStyle: `#${color}`,
+                            strokeStyle: color === '000000' ? '#fff' : '#000',
+                            lineWidth: 2.0,
+                        },
+                    };
+                });
+        }
 
         function list2string($obj2) {
             const $animes = $obj2.animes;
