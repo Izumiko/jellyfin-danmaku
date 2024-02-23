@@ -33,6 +33,7 @@
         if (!baseUrl) {
             baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
         }
+        let ddplayStatus = localStorage.getItem('ddplayStatus') ? JSON.parse(localStorage.getItem('ddplayStatus')) : {isLogin: false, token: '', tokenExpire: 0};
         const check_interval = 200;
         // 0:当前状态关闭 1:当前状态打开
         const danmaku_icons = ['comments_disabled', 'comment'];
@@ -40,6 +41,7 @@
         const source_icon = 'library_add';
         const log_icons = ['code_off', 'code'];
         const settings_icon = 'tune'
+        const send_icon = 'send';
         const spanClass = 'xlargePaperIconButton material-icons ';
         const buttonOptions = {
             class: 'paper-icon-button-light',
@@ -81,7 +83,7 @@
         };
 
         const sourceButtonOpts = {
-            title: '临时增加弹幕源',
+            title: '增加弹幕源',
             id: 'addDanmakuSource',
             class: source_icon,
             onclick: () => {
@@ -93,6 +95,11 @@
                             showDebugInfo('弹幕就位');
                         });
                     });
+
+                    // 如果已经登录，把弹幕源提交给弹弹Play
+                    if (ddplayStatus.isLogin) {
+                        postRelatedSource(source);
+                    }
                 }
             },
         }
@@ -172,8 +179,8 @@
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                            <button id="saveSettings">保存设置</button>
-                            <button id="cancelSettings">取消</button>
+                            <button id="saveSettings" class="raised button-submit block btnSave formDialogFooterItem emby-button">保存设置</button>
+                            <button id="cancelSettings" class="raised button-cancel block btnCancel formDialogFooterItem emby-button">取消</button>
                         </div>
                     </div>`;
                 document.body.appendChild(modal);
@@ -247,6 +254,113 @@
                     }
                 };
                 document.getElementById('cancelSettings').onclick = closeModal;
+            }
+        };
+
+        const sendDanmakuOpts = {
+            title: '发送弹幕',
+            id: 'sendDanmaku',
+            class: send_icon,
+            onclick: () => {
+                // 登录窗口
+                if (!document.getElementById('loginDialog')) {
+                    const modal = document.createElement('div');
+                    modal.id = 'loginDialog';
+                    modal.className = 'dialogContainer';
+                    modal.style.display = 'none';
+                    modal.innerHTML = `
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                    <form id="loginForm">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex;">
+                                <span style="flex: auto;">请输入弹弹Play账号密码</span>
+                            </div>
+                            <div style="display: flex;">
+                                <span style="flex: auto;">账号:</span>
+                                <input id="ddPlayAccount" placeholder="账号" value="" style="width: 80%;" />
+                            </div>
+                            <div style="display: flex;">
+                                <span style="flex: auto;">密码:</span>
+                                <input id="ddPlayPassword" placeholder="密码" value="" style="width: 80%;" type="password" />
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <button id="loginBtn" class="raised button-submit block formDialogFooterItem emby-button" type="submit">登录</button>
+                            <button id="cancelBtn" class="raised button-cancel block formDialogFooterItem emby-button" type="button">取消</button>
+                        </div>
+                    </form>
+                    </div>
+                    `;
+                    document.body.appendChild(modal);
+
+                    document.getElementById('loginForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        const account = document.getElementById('ddPlayAccount').value;
+                        const password = document.getElementById('ddPlayPassword').value;
+                        if (account && password) {
+                            const status = loginDanDanPlay(account, password);
+                            if (status) {
+                                document.getElementById('loginDialog').style.display = 'none';
+                                modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                            }
+                        }
+                    };
+                    document.getElementById('cancelBtn').onclick = () => {
+                        document.getElementById('loginDialog').style.display = 'none';
+                        modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    };
+                }
+
+                // 发送窗口
+                if (!document.getElementById('sendDanmakuDialog')) {
+                    const modal = document.createElement('div');
+                    modal.id = 'sendDanmakuDialog';
+                    modal.className = 'dialogContainer';
+                    modal.style.display = 'none';
+                    modal.innerHTML = `
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%;">
+                    <form id="sendDanmakuForm">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex;">
+                                <span id="lbAnimeTitle" style="flex: auto;"></span>
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbEpisodeTitle" style="flex: auto;"></span>
+                            </div>
+                            <div style="display: flex;">
+                                <input style="width: 85%;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
+                                <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em;" type="submit">发送</button>
+                                <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em;" type="button">取消</button>
+                            </div>
+                        </div>
+                    </form>
+                    </div>
+                    `;
+                    document.body.appendChild(modal);
+                    document.getElementById('sendDanmakuForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        const danmakuText = document.getElementById('danmakuText').value;
+                        const _media = document.querySelector(mediaQueryStr);
+                        const currentTime = _media.currentTime;
+                        sendDanmaku(danmakuText, currentTime);
+                        modal.style.display = 'none';
+                        modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    };
+                    document.getElementById('cancelSendDanmakuBtn').onclick = () => {
+                        modal.style.display = 'none';
+                        modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    };
+                }
+
+                if (ddplayStatus.isLogin) {
+                    document.getElementById('sendDanmakuDialog').style.display = 'block';
+                    document.getElementById('sendDanmakuDialog').addEventListener('keydown', event => event.stopPropagation(), true);
+                    document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${window.ede.episode_info.animeTitle}`;
+                    document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${window.ede.episode_info.episodeTitle}`;
+                } else {
+                    document.getElementById('loginDialog').style.display = 'block';
+                    document.getElementById('loginDialog').addEventListener('keydown', event => event.stopPropagation(), true);
+                }
             }
         };
 
@@ -386,6 +500,8 @@
             // 日志开关
             logButtonOpts.class = log_icons[window.ede.logSwitch];
             menubar.appendChild(createButton(logButtonOpts));
+            // 发送弹幕
+            menubar.appendChild(createButton(sendDanmakuOpts));
 
             let _container = null;
             document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
@@ -410,6 +526,161 @@
 
             showDebugInfo('UI初始化完成');
             reloadDanmaku('init');
+            refreshDanDanPlayToken();
+        }
+
+        async function loginDanDanPlay(account, passwd) {
+            const loginUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/login'
+            const params = {
+                'userName': account,
+                'password': passwd
+            };
+
+            const resp = await fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': navigator.userAgent
+                },
+                body: JSON.stringify(params)
+            });
+
+            if (resp.status != 200) {
+                showDebugInfo('登录失败 http error:' + resp.code);
+                alert('登录失败 http error:' + resp.code);
+                return false;
+            }
+
+            const json = await resp.json();
+            if (json.errorCode != 0) {
+                showDebugInfo('登录失败 ' + json.errorMessage);
+                alert('登录失败 ' + json.errorMessage);
+                return false;
+            }
+
+            ddplayStatus.isLogin = true;
+            ddplayStatus.token = json.token;
+            ddplayStatus.tokenExpire = json.tokenExpireTime;
+            window.localStorage.setItem('ddplayStatus', JSON.stringify(ddplayStatus));
+            showDebugInfo('登录成功');
+            return true;
+        }
+
+        async function refreshDanDanPlayToken() {
+            if (ddplayStatus.isLogin) {
+                const now = Math.floor(Date.now() / 1000);
+                const expire = new Date(ddplayStatus.tokenExpire).getTime() / 1000;
+                if (expire < now) {
+                    ddplayStatus.isLogin = false;
+                    return;
+                } else if (expire - now > 259200) {
+                    return;
+                } else { // refresh token before 3 days
+                    const refreshUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/login/renew';
+                    const resp = await fetch(refreshUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': navigator.userAgent,
+                            'Authorization': 'Bearer ' + ddplayStatus.token
+                        }
+                    });
+                    if (resp.status != 200) {
+                        showDebugInfo('刷新弹弹Play Token失败 http error:' + resp.code);
+                        return;
+                    }
+                    const json = await resp.json();
+                    if (json.errorCode == 0) {
+                        ddplayStatus.isLogin = true;
+                        ddplayStatus.token = json.token;
+                        ddplayStatus.tokenExpire = json.tokenExpireTime;
+                    } else {
+                        showDebugInfo('刷新弹弹Play Token失败');
+                        showDebugInfo(json.errorMessage);
+                    }
+                }
+            }
+        }
+
+        async function sendDanmaku(danmakuText, time, mode = 1, color = 0xffffff) {
+            if (ddplayStatus.isLogin) {
+                const danmakuUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + window.ede.episode_info.episodeId;
+                const params = {
+                    'time': time,
+                    'mode': mode,
+                    'color': color,
+                    'text': danmakuText
+                };
+                const resp = await fetch(danmakuUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'User-Agent': navigator.userAgent,
+                        'Authorization': 'Bearer ' + ddplayStatus.token
+                    },
+                    body: JSON.stringify(params)
+                });
+
+                if (resp.status != 200) {
+                    showDebugInfo('发送弹幕失败 http error:' + resp.code);
+                    return;
+                }
+                const json = await resp.json();
+                if (json.errorCode == 0) {
+                    const colorStr = `000000${colorValue.toString(16)}`.slice(-6);
+                    const comment = {
+                        text: danmakuText,
+                        mode: mode,
+                        time: time,
+                        style: {
+                            font: `${fontSize}px sans-serif`,
+                            fillStyle: `#${colorStr}`,
+                            strokeStyle: color === '000000' ? '#fff' : '#000',
+                            lineWidth: 2.0,
+                        },
+                    };
+                    window.ede.danmaku.emit(comment);
+                    showDebugInfo('发送弹幕成功');
+                } else {
+                    showDebugInfo('发送弹幕失败');
+                    showDebugInfo(json.errorMessage);
+                    alert('发送失败：' + json.errorMessage);
+                }
+            }
+        }
+
+        async function postRelatedSource(relatedUrl) {
+            const url = apiPrefix + 'https://api.dandanplay.net/api/v2/related/' + window.ede.episode_info.episodeId;
+            const params = {
+                'episodeId': window.ede.episode_info.episodeId,
+                'url': relatedUrl,
+                'shift': 0
+            }
+
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': navigator.userAgent,
+                    'Authorization': 'Bearer ' + ddplayStatus.token
+                },
+                body: JSON.stringify(params)
+            });
+            if (resp.status != 200) {
+                showDebugInfo('发送相关链接失败 http error:' + resp.code);
+                return;
+            }
+            const json = await resp.json();
+            if (json.errorCode == 0) {
+                showDebugInfo('发送相关链接成功');
+            } else {
+                showDebugInfo('发送相关链接失败');
+                showDebugInfo(json.errorMessage);
+                alert('弹幕源提交弹弹Play失败：' + json.errorMessage);
+            }
         }
 
         async function showDebugInfo(msg) {
