@@ -277,11 +277,11 @@
                             </div>
                             <div style="display: flex;">
                                 <span style="flex: auto;">账号:</span>
-                                <input id="ddPlayAccount" placeholder="账号" value="" style="width: 80%;" />
+                                <input id="ddPlayAccount" placeholder="账号" value="" style="width: 70%;" />
                             </div>
                             <div style="display: flex;">
                                 <span style="flex: auto;">密码:</span>
-                                <input id="ddPlayPassword" placeholder="密码" value="" style="width: 80%;" type="password" />
+                                <input id="ddPlayPassword" placeholder="密码" value="" style="width: 70%;" type="password" />
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
@@ -300,7 +300,11 @@
                         if (account && password) {
                             const status = loginDanDanPlay(account, password);
                             if (status) {
-                                document.getElementById('loginDialog').style.display = 'none';
+                                document.getElementById('loginBtn').innerText = '登录✔️';
+                                let sleep = new Promise(resolve => setTimeout(resolve, 1500));
+                                sleep.then(() => {
+                                    document.getElementById('loginDialog').style.display = 'none';
+                                });
                                 modal.removeEventListener('keydown', event => event.stopPropagation(), true);
                             }
                         }
