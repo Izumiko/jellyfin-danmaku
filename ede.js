@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.32
+// @version      1.31
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -839,6 +839,7 @@
         async function initConfig() {
             showDebugInfo('获取服务器信息&Token');
             const serversInfo = JSON.parse(localStorage.getItem('jellyfin_credentials')).Servers;
+            
             let token = serversInfo[0].AccessToken;
             userId = serversInfo[0].UserId;
 
@@ -852,6 +853,10 @@
             if (!deviceId) {
                 deviceId = sessionInfo[0].DeviceId;
                 localStorage.setItem('_deviceId2', deviceId);
+            }
+            if (!sessionInfo || !sessionInfo[0] || !sessionInfo[0].Client|| !sessionInfo[0].DeviceName) {
+                showDebugInfo('Token已过期请刷新页面');
+                return 'TokenError';
             }
 
             let clientName = sessionInfo[0].Client;
@@ -871,10 +876,13 @@
                     let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
                     let sessionInfo = await getSessionInfo(sessionUrl, authorization);
                     if (!sessionInfo || !sessionInfo[0] || !sessionInfo[0].NowPlayingItem) {
-                        await initConfig();
+                        const initConfigResult = await initConfig();
+                        if (initConfigResult === 'TokenError') {
+                            return;
+                        }
                         await new Promise(resolve => setTimeout(resolve, 150));
                         continue;
-                    }
+                    }                    
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
                 showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
