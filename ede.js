@@ -874,7 +874,7 @@
                         await initConfig();
                         await new Promise(resolve => setTimeout(resolve, 150));
                         continue;
-                    }                    
+                    }
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
                 showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
