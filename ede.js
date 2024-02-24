@@ -135,7 +135,7 @@
                 modal.id = 'danmakuModal';
                 modal.className = 'dialogContainer';
                 modal.innerHTML = `
-                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.9;">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
                                 <span id="lbopacity" style="flex: auto;">透明度:</span>
@@ -269,7 +269,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.9;">
                     <form id="loginForm">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -323,7 +323,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.75;">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.8;">
                     <form id="sendDanmakuForm" autocomplete="off">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -599,6 +599,7 @@
             });
             let span = document.createElement('span');
             span.id = 'debugInfo';
+            span.style.fontSize = '84%';
             span.style.position = 'absolute';
             span.style.overflow = 'auto';
             span.style.zIndex = '99';
