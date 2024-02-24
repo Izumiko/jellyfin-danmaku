@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.31
+// @version      1.32
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -21,7 +21,6 @@
     if (document.querySelector('meta[name="application-name"]').content == 'Jellyfin') {
         // ------ configs start------
         let deviceId = localStorage.getItem('_deviceId2');
-        const serversInfo = JSON.parse(localStorage.getItem('jellyfin_credentials')).Servers;
         let authorization = '';
         let userId = '';
         let isInTampermonkey = true;
@@ -839,6 +838,7 @@
 
         async function initConfig() {
             showDebugInfo('获取服务器信息&Token');
+            const serversInfo = JSON.parse(localStorage.getItem('jellyfin_credentials')).Servers;
             let token = serversInfo[0].AccessToken;
             userId = serversInfo[0].UserId;
 
