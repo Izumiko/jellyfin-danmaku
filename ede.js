@@ -135,7 +135,7 @@
                 modal.id = 'danmakuModal';
                 modal.className = 'dialogContainer';
                 modal.innerHTML = `
-                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.9;">
+                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity:0.8;">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
                                 <span id="lbopacity" style="flex: auto;">透明度:</span>
@@ -269,7 +269,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.9;">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity:0.8;">
                     <form id="loginForm">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -323,7 +323,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.8;">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity:0.8;">
                     <form id="sendDanmakuForm" autocomplete="off">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -599,7 +599,6 @@
             });
             let span = document.createElement('span');
             span.id = 'debugInfo';
-            span.style.fontSize = '84%';
             span.style.position = 'absolute';
             span.style.overflow = 'auto';
             span.style.zIndex = '99';
@@ -871,11 +870,11 @@
                     await new Promise((resolve) => setTimeout(resolve, 200));
                     let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
                     let sessionInfo = await getSessionInfo(sessionUrl, authorization);
-                    if (!sessionInfo[0].NowPlayingItem) {
+                    if (!sessionInfo || !sessionInfo[0] || !sessionInfo[0].NowPlayingItem) {
                         await initConfig();
                         await new Promise(resolve => setTimeout(resolve, 150));
                         continue;
-                    }
+                    }                    
                     playingInfo = sessionInfo[0].NowPlayingItem;
                 }
                 showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
