@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.31
+// @version      1.32
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -20,19 +20,11 @@
     'use strict';
     if (document.querySelector('meta[name="application-name"]').content == 'Jellyfin') {
         // ------ configs start------
-        let deviceId = localStorage.getItem('_deviceId2');
-        const serversInfo = JSON.parse(localStorage.getItem('jellyfin_credentials')).Servers;
-        let authorization = '';
-        let userId = '';
         let isInTampermonkey = true;
-        let apiPrefix = 'https://ddplay-api.930524.xyz/cors/';
+        const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
+        let apiPrefix = corsProxy;
         let logQueue = [];
         let logLines = 0;
-        const jellyfinCredentials = JSON.parse(localStorage.getItem('jellyfin_credentials'));
-        let baseUrl = jellyfinCredentials.Servers[0].ManualAddress;
-        if (!baseUrl) {
-            baseUrl = window.location.origin + window.location.pathname.replace('/web/index.html', '');
-        }
         let ddplayStatus = localStorage.getItem('ddplayStatus') ? JSON.parse(localStorage.getItem('ddplayStatus')) : {isLogin: false, token: '', tokenExpire: 0};
         const check_interval = 200;
         // 0:当前状态关闭 1:当前状态打开
@@ -323,7 +315,7 @@
                     modal.className = 'dialogContainer';
                     modal.style.display = 'none';
                     modal.innerHTML = `
-                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); width: 40%; opacity: 0.75;">
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; bottom: 0; transform: translate(-50%, -50%); width: 40%; opacity: 0.8;">
                     <form id="sendDanmakuForm" autocomplete="off">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex;">
@@ -341,9 +333,9 @@
                                 <label for="danmakuMode5">顶部</label></div>
                             </div>
                             <div style="display: flex;">
-                                <input style="width: 85%;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
-                                <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em;" type="submit">发送</button>
-                                <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em;" type="button">取消</button>
+                                <input style="flex-grow: 1;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
+                                <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em .5em;" type="submit">发送</button>
+                                <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em .5em;" type="button">取消</button>
                             </div>
                         </div>
                     </form>
@@ -558,7 +550,7 @@
         }
 
         async function loginDanDanPlay(account, passwd) {
-            const loginUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/login'
+            const loginUrl = corsProxy + 'https://api.dandanplay.net/api/v2/login'
             const params = {
                 'userName': account,
                 'password': passwd
@@ -605,7 +597,7 @@
                 } else if (expire - now > 259200) {
                     return;
                 } else { // refresh token before 3 days
-                    const refreshUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/login/renew';
+                    const refreshUrl = corsProxy + 'https://api.dandanplay.net/api/v2/login/renew';
                     const resp = await fetch(refreshUrl, {
                         method: 'GET',
                         headers: {
@@ -638,7 +630,7 @@
                     alert('请先获取弹幕信息');
                     return;
                 }
-                const danmakuUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + window.ede.episode_info.episodeId;
+                const danmakuUrl = corsProxy + 'https://api.dandanplay.net/api/v2/comment/' + window.ede.episode_info.episodeId;
                 const params = {
                     'time': time,
                     'mode': mode,
@@ -686,7 +678,7 @@
         }
 
         async function postRelatedSource(relatedUrl) {
-            const url = apiPrefix + 'https://api.dandanplay.net/api/v2/related/' + window.ede.episode_info.episodeId;
+            const url = corsProxy + 'https://api.dandanplay.net/api/v2/related/' + window.ede.episode_info.episodeId;
             const params = {
                 'episodeId': window.ede.episode_info.episodeId,
                 'url': relatedUrl,
@@ -750,79 +742,22 @@
             console.log(msg);
         }
 
-        async function getSessionInfo(sessionUrl, Authorization) {
-            let sessionInfo = null;
-            if (isInTampermonkey) {
-                const result = await GM.xmlHttpRequest({
-                    method: 'GET',
-                    url: sessionUrl,
-                    headers: {
-                        Accept: 'application/json',
-                        Authorization: Authorization,
-                    },
-                });
-                sessionInfo = JSON.parse(result.responseText);
-            } else {
-                sessionInfo = await fetch(sessionUrl, {
-                    credentials: 'include',
-                    headers: {
-                        Accept: 'application/json',
-                        Authorization: Authorization,
-                    },
-                    method: 'GET',
-                    mode: 'cors',
-                }).then((res) => res.json());
-            }
-
-            return sessionInfo;
-        }
-
-        async function initConfig() {
-            showDebugInfo('获取服务器信息&Token');
-            let token = serversInfo[0].AccessToken;
-            userId = serversInfo[0].UserId;
-
-            let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId
-            if (deviceId) {
-                sessionUrl += '&DeviceId=' + deviceId;
-            }
-
-            let sessionInfo = await getSessionInfo(sessionUrl, "MediaBrowser Token=\"" + token + "\"");
-
-            if (!deviceId) {
-                deviceId = sessionInfo[0].DeviceId;
-                localStorage.setItem('_deviceId2', deviceId);
-            }
-
-            let clientName = sessionInfo[0].Client;
-            let deviceName = sessionInfo[0].DeviceName;
-            let serverVersion = sessionInfo[0].ApplicationVersion;
-            // Ref: https://gist.github.com/nielsvanvelzen/ea047d9028f676185832e51ffaf12a6f
-            authorization = "MediaBrowser Client=\"" + clientName + "\", Device=\"" + deviceName + "\", DeviceId=\"" + deviceId + "\", Version=\"" + serverVersion + "\", Token=\"" + token + "\"";
-            return deviceId;
-        }
-
-
         async function getEmbyItemInfo() {
-            if (authorization.length > 0 && userId.length > 0 && deviceId.length > 0) {
-                let playingInfo = null;
-                while (!playingInfo) {
-                    await new Promise((resolve) => setTimeout(resolve, 200));
-                    let sessionUrl = baseUrl + '/Sessions?ControllableByUserId=' + userId + '&deviceId=' + deviceId;
-                    let sessionInfo = await getSessionInfo(sessionUrl, authorization);
-                    if (!sessionInfo[0].NowPlayingItem) {
-                        await initConfig();
-                        await new Promise(resolve => setTimeout(resolve, 150));
-                        continue;
-                    }
-                    playingInfo = sessionInfo[0].NowPlayingItem;
+            let playingInfo = null;
+            while (!playingInfo) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                let sessionInfo = await ApiClient.getSessions({
+                    userId: ApiClient.getCurrentUserId(),
+                    deviceId: ApiClient.deviceId(),
+                });
+                if (!sessionInfo[0].NowPlayingItem) {
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                    continue;
                 }
-                showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
-                return playingInfo;
-            } else {
-                showDebugInfo('等待Config');
-                await initConfig();
+                playingInfo = sessionInfo[0].NowPlayingItem;
             }
+            showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
+            return playingInfo;
         }
 
         function makeGetRequest(url) {
@@ -903,8 +838,7 @@
                     return null;
                 });
             if (animaInfo.animes.length == 0) {
-                const seriesUrl = baseUrl + '/Users/' + userId + '/Items/' + item.SeriesId;
-                const seriesInfo = await getSessionInfo(seriesUrl, authorization);
+                const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId);
                 animeName = seriesInfo.OriginalTitle;
                 if (animeName.length > 0) {
                     searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
@@ -1024,6 +958,8 @@
             showDebugInfo(`弹幕速度：${window.ede.speed}`);
             showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
             showDebugInfo(`弹幕来源过滤：${window.ede.danmakufilter}`);
+            showDebugInfo(`弹幕字号：${window.ede.fontSize}`);
+            showDebugInfo(`屏幕分辨率：${window.screen.width}x${window.screen.height}`);
 
             const waitForMediaContainer = async () => {
                 while (!document.querySelector(mediaContainerQueryStr)) {
@@ -1207,8 +1143,6 @@
 
         function danmakuParser($obj) {
             const { fontSize, danmakufilter } = window.ede;
-            showDebugInfo(`Screen: ${window.screen.width}x${window.screen.height}`);
-            showDebugInfo(`字号大小: ${fontSize}`);
 
             const disableBilibili = (danmakufilter & 1) === 1;
             const disableGamer = (danmakufilter & 2) === 2;
@@ -1290,7 +1224,7 @@
                 window.ede = new EDE();
 
                 (async () => {
-                    while (!(await initConfig())) {
+                    while (!(await ApiClient.getSessions())) {
                         await new Promise((resolve) => setTimeout(resolve, 200));
                     }
 
