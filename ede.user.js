@@ -708,29 +708,33 @@
                 await new Promise((resolve) => setTimeout(resolve, 200));
                 span = document.getElementById('debugInfo');
             }
+            let msgStr = msg;
+            if (typeof msg !== 'string') {
+                msgStr = JSON.stringify(msg);
+            }
             if (logQueue.length > 0) {
                 let lastLine = logQueue[logQueue.length - 1];
                 let baseLine = lastLine.replace(/ X\d+$/, '');
-                if (baseLine === msg) {
+                if (baseLine === msgStr) {
                     let count = 2;
                     if (lastLine.match(/ X(\d+)$/)) {
                         count = parseInt(lastLine.match(/ X(\d+)$/)[1]) + 1;
                     }
-                    msg = `${msg} X${count}`;
+                    msgStr = `${msgStr} X${count}`;
                     logQueue.pop();
                     logLines--
                 }
             }
             if (logLines < 15) {
                 logLines++;
-                logQueue.push(msg);
+                logQueue.push(msgStr);
             } else {
                 logQueue.shift();
-                logQueue.push(msg);
+                logQueue.push(msgStr);
             }
-            span.innerText = '';
+            span.innerHTML = '';
             logQueue.forEach((line) => {
-                span.innerText += line + '\n';
+                span.innerHTML += line + '<br/>';
             });
             console.log(msg);
         }
@@ -831,7 +835,7 @@
                     return null;
                 });
             if (animaInfo.animes.length == 0) {
-                const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId);
+                const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId || item.Id);
                 animeName = seriesInfo.OriginalTitle;
                 if (animeName.length > 0) {
                     searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
@@ -1037,6 +1041,7 @@
                                 if (removedNode.className && removedNode.classList.contains('videoPlayerContainer')) {
                                     console.log('Video Removed');
                                     window.ede.loading = false;
+                                    document.getElementById('danmakuInfoTitle')?.remove();
                                     return;
                                 }
                             }
@@ -1046,6 +1051,17 @@
 
                 window.obVideo.observe(document.body, { childList: true });
             }
+        }
+
+        function displayDanmakuInfo(info) {
+            let infoContainer = document.getElementById('danmakuInfoTitle');
+            if (!infoContainer) {
+                infoContainer = document.createElement('div');
+                infoContainer.id = 'danmakuInfoTitle';
+                infoContainer.className = 'pageTitle';
+                document.querySelector('div.skinHeader').appendChild(infoContainer);
+            }
+            infoContainer.innerText = `弹幕匹配信息：${info.animeTitle} - ${info.episodeTitle}`;
         }
 
         function reloadDanmaku(type = 'check') {
@@ -1068,6 +1084,7 @@
                             reject('当前播放视频未变动');
                         } else {
                             window.ede.episode_info = info;
+                            displayDanmakuInfo(info);
                             resolve(info.episodeId);
                         }
                     });
