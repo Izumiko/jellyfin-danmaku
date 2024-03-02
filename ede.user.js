@@ -22,7 +22,7 @@
         // ------ configs start------
         let isInTampermonkey = true;
         const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
-        let apiPrefix = corsProxy;
+        let apiPrefix = '';
         let logQueue = [];
         let logLines = 0;
         let ddplayStatus = localStorage.getItem('ddplayStatus') ? JSON.parse(localStorage.getItem('ddplayStatus')) : {isLogin: false, token: '', tokenExpire: 0};
@@ -104,7 +104,6 @@
                     showDebugInfo('正在加载,请稍后再试');
                     return;
                 }
-                // showDebugInfo('切换日志开关');
                 window.ede.logSwitch = (window.ede.logSwitch + 1) % 2;
                 window.localStorage.setItem('logSwitch', window.ede.logSwitch);
                 document.querySelector('#displayLog').children[0].className = spanClass + log_icons[window.ede.logSwitch]
@@ -396,8 +395,7 @@
         // 检测是否在Tampermonkey中运行
         if (typeof GM_xmlhttpRequest === 'undefined') {
             isInTampermonkey = false;
-        } else {
-            apiPrefix = '';
+            apiPrefix = corsProxy;
         }
 
         class EDE {
@@ -470,12 +468,6 @@
                 }
                 return;
             }
-            // if (!container.getAttribute('ede_listening')) {
-            //     showDebugInfo('正在初始化Listener');
-            //     container.setAttribute('ede_listening', true);
-            //     container.addEventListener('play', reloadDanmaku);
-            //     showDebugInfo('Listener初始化完成');
-            // }
         }
 
         function initUI() {
@@ -540,6 +532,7 @@
             span.style.color = '#fff';
             span.style.padding = '20px';
             span.style.borderRadius = '.3em';
+            span.style.maxHeight = '50%'
             window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
             _container.appendChild(span);
 
