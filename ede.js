@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.33
+// @version      1.34
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -25,14 +25,14 @@
     let isInTampermonkey = true;
     const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
     let apiPrefix = '';
-    let ddplayStatus = localStorage.getItem('ddplayStatus') ? JSON.parse(localStorage.getItem('ddplayStatus')) : {isLogin: false, token: '', tokenExpire: 0};
+    let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
     const danmaku_icons = ['comments_disabled', 'comment'];
     const search_icon = 'find_replace';
     const source_icon = 'library_add';
     const log_icons = ['code_off', 'code'];
-    const settings_icon = 'tune'
+    const settings_icon = 'tune';
     const send_icon = 'send';
     const spanClass = 'xlargePaperIconButton material-icons ';
     const buttonOptions = {
@@ -43,6 +43,7 @@
     const uiQueryStr = '.osdTimeText';
     const mediaContainerQueryStr = "div[data-type='video-osd']";
     const mediaQueryStr = 'video';
+
     const displayButtonOpts = {
         title: '弹幕开关',
         id: 'displayDanmaku',
@@ -60,6 +61,7 @@
             }
         },
     };
+
     const searchButtonOpts = {
         title: '搜索弹幕',
         id: 'searchDanmaku',
@@ -94,7 +96,7 @@
                 }
             }
         },
-    }
+    };
 
     const logButtonOpts = {
         title: '日志开关',
@@ -106,7 +108,7 @@
             }
             window.ede.logSwitch = (window.ede.logSwitch + 1) % 2;
             window.localStorage.setItem('logSwitch', window.ede.logSwitch);
-            document.querySelector('#displayLog').children[0].className = spanClass + log_icons[window.ede.logSwitch]
+            document.querySelector('#displayLog').children[0].className = spanClass + log_icons[window.ede.logSwitch];
             let logSpan = document.querySelector('#debugInfo');
             if (logSpan) {
                 window.ede.logSwitch == 1 ? (logSpan.style.display = 'block') && showDebugInfo('开启日志显示') : (logSpan.style.display = 'none');
@@ -126,7 +128,7 @@
             modal.id = 'danmakuModal';
             modal.className = 'dialogContainer';
             modal.innerHTML = `
-            <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                         <div style="display: flex;">
                             <span id="lbopacity" style="flex: auto;">透明度:</span>
@@ -150,23 +152,23 @@
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">弹幕过滤:</label>
-                            <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" />
-                            <label for="filterBilibili">B站</label></div>
-                            <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" />
-                            <label for="filterGamer">巴哈</label></div>
-                            <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" />
-                            <label for="filterDanDanPlay">弹弹</label></div>
-                            <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" />
-                            <label for="filterOthers">其他</label></div>
+                            <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" ${((window.ede.danmakufilter & 1) === 1) ? 'checked' : ''} />
+                                <label for="filterBilibili">B站</label></div>
+                            <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" ${((window.ede.danmakufilter & 2) === 2) ? 'checked' : ''} />
+                                <label for="filterGamer">巴哈</label></div>
+                            <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" ${((window.ede.danmakufilter & 4) === 4) ? 'checked' : ''} />
+                                <label for="filterDanDanPlay">弹弹</label></div>
+                            <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" ${((window.ede.danmakufilter & 8) === 8) ? 'checked' : ''} />
+                                <label for="filterOthers">其他</label></div>
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">简繁转换:</label>
-                            <div><input type="radio" id="chConvert0" name="chConvert" value="0">
-                            <label for="chConvert0">不转换</label></div>
-                            <div><input type="radio" id="chConvert1" name="chConvert" value="1">
-                            <label for="chConvert1">简体</label></div>
-                            <div><input type="radio" id="chConvert2" name="chConvert" value="2">
-                            <label for="chConvert2">繁体</label></div>
+                            <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${(window.ede.chConvert === 0) ? 'checked' : ''}>
+                                <label for="chConvert0">不转换</label></div>
+                            <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${(window.ede.chConvert === 1) ? 'checked' : ''}>
+                                <label for="chConvert1">简体</label></div>
+                            <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${(window.ede.chConvert === 2) ? 'checked' : ''}>
+                                <label for="chConvert2">繁体</label></div>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 10px;">
@@ -175,13 +177,6 @@
                     </div>
                 </div>`;
             document.body.appendChild(modal);
-
-            document.getElementById(`chConvert${window.ede.chConvert}`).checked = true;
-
-            (window.ede.danmakufilter & 1) === 1 ? document.getElementById('filterBilibili').checked = true : document.getElementById('filterBilibili').checked = false;
-            (window.ede.danmakufilter & 2) === 2 ? document.getElementById('filterGamer').checked = true : document.getElementById('filterGamer').checked = false;
-            (window.ede.danmakufilter & 4) === 4 ? document.getElementById('filterDanDanPlay').checked = true : document.getElementById('filterDanDanPlay').checked = false;
-            (window.ede.danmakufilter & 8) === 8 ? document.getElementById('filterOthers').checked = true : document.getElementById('filterOthers').checked = false;
 
             function showCurrentVal(id, ticks) {
                 const val = document.getElementById(id).value;
@@ -194,22 +189,14 @@
                 }
             }
 
-            document.getElementById('opacity').oninput = () => showCurrentVal('opacity');
-            document.getElementById('speed').oninput = () => showCurrentVal('speed');
-            document.getElementById('fontSize').oninput = () => showCurrentVal('fontSize');
-            document.getElementById('heightRatio').oninput = () => showCurrentVal('heightRatio');
-            document.getElementById('danmakuDensityLimit').oninput = () => showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
             showCurrentVal('opacity');
             showCurrentVal('speed');
             showCurrentVal('fontSize');
             showCurrentVal('heightRatio');
             showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
 
-            modal.addEventListener('keydown', event => event.stopPropagation(), true);
-
             const closeModal = () => {
                 document.body.removeChild(modal);
-                modal.removeEventListener('keydown', event => event.stopPropagation(), true);
             };
 
             document.getElementById('saveSettings').onclick = () => {
@@ -239,12 +226,18 @@
                     window.localStorage.setItem('chConvert', window.ede.chConvert);
                     showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
                     reloadDanmaku('reload');
-                    document.body.removeChild(modal);
+                    closeModal();
                 } catch (e) {
                     alert(`Invalid input: ${e.message}`);
                 }
             };
             document.getElementById('cancelSettings').onclick = closeModal;
+
+            document.getElementById('opacity').oninput = () => showCurrentVal('opacity');
+            document.getElementById('speed').oninput = () => showCurrentVal('speed');
+            document.getElementById('fontSize').oninput = () => showCurrentVal('fontSize');
+            document.getElementById('heightRatio').oninput = () => showCurrentVal('heightRatio');
+            document.getElementById('danmakuDensityLimit').oninput = () => showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
         }
     };
 
@@ -542,41 +535,47 @@
     }
 
     async function loginDanDanPlay(account, passwd) {
-        const loginUrl = corsProxy + 'https://api.dandanplay.net/api/v2/login'
+        const loginUrl = corsProxy + 'https://api.dandanplay.net/api/v2/login';
         const params = {
             'userName': account,
             'password': passwd
         };
 
-        const resp = await fetch(loginUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': navigator.userAgent
-            },
-            body: JSON.stringify(params)
-        });
+        try {
+            const resp = await fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': navigator.userAgent
+                },
+                body: JSON.stringify(params)
+            });
 
-        if (resp.status != 200) {
-            showDebugInfo('登录失败 http error:' + resp.status);
-            alert('登录失败 http error:' + resp.status);
+            if (resp.status !== 200) {
+                showDebugInfo('登录失败 http error:' + resp.status);
+                alert('登录失败 http error:' + resp.status);
+                return false;
+            }
+
+            const json = await resp.json();
+            if (json.errorCode !== 0) {
+                showDebugInfo('登录失败 ' + json.errorMessage);
+                alert('登录失败 ' + json.errorMessage);
+                return false;
+            }
+
+            ddplayStatus.isLogin = true;
+            ddplayStatus.token = json.token;
+            ddplayStatus.tokenExpire = json.tokenExpireTime;
+            window.localStorage.setItem('ddplayStatus', JSON.stringify(ddplayStatus));
+            showDebugInfo('登录成功');
+            return true;
+        } catch (error) {
+            console.error('登录失败', error);
+            alert('登录失败');
             return false;
         }
-
-        const json = await resp.json();
-        if (json.errorCode != 0) {
-            showDebugInfo('登录失败 ' + json.errorMessage);
-            alert('登录失败 ' + json.errorMessage);
-            return false;
-        }
-
-        ddplayStatus.isLogin = true;
-        ddplayStatus.token = json.token;
-        ddplayStatus.tokenExpire = json.tokenExpireTime;
-        window.localStorage.setItem('ddplayStatus', JSON.stringify(ddplayStatus));
-        showDebugInfo('登录成功');
-        return true;
     }
 
     async function refreshDanDanPlayToken() {
@@ -586,30 +585,36 @@
             if (expire < now) {
                 ddplayStatus.isLogin = false;
                 return;
-            } else if (expire - now > 259200) {
+            } else if (expire - now > 259200) { // Token expires in more than 3 days, no need to refresh
                 return;
-            } else { // refresh token before 3 days
+            } else { // Refresh token before 3 days
                 const refreshUrl = corsProxy + 'https://api.dandanplay.net/api/v2/login/renew';
-                const resp = await fetch(refreshUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': navigator.userAgent,
-                        'Authorization': 'Bearer ' + ddplayStatus.token
+                try {
+                    const resp = await fetch(refreshUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': navigator.userAgent,
+                            'Authorization': 'Bearer ' + ddplayStatus.token
+                        }
+                    });
+
+                    if (resp.status !== 200) {
+                        showDebugInfo('刷新弹弹Play Token失败 http error:' + resp.status);
+                        return;
                     }
-                });
-                if (resp.status != 200) {
-                    showDebugInfo('刷新弹弹Play Token失败 http error:' + resp.status);
-                    return;
-                }
-                const json = await resp.json();
-                if (json.errorCode == 0) {
-                    ddplayStatus.isLogin = true;
-                    ddplayStatus.token = json.token;
-                    ddplayStatus.tokenExpire = json.tokenExpireTime;
-                } else {
-                    showDebugInfo('刷新弹弹Play Token失败');
-                    showDebugInfo(json.errorMessage);
+
+                    const json = await resp.json();
+                    if (json.errorCode === 0) {
+                        ddplayStatus.isLogin = true;
+                        ddplayStatus.token = json.token;
+                        ddplayStatus.tokenExpire = json.tokenExpireTime;
+                    } else {
+                        showDebugInfo('刷新弹弹Play Token失败');
+                        showDebugInfo(json.errorMessage);
+                    }
+                } catch (error) {
+                    console.error('刷新弹弹Play Token失败', error);
                 }
             }
         }
@@ -629,42 +634,48 @@
                 'color': color,
                 'comment': danmakuText
             };
-            const resp = await fetch(danmakuUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'User-Agent': navigator.userAgent,
-                    'Authorization': 'Bearer ' + ddplayStatus.token
-                },
-                body: JSON.stringify(params)
-            });
-
-            if (resp.status != 200) {
-                showDebugInfo('发送弹幕失败 http error:' + resp.status);
-                return;
-            }
-            const json = await resp.json();
-            if (json.errorCode == 0) {
-                const colorStr = `000000${color.toString(16)}`.slice(-6);
-                const modemap = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[mode];
-                const comment = {
-                    text: danmakuText,
-                    mode: modemap,
-                    time: time,
-                    style: {
-                        font: `${window.ede.fontSize}px sans-serif`,
-                        fillStyle: `#${colorStr}`,
-                        strokeStyle: colorStr === '000000' ? '#fff' : '#000',
-                        lineWidth: 2.0,
+            try {
+                const resp = await fetch(danmakuUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'User-Agent': navigator.userAgent,
+                        'Authorization': 'Bearer ' + ddplayStatus.token
                     },
-                };
-                window.ede.danmaku.emit(comment);
-                showDebugInfo('发送弹幕成功');
-            } else {
+                    body: JSON.stringify(params)
+                });
+
+                if (resp.status !== 200) {
+                    showDebugInfo('发送弹幕失败 http error:' + resp.status);
+                    return;
+                }
+
+                const json = await resp.json();
+                if (json.errorCode === 0) {
+                    const colorStr = `000000${color.toString(16)}`.slice(-6);
+                    const modemap = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[mode];
+                    const comment = {
+                        text: danmakuText,
+                        mode: modemap,
+                        time: time,
+                        style: {
+                            font: `${window.ede.fontSize}px sans-serif`,
+                            fillStyle: `#${colorStr}`,
+                            strokeStyle: colorStr === '000000' ? '#fff' : '#000',
+                            lineWidth: 2.0,
+                        },
+                    };
+                    window.ede.danmaku.emit(comment);
+                    showDebugInfo('发送弹幕成功');
+                } else {
+                    showDebugInfo('发送弹幕失败');
+                    showDebugInfo(json.errorMessage);
+                    alert('发送失败：' + json.errorMessage);
+                }
+            } catch (error) {
+                console.error('发送弹幕失败', error);
                 showDebugInfo('发送弹幕失败');
-                showDebugInfo(json.errorMessage);
-                alert('发送失败：' + json.errorMessage);
             }
         }
     }
@@ -675,29 +686,33 @@
             'episodeId': window.ede.episode_info.episodeId,
             'url': relatedUrl,
             'shift': 0
-        }
-
-        const resp = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': navigator.userAgent,
-                'Authorization': 'Bearer ' + ddplayStatus.token
-            },
-            body: JSON.stringify(params)
-        });
-        if (resp.status != 200) {
-            showDebugInfo('发送相关链接失败 http error:' + resp.code);
-            return;
-        }
-        const json = await resp.json();
-        if (json.errorCode == 0) {
-            showDebugInfo('发送相关链接成功');
-        } else {
+        };
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': navigator.userAgent,
+                    'Authorization': 'Bearer ' + ddplayStatus.token
+                },
+                body: JSON.stringify(params)
+            });
+            if (resp.status !== 200) {
+                showDebugInfo('发送相关链接失败 http error:' + resp.code);
+                return;
+            }
+            const json = await resp.json();
+            if (json.errorCode === 0) {
+                showDebugInfo('发送相关链接成功');
+            } else {
+                showDebugInfo('发送相关链接失败');
+                showDebugInfo(json.errorMessage);
+                alert('弹幕源提交弹弹Play失败：' + json.errorMessage);
+            }
+        } catch (error) {
+            console.error('发送相关链接失败', error);
             showDebugInfo('发送相关链接失败');
-            showDebugInfo(json.errorMessage);
-            alert('弹幕源提交弹弹Play失败：' + json.errorMessage);
         }
     }
 
@@ -772,7 +787,7 @@
                     "Accept": "application/json",
                     "User-Agent": navigator.userAgent
                 }
-            })
+            });
         }
     }
 
@@ -885,18 +900,17 @@
         return episodeInfo;
     }
 
-    function getComments(episodeId) {
+    async function getComments(episodeId) {
         let url = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
-        return makeGetRequest(url)
-            .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
-            .then((data) => {
-                showDebugInfo('弹幕下载成功: ' + data.comments.length);
-                return data.comments;
-            })
-            .catch((error) => {
-                showDebugInfo('获取弹幕失败:', error);
-                return null;
-            });
+        try {
+            const response = await makeGetRequest(url);
+            const data = isInTampermonkey ? JSON.parse(response) : await response.json();
+            showDebugInfo('弹幕下载成功: ' + data.comments.length);
+            return data.comments;
+        } catch (error) {
+            showDebugInfo('获取弹幕失败:', error);
+            return null;
+        }
     }
 
     async function getCommentsByUrl(src) {
@@ -904,20 +918,21 @@
         const url = apiPrefix + 'https://api.dandanplay.net/api/v2/extcomment?url=' + url_encoded;
         let comments = [];
         for (let i = 0; i < 2; i++) {
-            comments = makeGetRequest(url)
-                .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
-                .then((data) => {
-                    showDebugInfo('弹幕下载成功: ' + data.comments.length);
-                    return data.comments;
-                })
-                .catch((error) => {
-                    showDebugInfo('获取弹幕失败:', error);
-                    return null;
-                });
-            if (comments.length > 0) {
-                break;
+            try {
+                comments = await makeGetRequest(url)
+                    .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
+                    .then((data) => {
+                        showDebugInfo('弹幕下载成功: ' + data.comments.length);
+                        return data.comments;
+                    });
+                if (comments.length > 0) {
+                    break;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+            } catch (error) {
+                showDebugInfo('获取弹幕失败:', error);
+                return null;
             }
-            await new Promise((resolve) => setTimeout(resolve, 3000));
         }
         return comments;
     }
