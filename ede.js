@@ -144,7 +144,7 @@
                         </div>
                         <div style="display: flex;">
                             <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
-                            <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.1" value="${window.ede.heightRatio || 0.7}" />
+                            <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.05" value="${window.ede.heightRatio || 0.9}" />
                         </div>
                         <div style="display: flex;">
                             <span id="lbdanmakuDensityLimit" style="flex: auto;">密度限制等级:</span>
@@ -395,7 +395,7 @@
         constructor() {
             // 简繁转换 0:不转换 1:简体 2:繁体
             const chConvert = window.localStorage.getItem('chConvert');
-            this.chConvert = chConvert ? parseInt(chConvert) : 1;
+            this.chConvert = chConvert ? parseInt(chConvert) : 0;
             // 开关弹幕 0:关闭 1:打开
             const danmakuSwitch = window.localStorage.getItem('danmakuSwitch');
             this.danmakuSwitch = danmakuSwitch ? parseInt(danmakuSwitch) : 1;
@@ -413,7 +413,7 @@
             this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
             // 弹幕高度
             const heightRecord = window.localStorage.getItem('danmakuheight');
-            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 1
+            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9
             // 弹幕过滤
             const danmakufilter = window.localStorage.getItem('danmakufilter');
             this.danmakufilter = danmakufilter ? parseInt(danmakufilter) : 0;
