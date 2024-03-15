@@ -413,7 +413,7 @@
             this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
             // 弹幕高度
             const heightRecord = window.localStorage.getItem('danmakuheight');
-            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.7
+            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 1
             // 弹幕过滤
             const danmakufilter = window.localStorage.getItem('danmakufilter');
             this.danmakufilter = danmakufilter ? parseInt(danmakufilter) : 0;
