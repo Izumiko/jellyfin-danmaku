@@ -317,7 +317,7 @@
                 modal.className = 'dialogContainer';
                 modal.style.display = 'none';
                 modal.innerHTML = `
-                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; bottom: 0; transform: translate(-50%, -50%); width: 40%; opacity: 0.8;">
+                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; bottom: 0; transform: translate(-50%, -50%); width: 40%;">
                 <form id="sendDanmakuForm" autocomplete="off">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                         <div style="display: flex;">
