@@ -1026,7 +1026,7 @@
             if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                 showDebugInfo('探测播放媒体变化');
                 const sleep = new Promise(resolve => setTimeout(resolve, 3000));
-                sleep.then(() => reloadDanmaku('reload'));
+                sleep.then(() => reloadDanmaku('refresh'));
             }
         };
 
