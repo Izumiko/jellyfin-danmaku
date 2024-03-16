@@ -84,16 +84,26 @@
             showDebugInfo('手动增加弹幕源');
             let source = prompt('请输入弹幕源地址:');
             if (source) {
-                getCommentsByUrl(source).then((comments) => {
-                    createDanmaku(comments).then(() => {
-                        showDebugInfo('弹幕就位');
-                    });
-                });
+                getCommentsByUrl(source)
+                    .then(comments => {
+                        if (comments !== null) {
+                            createDanmaku(comments)
+                                .then(() => {
+                                    showDebugInfo('弹幕就位');
 
-                // 如果已经登录，把弹幕源提交给弹弹Play
-                if (ddplayStatus.isLogin) {
-                    postRelatedSource(source);
-                }
+                                    // 如果已经登录，把弹幕源提交给弹弹Play
+                                    if (ddplayStatus.isLogin) {
+                                        postRelatedSource(source);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('创建弹幕失败:', error);
+                                });
+                        }
+                    }
+                    )
+            } else {
+                showDebugInfo('未获取弹幕源地址');
             }
         },
     };
@@ -916,25 +926,17 @@
     async function getCommentsByUrl(src) {
         const url_encoded = encodeURIComponent(src);
         const url = apiPrefix + 'https://api.dandanplay.net/api/v2/extcomment?url=' + url_encoded;
-        let comments = [];
         for (let i = 0; i < 2; i++) {
             try {
-                comments = await makeGetRequest(url)
-                    .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
-                    .then((data) => {
-                        showDebugInfo('弹幕下载成功: ' + data.comments.length);
-                        return data.comments;
-                    });
-                if (comments.length > 0) {
-                    break;
-                }
-                await new Promise((resolve) => setTimeout(resolve, 3000));
+                const response = await makeGetRequest(url);
+                const data = isInTampermonkey ? JSON.parse(response) : await response.json();
+                showDebugInfo('弹幕下载成功: ' + data.comments.length);
+                return data.comments;
             } catch (error) {
                 showDebugInfo('获取弹幕失败:', error);
-                return null;
             }
         }
-        return comments;
+        return null;
     }
 
     async function createDanmaku(comments) {
