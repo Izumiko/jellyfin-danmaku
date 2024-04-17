@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.34
+// @version      1.35
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -11,8 +11,8 @@
 // @downloadURL  https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js
 // @grant        GM_xmlhttpRequest
 // @connect      *
-// @match        *://*/*/web/index.html
-// @match        *://*/web/index.html
+// @match        *://*/*/web/
+// @match        *://*/web/
 // @match        https://jellyfin-web.pages.dev/
 // ==/UserScript==
 
@@ -27,10 +27,8 @@
     let apiPrefix = '';
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
-    // 0:当前状态关闭 1:当前状态打开
     const danmaku_icons = ['comments_disabled', 'comment'];
     const search_icon = 'find_replace';
-    const source_icon = 'library_add';
     const log_icons = ['code_off', 'code'];
     const settings_icon = 'tune';
     const send_icon = 'send';
@@ -59,7 +57,7 @@
             if (window.ede.danmaku) {
                 window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
             }
-        },
+        }
     };
 
     const searchButtonOpts = {
@@ -73,39 +71,7 @@
             }
             showDebugInfo('手动匹配弹幕');
             reloadDanmaku('search');
-        },
-    };
-
-    const sourceButtonOpts = {
-        title: '增加弹幕源',
-        id: 'addDanmakuSource',
-        class: source_icon,
-        onclick: () => {
-            showDebugInfo('手动增加弹幕源');
-            let source = prompt('请输入弹幕源地址:');
-            if (source) {
-                getCommentsByUrl(source)
-                    .then(comments => {
-                        if (comments !== null) {
-                            createDanmaku(comments)
-                                .then(() => {
-                                    showDebugInfo('弹幕就位');
-
-                                    // 如果已经登录，把弹幕源提交给弹弹Play
-                                    if (ddplayStatus.isLogin) {
-                                        postRelatedSource(source);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('创建弹幕失败:', error);
-                                });
-                        }
-                    }
-                    )
-            } else {
-                showDebugInfo('未获取弹幕源地址');
-            }
-        },
+        }
     };
 
     const logButtonOpts = {
@@ -131,86 +97,109 @@
         id: 'danmakuSettings',
         class: settings_icon,
         onclick: () => {
-            if (document.getElementById('danmakuModal')) {
-                return;
-            }
-            const modal = document.createElement('div');
-            modal.id = 'danmakuModal';
-            modal.className = 'dialogContainer';
-            modal.innerHTML = `
+            createModal(
+                'danmakuModal',
+                'dialogContainer',
+                `
                 <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="display: flex;">
-                            <span id="lbopacity" style="flex: auto;">透明度:</span>
-                            <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
-                        </div>
-                        <div style="display: flex;">
-                            <span id="lbspeed" style="flex: auto;">弹幕速度:</span>
-                            <input style="width: 50%;" type="range" id="speed" min="100" max="600" step="10" value="${window.ede.speed || 200}" />
-                        </div>
-                        <div style="display: flex;">
-                            <span id="lbfontSize" style="flex: auto;">字体大小:</span>
-                            <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />
-                        </div>
-                        <div style="display: flex;">
-                            <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
-                            <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.05" value="${window.ede.heightRatio || 0.9}" />
-                        </div>
-                        <div style="display: flex;">
-                            <span id="lbdanmakuDensityLimit" style="flex: auto;">密度限制等级:</span>
-                            <input style="width: 50%;" type="range" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}" />
-                        </div>
-                        <div style="display: flex;">
-                            <label style="flex: auto;">弹幕过滤:</label>
-                            <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" ${((window.ede.danmakufilter & 1) === 1) ? 'checked' : ''} />
-                                <label for="filterBilibili">B站</label></div>
-                            <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" ${((window.ede.danmakufilter & 2) === 2) ? 'checked' : ''} />
-                                <label for="filterGamer">巴哈</label></div>
-                            <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" ${((window.ede.danmakufilter & 4) === 4) ? 'checked' : ''} />
-                                <label for="filterDanDanPlay">弹弹</label></div>
-                            <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" ${((window.ede.danmakufilter & 8) === 8) ? 'checked' : ''} />
-                                <label for="filterOthers">其他</label></div>
-                        </div>
-                        <div style="display: flex;">
-                            <label style="flex: auto;">简繁转换:</label>
-                            <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${(window.ede.chConvert === 0) ? 'checked' : ''}>
-                                <label for="chConvert0">不转换</label></div>
-                            <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${(window.ede.chConvert === 1) ? 'checked' : ''}>
-                                <label for="chConvert1">简体</label></div>
-                            <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${(window.ede.chConvert === 2) ? 'checked' : ''}>
-                                <label for="chConvert2">繁体</label></div>
-                        </div>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <div style="display: flex;">
+                        <label for="offset" style="flex: auto;">弹幕偏移(秒):</label>
+                        <input style="width: 50%;" type="number" id="offset" step="0.5" value="${window.ede.offset || 0}" />
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                        <button id="saveSettings" class="raised button-submit block btnSave formDialogFooterItem emby-button">保存设置</button>
-                        <button id="cancelSettings" class="raised button-cancel block btnCancel formDialogFooterItem emby-button">取消</button>
+                    <div style="display: flex;">
+                        <label for="danmakuSource" style="flex: auto;">弹幕源地址:</label>
+                        <input style="width: 50%;" type="text" id="danmakuSource" />
                     </div>
-                </div>`;
-            document.body.appendChild(modal);
+                    <div style="display: flex;">
+                        <span id="lbspeed" style="flex: auto;">弹幕速度:</span>
+                        <input style="width: 50%;" type="range" id="speed" min="100" max="600" step="10" value="${window.ede.speed || 200}" />
+                    </div>
+                    <div style="display: flex;">
+                        <span id="lbfontSize" style="flex: auto;">字体大小:</span>
+                        <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />
+                    </div>
+                    <div style="display: flex;">
+                        <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
+                        <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.05" value="${window.ede.heightRatio || 0.9}" />
+                    </div>
+                    <div style="display: flex;">
+                        <span id="lbopacity" style="flex: auto;">透明度:</span>
+                        <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
+                    </div>
+                    <div style="display: flex;">
+                        <span id="lbdanmakuDensityLimit" style="flex: auto;">密度限制等级:</span>
+                        <input style="width: 50%;" type="range" id="danmakuDensityLimit" min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}" />
+                    </div>
+                    <div style="display: flex;">
+                        <label style="flex: auto;">弹幕过滤:</label>
+                        <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" ${(window.ede.danmakufilter & 1) === 1 ? 'checked' : ''} />
+                            <label for="filterBilibili">B站</label></div>
+                        <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" ${(window.ede.danmakufilter & 2) === 2 ? 'checked' : ''} />
+                            <label for="filterGamer">巴哈</label></div>
+                        <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" ${(window.ede.danmakufilter & 4) === 4 ? 'checked' : ''} />
+                            <label for="filterDanDanPlay">弹弹</label></div>
+                        <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" ${(window.ede.danmakufilter & 8) === 8 ? 'checked' : ''} />
+                            <label for="filterOthers">其他</label></div>
+                    </div>
+                    <div style="display: flex;">
+                        <label style="flex: auto;">简繁转换:</label>
+                        <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${window.ede.chConvert === 0 ? 'checked' : ''}>
+                            <label for="chConvert0">不转换</label></div>
+                        <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${window.ede.chConvert === 1 ? 'checked' : ''}>
+                            <label for="chConvert1">简体</label></div>
+                        <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${window.ede.chConvert === 2 ? 'checked' : ''}>
+                            <label for="chConvert2">繁体</label></div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <button id="saveSettings" class="raised button-submit block btnSave formDialogFooterItem emby-button">保存设置</button>
+                    <button id="cancelSettings" class="raised button-cancel block btnCancel formDialogFooterItem emby-button">取消</button>
+                </div>
+            </div>`,
+            );
 
-            function showCurrentVal(id, ticks) {
-                const val = document.getElementById(id).value;
-                const span = document.getElementById('lb' + id);
-                const prefix = span.innerText.split(':')[0];
-                if (ticks) {
-                    span.innerText = prefix + ': ' + ticks[val];
+            [{ id: 'opacity' }, { id: 'speed' }, { id: 'fontSize' }, { id: 'heightRatio' }, { id: 'danmakuDensityLimit', ticks: ['无', '低', '中', '高'] }].forEach((item) => {
+                const input = document.getElementById(item.id);
+                const label = document.getElementById('lb' + item.id);
+                const updateDisplay = () => {
+                    const value = input.value;
+                    const prefix = label.innerText.split(':')[0];
+                    label.innerText = `${prefix}: ${item.ticks ? item.ticks[value] : value}`;
+                };
+
+                input.oninput = updateDisplay;
+                updateDisplay();
+            });
+
+            document.getElementById('danmakuSource').onchange = () => {
+                const source = document.getElementById('danmakuSource').value;
+                if (source) {
+                    getCommentsByUrl(source).then((comments) => {
+                        if (comments !== null) {
+                            createDanmaku(comments)
+                                .then(() => {
+                                    showDebugInfo('弹幕就位');
+                                    if (ddplayStatus.isLogin) {
+                                        postRelatedSource(source);
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('创建弹幕失败:', error);
+                                });
+                        }
+                    });
                 } else {
-                    span.innerText = prefix + ': ' + val;
+                    showDebugInfo('未获取弹幕源地址');
                 }
-            }
-
-            showCurrentVal('opacity');
-            showCurrentVal('speed');
-            showCurrentVal('fontSize');
-            showCurrentVal('heightRatio');
-            showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
-
-            const closeModal = () => {
-                document.body.removeChild(modal);
             };
 
+            document.getElementById('cancelSettings').onclick = () => closeModal('danmakuModal');
             document.getElementById('saveSettings').onclick = () => {
                 try {
+                    window.ede.offset = parseFloat(document.getElementById('offset').value);
+                    window.localStorage.setItem('danmakuOffset', window.ede.offset.toString());
+                    showDebugInfo(`设置弹幕时间偏移：${window.ede.offset}`);
                     window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
                     window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
                     showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
@@ -223,31 +212,24 @@
                     window.ede.heightRatio = parseFloatOfRange(document.getElementById('heightRatio').value, 0, 1);
                     window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
                     showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
-                    window.ede.danmakufilter = 0;
-                    document.querySelectorAll('input[name="danmakufilter"]:checked').forEach(element => {
-                        window.ede.danmakufilter += parseInt(element.value, 10);
-                    });
-                    window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
-                    showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
                     window.ede.danmakuDensityLimit = parseInt(document.getElementById('danmakuDensityLimit').value);
                     window.localStorage.setItem('danmakuDensityLimit', window.ede.danmakuDensityLimit);
                     showDebugInfo(`设置弹幕密度限制等级：${window.ede.danmakuDensityLimit}`);
                     window.ede.chConvert = parseInt(document.querySelector('input[name="chConvert"]:checked').value);
                     window.localStorage.setItem('chConvert', window.ede.chConvert);
                     showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
+                    window.ede.danmakufilter = 0;
+                    document.querySelectorAll('input[name="danmakufilter"]:checked').forEach((element) => {
+                        window.ede.danmakufilter += parseInt(element.value, 10);
+                    });
+                    window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
+                    showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
                     reloadDanmaku('reload');
-                    closeModal();
+                    closeModal('danmakuModal');
                 } catch (e) {
                     alert(`Invalid input: ${e.message}`);
                 }
             };
-            document.getElementById('cancelSettings').onclick = closeModal;
-
-            document.getElementById('opacity').oninput = () => showCurrentVal('opacity');
-            document.getElementById('speed').oninput = () => showCurrentVal('speed');
-            document.getElementById('fontSize').oninput = () => showCurrentVal('fontSize');
-            document.getElementById('heightRatio').oninput = () => showCurrentVal('heightRatio');
-            document.getElementById('danmakuDensityLimit').oninput = () => showCurrentVal('danmakuDensityLimit', ['无', '低', '中', '高']);
         }
     };
 
@@ -256,36 +238,33 @@
         id: 'sendDanmaku',
         class: send_icon,
         onclick: () => {
-            // 登录窗口
-            if (!document.getElementById('loginDialog')) {
-                const modal = document.createElement('div');
-                modal.id = 'loginDialog';
-                modal.className = 'dialogContainer';
-                modal.style.display = 'none';
-                modal.innerHTML = `
-                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-                <form id="loginForm">
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="display: flex;">
-                            <span style="flex: auto;">请输入弹弹Play账号密码</span>
+            if (!ddplayStatus.isLogin) {
+                createModal(
+                    'loginDialog',
+                    'dialogContainer',
+                    `
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+                    <form id="loginForm">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex;">
+                                <span style="flex: auto;">请输入弹弹Play账号密码</span>
+                            </div>
+                            <div style="display: flex;">
+                                <span style="flex: auto;">账号:</span>
+                                <input id="ddPlayAccount" placeholder="账号" value="" style="width: 70%;" />
+                            </div>
+                            <div style="display: flex;">
+                                <span style="flex: auto;">密码:</span>
+                                <input id="ddPlayPassword" placeholder="密码" value="" style="width: 70%;" type="password" />
+                            </div>
                         </div>
-                        <div style="display: flex;">
-                            <span style="flex: auto;">账号:</span>
-                            <input id="ddPlayAccount" placeholder="账号" value="" style="width: 70%;" />
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <button id="loginBtn" class="raised button-submit block formDialogFooterItem emby-button" type="submit">登录</button>
+                            <button id="cancelBtn" class="raised button-cancel block formDialogFooterItem emby-button" type="button">取消</button>
                         </div>
-                        <div style="display: flex;">
-                            <span style="flex: auto;">密码:</span>
-                            <input id="ddPlayPassword" placeholder="密码" value="" style="width: 70%;" type="password" />
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                        <button id="loginBtn" class="raised button-submit block formDialogFooterItem emby-button" type="submit">登录</button>
-                        <button id="cancelBtn" class="raised button-cancel block formDialogFooterItem emby-button" type="button">取消</button>
-                    </div>
-                </form>
-                </div>
-                `;
-                document.body.appendChild(modal);
+                    </form>
+                    </div>`,
+                );
 
                 document.getElementById('loginForm').onsubmit = (e) => {
                     e.preventDefault();
@@ -297,53 +276,55 @@
                                 document.getElementById('loginBtn').innerText = '登录✔️';
                                 let sleep = new Promise(resolve => setTimeout(resolve, 1500));
                                 sleep.then(() => {
-                                    document.getElementById('loginDialog').style.display = 'none';
+                                    closeModal('loginDialog');
+                                    ddplayStatus.isLogin = true; // 更新登录状态
                                 });
-                                modal.removeEventListener('keydown', event => event.stopPropagation(), true);
                             }
                         });
                     }
                 };
-                document.getElementById('cancelBtn').onclick = () => {
-                    document.getElementById('loginDialog').style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
-                };
-            }
+                document.getElementById('cancelBtn').onclick = () => closeModal('loginDialog');
+            } else {
+                createModal(
+                    'sendDanmakuDialog',
+                    'dialogContainer',
+                    `
+                    <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; bottom: 0; transform: translate(-50%, -50%); width: 40%;">
+                    <form id="sendDanmakuForm" autocomplete="off">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex;">
+                                <span id="lbAnimeTitle" style="flex: auto;"></span>
+                            </div>
+                            <div style="display: flex;">
+                                <span id="lbEpisodeTitle" style="flex: auto;"></span>
+                            </div>
+                            <div style="display: flex;">
+                                <div><input type="radio" id="danmakuMode1" name="danmakuMode" value="1" checked>
+                                <label for="danmakuMode1">滚动</label></div>
+                                <div><input type="radio" id="danmakuMode4" name="danmakuMode" value="4">
+                                <label for="danmakuMode4">底部</label></div>
+                                <div><input type="radio" id="danmakuMode5" name="danmakuMode" value="5">
+                                <label for="danmakuMode5">顶部</label></div>
+                            </div>
+                            <div style="display: flex;">
+                                <input style="flex-grow: 1;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
+                                <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em .5em;" type="submit">发送</button>
+                                <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em .5em;" type="button">取消</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>`,
+                );
 
-            // 发送窗口
-            if (!document.getElementById('sendDanmakuDialog')) {
-                const modal = document.createElement('div');
-                modal.id = 'sendDanmakuDialog';
-                modal.className = 'dialogContainer';
-                modal.style.display = 'none';
-                modal.innerHTML = `
-                <div class="dialog" style="padding: 20px; border-radius: .3em; position: fixed; left: 50%; bottom: 0; transform: translate(-50%, -50%); width: 40%;">
-                <form id="sendDanmakuForm" autocomplete="off">
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="display: flex;">
-                            <span id="lbAnimeTitle" style="flex: auto;"></span>
-                        </div>
-                        <div style="display: flex;">
-                            <span id="lbEpisodeTitle" style="flex: auto;"></span>
-                        </div>
-                        <div style="display: flex;">
-                            <div><input type="radio" id="danmakuMode1" name="danmakuMode" value="1" checked>
-                            <label for="danmakuMode1">滚动</label></div>
-                            <div><input type="radio" id="danmakuMode4" name="danmakuMode" value="4">
-                            <label for="danmakuMode4">底部</label></div>
-                            <div><input type="radio" id="danmakuMode5" name="danmakuMode" value="5">
-                            <label for="danmakuMode5">顶部</label></div>
-                        </div>
-                        <div style="display: flex;">
-                            <input style="flex-grow: 1;" id="danmakuText" placeholder="请输入弹幕内容" value="" />
-                            <button id="sendDanmakuBtn" class="raised button-submit emby-button" style="padding: .2em .5em;" type="submit">发送</button>
-                            <button id="cancelSendDanmakuBtn" class="raised button-cancel emby-button" style="padding: .2em .5em;" type="button">取消</button>
-                        </div>
-                    </div>
-                </form>
-                </div>
-                `;
-                document.body.appendChild(modal);
+                document.getElementById('danmakuText').focus();
+                document.getElementById('sendDanmakuDialog').style.display = 'block';
+                document.getElementById('sendDanmakuDialog').addEventListener('keydown', (event) => event.stopPropagation(), true);
+                const animeTitle = window.ede.episode_info ? window.ede.episode_info.animeTitle : '';
+                const episodeTitle = window.ede.episode_info ? window.ede.episode_info.episodeTitle : '';
+                document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${animeTitle || ''}`;
+                document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${episodeTitle || ''}`;
+                document.getElementById('cancelSendDanmakuBtn').onclick = () => closeModal('sendDanmakuDialog');
+
                 document.getElementById('sendDanmakuForm').onsubmit = (e) => {
                     e.preventDefault();
                     const danmakuText = document.getElementById('danmakuText').value;
@@ -357,36 +338,12 @@
                     const currentTime = _media.currentTime;
                     const mode = parseInt(document.querySelector('input[name="danmakuMode"]:checked').value);
                     sendDanmaku(danmakuText, currentTime, mode);
-                    // 清空输入框的值
                     document.getElementById('danmakuText').value = '';
-                    modal.style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    closeModal('sendDanmakuDialog');
                 };
-                document.getElementById('cancelSendDanmakuBtn').onclick = () => {
-                    modal.style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
-                };
-            }
-
-            if (ddplayStatus.isLogin) {
-                const txt = document.getElementById('danmakuText');
-                txt.placeholder = '请输入弹幕内容';
-                txt.value = '';
-                txt.focus();
-                document.getElementById('sendDanmakuDialog').style.display = 'block';
-                document.getElementById('sendDanmakuDialog').addEventListener('keydown', event => event.stopPropagation(), true);
-                const animeTitle = window.ede.episode_info ? window.ede.episode_info.animeTitle : '';
-                const episodeTitle = window.ede.episode_info ? window.ede.episode_info.episodeTitle : '';
-                document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${animeTitle || ''}`;
-                document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${episodeTitle || ''}`;
-            } else {
-                document.getElementById('loginDialog').style.display = 'block';
-                document.getElementById('loginDialog').addEventListener('keydown', event => event.stopPropagation(), true);
             }
         }
     };
-
-
 
     // ------ configs end------
     /* eslint-disable */
@@ -414,16 +371,16 @@
             this.logSwitch = logSwitch ? parseInt(logSwitch) : 0;
             // 弹幕透明度
             const opacityRecord = window.localStorage.getItem('danmakuopacity');
-            this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7
+            this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7;
             // 弹幕速度
             const speedRecord = window.localStorage.getItem('danmakuspeed');
-            this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200
+            this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200;
             // 弹幕字体大小
             const sizeRecord = window.localStorage.getItem('danmakusize');
-            this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
+            this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18;
             // 弹幕高度
             const heightRecord = window.localStorage.getItem('danmakuheight');
-            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9
+            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9;
             // 弹幕过滤
             const danmakufilter = window.localStorage.getItem('danmakufilter');
             this.danmakufilter = danmakufilter ? parseInt(danmakufilter) : 0;
@@ -431,6 +388,9 @@
             // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
             const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
             this.danmakuDensityLimit = danmakuDensityLimit ? parseInt(danmakuDensityLimit) : 0;
+            // 弹幕偏移
+            const offsetRecord = window.localStorage.getItem('danmakuOffset');
+            this.offset = offsetRecord ? parseFloat(offsetRecord) : 0;
 
             this.danmaku = null;
             this.episode_info = null;
@@ -459,6 +419,27 @@
         button.appendChild(icon);
         button.onclick = opt.onclick;
         return button;
+    }
+
+    function createModal(id, className, htmlContent) {
+        let modal = document.getElementById(id);
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = id;
+            modal.className = className;
+            modal.innerHTML = htmlContent;
+            document.body.appendChild(modal);
+            modal.addEventListener('keydown', (event) => event.stopPropagation(), true);
+        }
+        return modal;
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.removeEventListener('keydown', (event) => event.stopPropagation(), true);
+            document.body.removeChild(modal);
+        }
     }
 
     function initListener() {
@@ -502,20 +483,18 @@
         }
 
         parent.insertBefore(menubar, uiEle);
-        // 弹幕开关
         displayButtonOpts.class = danmaku_icons[window.ede.danmakuSwitch];
+        logButtonOpts.class = log_icons[window.ede.logSwitch];
+        // 弹幕开关
         menubar.appendChild(createButton(displayButtonOpts));
+        // 发送弹幕
+        menubar.appendChild(createButton(sendDanmakuOpts));
         // 手动匹配
         menubar.appendChild(createButton(searchButtonOpts));
-        // 手动增加弹幕源
-        menubar.appendChild(createButton(sourceButtonOpts));
         // 弹幕设置
         menubar.appendChild(createButton(danmakuInteractionOpts));
         // 日志开关
-        logButtonOpts.class = log_icons[window.ede.logSwitch];
         menubar.appendChild(createButton(logButtonOpts));
-        // 发送弹幕
-        menubar.appendChild(createButton(sendDanmakuOpts));
 
         let _container = null;
         document.querySelectorAll(mediaContainerQueryStr).forEach(function (element) {
@@ -534,10 +513,9 @@
         span.style.color = '#fff';
         span.style.padding = '20px';
         span.style.borderRadius = '.3em';
-        span.style.maxHeight = '50%'
+        span.style.maxHeight = '50%';
         window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
         _container.appendChild(span);
-
 
         showDebugInfo('UI初始化完成');
         reloadDanmaku('init');
@@ -729,7 +707,7 @@
     async function showDebugInfo(msg) {
         let span = document.getElementById('debugInfo');
         while (!span) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 200));
             span = document.getElementById('debugInfo');
         }
         let msgStr = msg;
@@ -756,7 +734,7 @@
     async function getEmbyItemInfo() {
         let playingInfo = null;
         while (!playingInfo) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 200));
             let sessionInfo = await ApiClient.getSessions({
                 userId: ApiClient.getCurrentUserId(),
                 deviceId: ApiClient.deviceId(),
@@ -953,7 +931,7 @@
             window.ede.danmaku = null;
         }
 
-        let _comments = danmakuFilter(danmakuParser(comments));
+        let _comments = danmakuProcessor(comments);
         showDebugInfo(`弹幕加载成功: ${_comments.length}`);
         showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
         showDebugInfo(`弹幕速度：${window.ede.speed}`);
@@ -964,7 +942,7 @@
 
         const waitForMediaContainer = async () => {
             while (!document.querySelector(mediaContainerQueryStr)) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
         };
 
@@ -1057,6 +1035,56 @@
         }
     }
 
+    function danmakuProcessor(comments) {
+        const { fontSize, danmakufilter, danmakuDensityLimit, offset } = window.ede;
+
+        const disableBilibili = (danmakufilter & 1) === 1;
+        const disableGamer = (danmakufilter & 2) === 2;
+        const disableDandan = (danmakufilter & 4) === 4;
+        const disableOther = (danmakufilter & 8) === 8;
+
+        const filterRule = [];
+        if (disableDandan) filterRule.push('^(?!\\[)|^.{0,3}\\]');
+        if (disableBilibili) filterRule.push('^\\[BiliBili\\]');
+        if (disableGamer) filterRule.push('^\\[Gamer\\]');
+        if (disableOther) filterRule.push('^\\[(?!(BiliBili|Gamer)).{3,}\\]');
+        const danmakuFilterRule = new RegExp(filterRule.join('|') || '!.*');
+
+        return comments
+            .filter((comment) => !danmakuFilterRule.test(comment.p.split(',').pop()))
+            .map((comment) => {
+                const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => (i === 0 ? parseFloat(v) + offset : parseInt(v, 10)));
+                const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
+                if (!mode) return null;
+
+                const color = `000000${colorValue.toString(16)}`.slice(-6);
+                return {
+                    text: comment.m,
+                    mode,
+                    time,
+                    style: {
+                        font: `${fontSize}px sans-serif`,
+                        fillStyle: `#${color}`,
+                        strokeStyle: color === '000000' ? '#fff' : '#000',
+                        lineWidth: 2.0,
+                    },
+                };
+            })
+            .filter((comment, index, arr) => {
+                const timeIndex = Math.ceil(comment.time);
+                const verticalTimeIndex = Math.ceil(comment.time / 3);
+
+                if (comment.mode === 'top' || comment.mode === 'bottom') {
+                    return arr.filter((c) => (c.mode === 'top' || c.mode === 'bottom') && Math.ceil(c.time / 3) === verticalTimeIndex).length <= 6;
+                } else {
+                    const level = danmakuDensityLimit;
+                    const limit = 9 - level * 2;
+
+                    return arr.filter((c) => c.mode !== 'top' && c.mode !== 'bottom' && Math.ceil(c.time) === timeIndex).length <= limit;
+                }
+            });
+    }
+
     function displayDanmakuInfo(info) {
         let infoContainer = document.getElementById('danmakuInfoTitle');
         if (!infoContainer) {
@@ -1115,86 +1143,6 @@
             });
     }
 
-    function danmakuFilter(comments) {
-        const level = window.ede.danmakuDensityLimit;
-        if (level === 0) {
-            return comments;
-        }
-
-        const limit = 9 - level * 2;
-        const verticalLimit = 6;
-        const resultComments = [];
-
-        const timeBuckets = {};
-        const verticalTimeBuckets = {};
-
-        comments.forEach(comment => {
-            const timeIndex = Math.ceil(comment.time);
-            const verticalTimeIndex = Math.ceil(comment.time / 3);
-
-            if (!timeBuckets[timeIndex]) {
-                timeBuckets[timeIndex] = [];
-            }
-            if (!verticalTimeBuckets[verticalTimeIndex]) {
-                verticalTimeBuckets[verticalTimeIndex] = [];
-            }
-
-            if (comment.mode === 'top' || comment.mode === 'bottom') {
-                if (verticalTimeBuckets[verticalTimeIndex].length < verticalLimit) {
-                    verticalTimeBuckets[verticalTimeIndex].push(comment);
-                    resultComments.push(comment);
-                }
-            } else {
-                if (timeBuckets[timeIndex].length < limit) {
-                    timeBuckets[timeIndex].push(comment);
-                    resultComments.push(comment);
-                }
-            }
-        });
-
-        return resultComments;
-    }
-
-    function danmakuParser($obj) {
-        const { fontSize, danmakufilter } = window.ede;
-
-        const disableBilibili = (danmakufilter & 1) === 1;
-        const disableGamer = (danmakufilter & 2) === 2;
-        const disableDandan = (danmakufilter & 4) === 4;
-        const disableOther = (danmakufilter & 8) === 8;
-
-        let filterule = '';
-        if (disableDandan) { filterule += '^(?!\\[)|\^.{0,3}\\]'; }
-        if (disableBilibili) { filterule += (filterule ? '|' : '') + '\^\\[BiliBili\\]'; }
-        if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
-        if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
-        if (filterule === '') { filterule = '!.*'; }
-        const danmakufilterule = new RegExp(filterule);
-
-        return $obj
-            .filter(($comment) => {
-                return !danmakufilterule.test($comment.p.split(',').pop());
-            })
-            .map(($comment) => {
-                const [time, modeId, colorValue] = $comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-                const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
-                if (!mode) return null;
-
-                const color = `000000${colorValue.toString(16)}`.slice(-6);
-                return {
-                    text: $comment.m,
-                    mode,
-                    time,
-                    style: {
-                        font: `${fontSize}px sans-serif`,
-                        fillStyle: `#${color}`,
-                        strokeStyle: color === '000000' ? '#fff' : '#000',
-                        lineWidth: 2.0,
-                    },
-                };
-            });
-    }
-
     function list2string($obj2) {
         const $animes = $obj2.animes;
         let anime_lists = $animes.map(($single_anime) => {
@@ -1220,7 +1168,7 @@
     }
 
     const waitForElement = (selector) => {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const observer = new MutationObserver(() => {
                 const element = document.querySelector(selector);
                 if (element) {
@@ -1239,7 +1187,7 @@
 
             (async () => {
                 while (!(await ApiClient.getSessions())) {
-                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
 
                 setInterval(() => {
