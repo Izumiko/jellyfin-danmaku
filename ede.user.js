@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.34
+// @version      1.35
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -28,10 +28,10 @@
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
-    const danmaku_icons = ['comments_disabled', 'comment'];
+    let danmaku_icons = ['comments_disabled', 'comment'];
     const search_icon = 'find_replace';
     const source_icon = 'library_add';
-    const log_icons = ['code_off', 'code'];
+    let log_icons = ['code_off', 'code'];
     const settings_icon = 'tune';
     const send_icon = 'send';
     const spanClass = 'xlargePaperIconButton material-icons ';
@@ -126,7 +126,7 @@
         }
     };
 
-    const danmakuInteractionOpts = {
+    const settingButtonOpts = {
         title: '弹幕设置',
         id: 'danmakuSettings',
         class: settings_icon,
@@ -510,7 +510,7 @@
         // 手动增加弹幕源
         menubar.appendChild(createButton(sourceButtonOpts));
         // 弹幕设置
-        menubar.appendChild(createButton(danmakuInteractionOpts));
+        menubar.appendChild(createButton(settingButtonOpts));
         // 日志开关
         logButtonOpts.class = log_icons[window.ede.logSwitch];
         menubar.appendChild(createButton(logButtonOpts));
@@ -1236,6 +1236,17 @@
     waitForElement('.htmlvideoplayer').then(() => {
         if (!window.ede) {
             window.ede = new EDE();
+
+            var materialIcon = document.querySelector('.material-icons');
+            var fontFamily = window.getComputedStyle(materialIcon).fontFamily;
+            if (fontFamily === '"Font Awesome 6 Pro"') {
+                danmaku_icons = ['fa-comment-slash', 'fa-comment'];
+                log_icons = ['fa-toilet-paper-slash', 'fa-toilet-paper'];
+                searchButtonOpts.class = 'fa-search';
+                sourceButtonOpts.class = 'fa-square-plus';
+                settingButtonOpts.class = 'fa-sliders';
+                sendDanmakuOpts.class = 'fa-paper-plane';
+            }
 
             (async () => {
                 while (!(await ApiClient.getSessions())) {
