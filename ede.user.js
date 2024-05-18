@@ -962,7 +962,7 @@
                 // 去重
                 comments = comments.filter((comment, index, self) =>
                     index === self.findIndex((t) => (
-                        t.p === comment.p
+                        t.cid === comment.cid
                     ))
                 );
                 showDebugInfo('弹幕下载成功: ' + comments.length);
