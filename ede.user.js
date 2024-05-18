@@ -965,9 +965,9 @@
                         t.cid === comment.cid
                     ))
                 );
-                showDebugInfo('弹幕下载成功: ' + comments.length);
-                return comments;
             }
+            showDebugInfo('弹幕下载成功: ' + comments.length);
+            return comments;
         } catch (error) {
             showDebugInfo('获取弹幕失败:', error);
             return null;
