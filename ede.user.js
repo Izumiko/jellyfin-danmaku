@@ -13,6 +13,8 @@
 // @connect      *
 // @match        *://*/*/web/index.html
 // @match        *://*/web/index.html
+// @match        *://*/*/web/
+// @match        *://*/web/
 // @match        https://jellyfin-web.pages.dev/
 // ==/UserScript==
 
