@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.37
+// @version      1.38
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -991,7 +991,38 @@
     }
 
     async function createDanmaku(comments) {
+        if (!window.obVideo) {
+            window.obVideo = new MutationObserver((mutationList, _observer) => {
+                for (let mutationRecord of mutationList) {
+                    if (mutationRecord.removedNodes) {
+                        for (let removedNode of mutationRecord.removedNodes) {
+                            if (removedNode.className && removedNode.classList.contains('videoPlayerContainer')) {
+                                console.log('[Jellyfin-Danmaku] Video Removed');
+                                window.ede.loading = false;
+                                document.getElementById('danmakuInfoTitle')?.remove();
+                                window.ede.danmaku?.destroy();
+                                document.getElementById('danmakuWrapper')?.remove();
+                                return;
+                            }
+                        }
+                    }
+                    if (mutationRecord.addedNodes) {
+                        for (let addedNode of mutationRecord.addedNodes) {
+                            if (addedNode.className && addedNode.classList.contains('videoPlayerContainer')) {
+                                console.log('[Jellyfin-Danmaku] Video Added');
+                                reloadDanmaku('refresh');
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+
+            window.obVideo.observe(document.body, { childList: true });
+        }
+
         if (!comments) {
+            showDebugInfo('无弹幕');
             return;
         }
 
@@ -1087,25 +1118,6 @@
 
         window.ede.obMutation = new MutationObserver(mutationObserverCallback);
         window.ede.obMutation.observe(_media, { attributes: true });
-
-        if (!window.obVideo) {
-            window.obVideo = new MutationObserver((mutationList, _observer) => {
-                for (let mutationRecord of mutationList) {
-                    if (mutationRecord.removedNodes) {
-                        for (let removedNode of mutationRecord.removedNodes) {
-                            if (removedNode.className && removedNode.classList.contains('videoPlayerContainer')) {
-                                console.log('Video Removed');
-                                window.ede.loading = false;
-                                document.getElementById('danmakuInfoTitle')?.remove();
-                                return;
-                            }
-                        }
-                    }
-                }
-            });
-
-            window.obVideo.observe(document.body, { childList: true });
-        }
     }
 
     function displayDanmakuInfo(info) {
