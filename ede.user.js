@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.35
+// @version      1.36
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -911,12 +911,61 @@
     }
 
     async function getComments(episodeId) {
-        let url = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
+        const { danmakufilter } = window.ede;
+        const url_all = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
+        const url_related = apiPrefix + 'https://api.dandanplay.net/api/v2/related/' + episodeId;
+        const url_ext = apiPrefix + 'https://api.dandanplay.net/api/v2/extcomment?url=';
         try {
-            const response = await makeGetRequest(url);
-            const data = isInTampermonkey ? JSON.parse(response) : await response.json();
-            showDebugInfo('弹幕下载成功: ' + data.comments.length);
-            return data.comments;
+            let response = await makeGetRequest(url_all);
+            let data = isInTampermonkey ? JSON.parse(response) : await response.json();
+            const nonDandan = /^.{3,}\]/; // 匹配非弹弹play弹幕
+            let hasRelated = false;
+            for (const c of data.comments) {
+                if (nonDandan.test(c.p.split(',').pop())) {
+                    hasRelated = true;
+                    break;
+                }
+            }
+            if (hasRelated) { // 实际包含第三方弹幕
+                showDebugInfo('弹幕下载成功: ' + data.comments.length);
+                return data.comments;
+            } else {
+                showDebugInfo('缺少第三方弹幕，尝试获取');
+            }
+            let comments = data.comments;
+            response = await makeGetRequest(url_related);
+            data = isInTampermonkey ? JSON.parse(response) : await response.json();
+            showDebugInfo('第三方弹幕源个数：' + data.relateds.length);
+
+            if (data.relateds.length > 0) {
+                // 根据设置过滤弹幕源
+                let src = [];
+                for (const s of data.relateds) {
+                    if ((danmakufilter & 1) !== 1 && s.url.includes('bilibili')) {
+                        src.push(s.url);
+                    }
+                    if ((danmakufilter & 2) !== 2 && s.url.includes('gamer')) {
+                        src.push(s.url);
+                    }
+                    if ((danmakufilter & 8) !== 8 && !s.url.includes('bilibili') && !s.url.includes('gamer')) {
+                        src.push(s.url);
+                    }
+                }
+                // 获取第三方弹幕
+                for (const s of src) {
+                    response = await makeGetRequest(url_ext + encodeURIComponent(s));
+                    data = isInTampermonkey ? JSON.parse(response) : await response.json();
+                    comments = comments.concat(data.comments);
+                }
+                // 去重
+                comments = comments.filter((comment, index, self) =>
+                    index === self.findIndex((t) => (
+                        t.p === comment.p
+                    ))
+                );
+                showDebugInfo('弹幕下载成功: ' + comments.length);
+                return comments;
+            }
         } catch (error) {
             showDebugInfo('获取弹幕失败:', error);
             return null;
