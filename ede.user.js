@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.36
+// @version      1.37
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -148,7 +148,7 @@
                         </div>
                         <div style="display: flex;">
                             <span id="lbspeed" style="flex: auto;">弹幕速度:</span>
-                            <input style="width: 50%;" type="range" id="speed" min="100" max="600" step="10" value="${window.ede.speed || 200}" />
+                            <input style="width: 50%;" type="range" id="speed" min="20" max="600" step="10" value="${window.ede.speed || 200}" />
                         </div>
                         <div style="display: flex;">
                             <span id="lbfontSize" style="flex: auto;">字体大小:</span>
@@ -216,7 +216,7 @@
                     window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
                     window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
                     showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
-                    window.ede.speed = parseFloatOfRange(document.getElementById('speed').value, 100, 600);
+                    window.ede.speed = parseFloatOfRange(document.getElementById('speed').value, 20, 600);
                     window.localStorage.setItem('danmakuspeed', window.ede.speed.toString());
                     showDebugInfo(`设置弹幕速度：${window.ede.speed}`);
                     window.ede.fontSize = parseFloatOfRange(document.getElementById('fontSize').value, 8, 40);
