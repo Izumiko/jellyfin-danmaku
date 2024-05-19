@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.38
+// @version      1.39
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -1000,8 +1000,8 @@
                                 console.log('[Jellyfin-Danmaku] Video Removed');
                                 window.ede.loading = false;
                                 document.getElementById('danmakuInfoTitle')?.remove();
-                                window.ede.danmaku?.destroy();
-                                document.getElementById('danmakuWrapper')?.remove();
+                                const wrapper = document.getElementById('danmakuWrapper');
+                                if (wrapper) wrapper.style.display = 'none';
                                 return;
                             }
                         }
