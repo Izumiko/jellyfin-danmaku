@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.40
+// @version      1.41
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -954,11 +954,11 @@
                     }
                 }
                 // 获取第三方弹幕
-                for (const s of src) {
-                    response = await makeGetRequest(url_ext + encodeURIComponent(s));
-                    data = isInTampermonkey ? JSON.parse(response) : await response.json();
+                await Promise.all(src.map(async (s) => {
+                    const response = await makeGetRequest(url_ext + encodeURIComponent(s));
+                    const data = isInTampermonkey ? JSON.parse(response) : await response.json();
                     comments = comments.concat(data.comments);
-                }
+                }));
             }
             showDebugInfo('弹幕下载成功: ' + comments.length);
             return comments;
@@ -1047,6 +1047,7 @@
         await waitForMediaContainer();
 
         let _container = null;
+        const reactRoot = document.getElementById('reactRoot');
         document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
             if (!element.classList.contains('hide')) {
                 _container = element;
@@ -1066,13 +1067,17 @@
 
         wrapper = document.createElement('div');
         wrapper.id = 'danmakuWrapper';
-        wrapper.style.position = 'absolute';
+        wrapper.style.position = 'fixed';
         wrapper.style.width = '100%';
         wrapper.style.height = `calc(${window.ede.heightRatio * 100}% - 18px)`;
         wrapper.style.opacity = window.ede.opacity;
         wrapper.style.top = '18px';
-        wrapper.style.overflow = 'hidden';
-        _container.prepend(wrapper);
+        wrapper.style.pointerEvents = 'none';
+        if (reactRoot) {
+            reactRoot.prepend(wrapper);
+        } else {
+            showDebugInfo('未找到video');
+        }
 
         window.ede.danmaku = new Danmaku({
             container: wrapper,
