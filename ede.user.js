@@ -1076,7 +1076,7 @@
         if (reactRoot) {
             reactRoot.prepend(wrapper);
         } else {
-            showDebugInfo('未找到video');
+            _container.prepend(wrapper);
         }
 
         window.ede.danmaku = new Danmaku({
