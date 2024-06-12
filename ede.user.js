@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.41
+// @version      1.42
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -1244,9 +1244,19 @@
         if (filterule === '') { filterule = '!.*'; }
         const danmakufilterule = new RegExp(filterule);
 
-        return all_cmts
-            .filter((comment, index, self) => {
-                return !danmakufilterule.test(comment.p.split(',').pop()) && index === self.findIndex((t) => t.cid === comment.cid);
+        // 使用Map去重
+        const unique_cmts = [];
+        const cmtMap = new Map();
+        all_cmts.forEach((comment) => {
+            if (!cmtMap.has(comment.p + comment.m)) {
+                cmtMap.set(comment.p + comment.m, true);
+                unique_cmts.push(comment);
+            }
+        });
+
+        return unique_cmts
+            .filter((comment) => {
+                return !danmakufilterule.test(comment.p.split(',').pop());
             })
             .map((comment) => {
                 const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
