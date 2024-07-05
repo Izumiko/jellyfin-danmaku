@@ -1247,9 +1247,11 @@
         // 使用Map去重
         const unique_cmts = [];
         const cmtMap = new Map();
+        const removeUserRegex = /,[^,]+$/; //p: time,modeId,colorValue,user
         all_cmts.forEach((comment) => {
-            if (!cmtMap.has(comment.p + comment.m)) {
-                cmtMap.set(comment.p + comment.m, true);
+            const p = comment.p.replace(removeUserRegex, '');
+            if (!cmtMap.has(p + comment.m)) {
+                cmtMap.set(p + comment.m, true);
                 unique_cmts.push(comment);
             }
         });
