@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.42
+// @version      1.43
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -164,14 +164,23 @@
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">弹幕过滤:</label>
-                            <div><input type="checkbox" id="filterBilibili" name="danmakufilter" value="1" ${((window.ede.danmakufilter & 1) === 1) ? 'checked' : ''} />
+                            <div><input type="checkbox" id="filterBilibili" name="danmakuFilter" value="1" ${((window.ede.danmakuFilter & 1) === 1) ? 'checked' : ''} />
                                 <label for="filterBilibili">B站</label></div>
-                            <div><input type="checkbox" id="filterGamer" name="danmakufilter" value="2" ${((window.ede.danmakufilter & 2) === 2) ? 'checked' : ''} />
+                            <div><input type="checkbox" id="filterGamer" name="danmakuFilter" value="2" ${((window.ede.danmakuFilter & 2) === 2) ? 'checked' : ''} />
                                 <label for="filterGamer">巴哈</label></div>
-                            <div><input type="checkbox" id="filterDanDanPlay" name="danmakufilter" value="4" ${((window.ede.danmakufilter & 4) === 4) ? 'checked' : ''} />
+                            <div><input type="checkbox" id="filterDanDanPlay" name="danmakuFilter" value="4" ${((window.ede.danmakuFilter & 4) === 4) ? 'checked' : ''} />
                                 <label for="filterDanDanPlay">弹弹</label></div>
-                            <div><input type="checkbox" id="filterOthers" name="danmakufilter" value="8" ${((window.ede.danmakufilter & 8) === 8) ? 'checked' : ''} />
+                            <div><input type="checkbox" id="filterOthers" name="danmakuFilter" value="8" ${((window.ede.danmakuFilter & 8) === 8) ? 'checked' : ''} />
                                 <label for="filterOthers">其他</label></div>
+                        </div>
+                        <div style="display: flex;">
+                            <label style="flex: auto;">弹幕类型过滤:</label>
+                            <div><input type="checkbox" id="filterBottom" name="danmakuModeFilter" value="1" ${((window.ede.danmakuModeFilter & 1) === 1) ? 'checked' : ''} />
+                                <label for="filterBottom">底部</label></div>
+                            <div><input type="checkbox" id="filterTop" name="danmakuModeFilter" value="2" ${((window.ede.danmakuModeFilter & 2) === 2) ? 'checked' : ''} />
+                                <label for="filterTop">顶部</label></div>
+                            <div><input type="checkbox" id="filterRoll" name="danmakuModeFilter" value="4" ${((window.ede.danmakuModeFilter & 4) === 4) ? 'checked' : ''} />
+                                <label for="filterRoll">滚动</label></div>
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">简繁转换:</label>
@@ -181,6 +190,10 @@
                                 <label for="chConvert1">简体</label></div>
                             <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${(window.ede.chConvert === 2) ? 'checked' : ''}>
                                 <label for="chConvert2">繁体</label></div>
+                        </div>
+                        <div style="display: flex;">
+                            <label style="flex: auto;">当前弹幕偏移时间:</label>
+                            <div><input style="flex-grow: 1;" id="danmakuOffsetTime" placeholder="秒" value="${window.ede.curEpOffset || 0}" /></div>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 10px;">
@@ -225,18 +238,30 @@
                     window.ede.heightRatio = parseFloatOfRange(document.getElementById('heightRatio').value, 0, 1);
                     window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
                     showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
-                    window.ede.danmakufilter = 0;
-                    document.querySelectorAll('input[name="danmakufilter"]:checked').forEach(element => {
-                        window.ede.danmakufilter += parseInt(element.value, 10);
+                    window.ede.danmakuFilter = 0;
+                    document.querySelectorAll('input[name="danmakuFilter"]:checked').forEach(element => {
+                        window.ede.danmakuFilter += parseInt(element.value, 10);
                     });
-                    window.localStorage.setItem('danmakufilter', window.ede.danmakufilter);
-                    showDebugInfo(`设置弹幕过滤：${window.ede.danmakufilter}`);
+                    window.localStorage.setItem('danmakuFilter', window.ede.danmakuFilter);
+                    showDebugInfo(`设置弹幕过滤：${window.ede.danmakuFilter}`);
+                    window.ede.danmakuModeFilter = 0;
+                    document.querySelectorAll('input[name="danmakuModeFilter"]:checked').forEach(element => {
+                        window.ede.danmakuModeFilter += parseInt(element.value, 10);
+                    });
+                    window.localStorage.setItem('danmakuModeFilter', window.ede.danmakuModeFilter);
+                    showDebugInfo(`设置弹幕模式过滤：${window.ede.danmakuModeFilter}`);
                     window.ede.danmakuDensityLimit = parseInt(document.getElementById('danmakuDensityLimit').value);
                     window.localStorage.setItem('danmakuDensityLimit', window.ede.danmakuDensityLimit);
                     showDebugInfo(`设置弹幕密度限制等级：${window.ede.danmakuDensityLimit}`);
                     window.ede.chConvert = parseInt(document.querySelector('input[name="chConvert"]:checked').value);
                     window.localStorage.setItem('chConvert', window.ede.chConvert);
                     showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
+                    const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value);
+                    window.ede.curEpOffsetModified = epOffset !== window.ede.curEpOffset;
+                    if (window.ede.curEpOffsetModified) {
+                        window.ede.curEpOffset = epOffset;
+                        showDebugInfo(`设置弹幕偏移时间：${window.ede.curEpOffset}`);
+                    }
                     reloadDanmaku('reload');
                     closeModal();
                 } catch (e) {
@@ -427,12 +452,19 @@
             const heightRecord = window.localStorage.getItem('danmakuheight');
             this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9
             // 弹幕过滤
-            const danmakufilter = window.localStorage.getItem('danmakufilter');
-            this.danmakufilter = danmakufilter ? parseInt(danmakufilter) : 0;
-            this.danmakufilter = this.danmakufilter >= 0 && this.danmakufilter < 16 ? this.danmakufilter : 0;
+            const danmakuFilter = window.localStorage.getItem('danmakuFilter');
+            this.danmakuFilter = danmakuFilter ? parseInt(danmakuFilter) : 0;
+            this.danmakuFilter = this.danmakuFilter >= 0 && this.danmakuFilter < 16 ? this.danmakuFilter : 0;
+            // 按弹幕模式过滤
+            const danmakuModeFilter = window.localStorage.getItem('danmakuModeFilter');
+            this.danmakuModeFilter = danmakuModeFilter ? parseInt(danmakuModeFilter) : 0;
+            this.danmakuModeFilter = this.danmakuModeFilter >= 0 && this.danmakuModeFilter < 8 ? this.danmakuModeFilter : 0;
             // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
             const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
             this.danmakuDensityLimit = danmakuDensityLimit ? parseInt(danmakuDensityLimit) : 0;
+            // 当前剧集弹幕偏移时间
+            this.curEpOffset = 0;
+            this.curEpOffsetModified = false;
 
             this.danmaku = null;
             this.episode_info = null;
@@ -841,6 +873,11 @@
                 return null;
             }
         }
+        const _episode_key_offset = _episode_key + '_offset';
+        if (window.ede.curEpOffsetModified) {
+            window.localStorage.setItem(_episode_key_offset, window.ede.curEpOffset);
+        }
+        window.ede.curEpOffset = window.localStorage.getItem(_episode_key_offset) || 0;
 
         let searchUrl = apiPrefix + 'https://api.dandanplay.net/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
         let animaInfo = await makeGetRequest(searchUrl)
@@ -913,7 +950,7 @@
     }
 
     async function getComments(episodeId) {
-        const { danmakufilter } = window.ede;
+        const { danmakuFilter } = window.ede;
         const url_all = apiPrefix + 'https://api.dandanplay.net/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
         const url_related = apiPrefix + 'https://api.dandanplay.net/api/v2/related/' + episodeId;
         const url_ext = apiPrefix + 'https://api.dandanplay.net/api/v2/extcomment?url=';
@@ -943,13 +980,13 @@
                 // 根据设置过滤弹幕源
                 let src = [];
                 for (const s of data.relateds) {
-                    if ((danmakufilter & 1) !== 1 && s.url.includes('bilibili')) {
+                    if ((danmakuFilter & 1) !== 1 && s.url.includes('bilibili')) {
                         src.push(s.url);
                     }
-                    if ((danmakufilter & 2) !== 2 && s.url.includes('gamer')) {
+                    if ((danmakuFilter & 2) !== 2 && s.url.includes('gamer')) {
                         src.push(s.url);
                     }
-                    if ((danmakufilter & 8) !== 8 && !s.url.includes('bilibili') && !s.url.includes('gamer')) {
+                    if ((danmakuFilter & 8) !== 8 && !s.url.includes('bilibili') && !s.url.includes('gamer')) {
                         src.push(s.url);
                     }
                 }
@@ -1034,9 +1071,11 @@
         showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
         showDebugInfo(`弹幕速度：${window.ede.speed}`);
         showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
-        showDebugInfo(`弹幕来源过滤：${window.ede.danmakufilter}`);
+        showDebugInfo(`弹幕来源过滤：${window.ede.danmakuFilter}`);
+        showDebugInfo(`弹幕模式过滤：${window.ede.danmakuModeFilter}`);
         showDebugInfo(`弹幕字号：${window.ede.fontSize}`);
         showDebugInfo(`屏幕分辨率：${window.screen.width}x${window.screen.height}`);
+        if (window.ede.curEpOffset !== 0) showDebugInfo(`当前弹幕偏移：${window.ede.curEpOffset} 秒`);
 
         const waitForMediaContainer = async () => {
             while (!document.querySelector(mediaContainerQueryStr)) {
@@ -1229,12 +1268,12 @@
     }
 
     function danmakuParser(all_cmts) {
-        const { fontSize, danmakufilter } = window.ede;
+        const { fontSize, danmakuFilter, danmakuModeFilter, curEpOffset } = window.ede;
 
-        const disableBilibili = (danmakufilter & 1) === 1;
-        const disableGamer = (danmakufilter & 2) === 2;
-        const disableDandan = (danmakufilter & 4) === 4;
-        const disableOther = (danmakufilter & 8) === 8;
+        const disableBilibili = (danmakuFilter & 1) === 1;
+        const disableGamer = (danmakuFilter & 2) === 2;
+        const disableDandan = (danmakuFilter & 4) === 4;
+        const disableOther = (danmakuFilter & 8) === 8;
 
         let filterule = '';
         if (disableDandan) { filterule += '^(?!\\[)|\^.{0,3}\\]'; }
@@ -1242,7 +1281,7 @@
         if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
         if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
         if (filterule === '') { filterule = '!.*'; }
-        const danmakufilterule = new RegExp(filterule);
+        const danmakuFilteRule = new RegExp(filterule);
 
         // 使用Map去重
         const unique_cmts = [];
@@ -1256,20 +1295,26 @@
             }
         });
 
+        const disabledMode = [];
+        if ((danmakuModeFilter & 1) === 1) { disabledMode.push(4); }
+        if ((danmakuModeFilter & 2) === 2) { disabledMode.push(5); }
+        if ((danmakuModeFilter & 4) === 4) { disabledMode.push(6); disabledMode.push(1); }
+
         return unique_cmts
             .filter((comment) => {
-                return !danmakufilterule.test(comment.p.split(',').pop());
+                return !danmakuFilteRule.test(comment.p.split(',').pop());
             })
             .map((comment) => {
                 const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-                const mode = { 6: 'ltr', 1: 'rtl', 5: 'top', 4: 'bottom' }[modeId];
+                if (disabledMode.includes(modeId)) return null;
+                const mode = { 1: 'rtl', 4: 'bottom', 5: 'top', 6: 'ltr' }[modeId];
                 if (!mode) return null;
 
-                const color = `000000${colorValue.toString(16)}`.slice(-6);
+                const color = colorValue.toString(16).padStart(6, '0');
                 return {
                     text: comment.m,
                     mode,
-                    time,
+                    time: time + curEpOffset,
                     style: {
                         font: `${fontSize}px sans-serif`,
                         fillStyle: `#${color}`,
