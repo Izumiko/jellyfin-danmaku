@@ -1295,20 +1295,20 @@
             }
         });
 
-        const disabledMode = [];
-        if ((danmakuModeFilter & 1) === 1) { disabledMode.push(4); }
-        if ((danmakuModeFilter & 2) === 2) { disabledMode.push(5); }
-        if ((danmakuModeFilter & 4) === 4) { disabledMode.push(6); disabledMode.push(1); }
+        let enabledMode = [1, 4, 5, 6];
+        if ((danmakuModeFilter & 1) === 1) { enabledMode.filter((v) => v !== 4); }
+        if ((danmakuModeFilter & 2) === 2) { enabledMode.filter((v) => v !== 5); }
+        if ((danmakuModeFilter & 4) === 4) { enabledMode.filter((v) => v !== 6 || v !== 1); }
 
         return unique_cmts
             .filter((comment) => {
-                return !danmakuFilteRule.test(comment.p.split(',').pop());
+                const user = comment.p.split(',')[3];
+                const modeId = parseInt(comment.p.split(',')[1], 10);
+                return !danmakuFilteRule.test(comment.m) && enabledMode.includes(modeId);
             })
             .map((comment) => {
                 const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-                if (disabledMode.includes(modeId)) return null;
                 const mode = { 1: 'rtl', 4: 'bottom', 5: 'top', 6: 'ltr' }[modeId];
-                if (!mode) return null;
 
                 const color = colorValue.toString(16).padStart(6, '0');
                 return {
