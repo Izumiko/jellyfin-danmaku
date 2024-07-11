@@ -1298,7 +1298,7 @@
         let enabledMode = [1, 4, 5, 6];
         if ((danmakuModeFilter & 1) === 1) { enabledMode = enabledMode.filter((v) => v !== 4); }
         if ((danmakuModeFilter & 2) === 2) { enabledMode = enabledMode.filter((v) => v !== 5); }
-        if ((danmakuModeFilter & 4) === 4) { enabledMode = enabledMode.filter((v) => v !== 6 || v !== 1); }
+        if ((danmakuModeFilter & 4) === 4) { enabledMode = enabledMode.filter((v) => v !== 6 && v !== 1); }
 
         return unique_cmts
             .filter((comment) => {
