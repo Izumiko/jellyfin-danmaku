@@ -1053,7 +1053,11 @@
         const path = window.location.pathname.replace(/\/web\//, '/api/danmu/');
         const url = window.location.origin + path + jellyfinItemId + '/raw';
         const response = await makeGetRequest(url);
-        if (!response || response.length === 0) {
+        if (!response.ok) {
+            return null;
+        }
+        const xmlText = await response.text();
+        if (!xmlText || xmlText.length === 0) {
             return null;
         }
 
@@ -1062,21 +1066,25 @@
         //           <d p="stime, type, fontSize, color, date, pool, sender, dbid, unknown">content</d>
         // comment data: {cid: "1723088443", p: "392.00,1,16777215,[BiliBili]e6860b30", m: "弹幕内容"}
         //               {cid: "dbid", p: "stime, type, color, sender", m: "content"}
-        const parser = new DOMParser();
-        const data = parser.parseFromString(response, 'text/xml');
-        const comments = [];
+        try {
+            const parser = new DOMParser();
+            const data = parser.parseFromString(xmlText, 'text/xml');
+            const comments = [];
 
-        for (const comment of data.getElementsByTagName('d')) {
-            const p = comment.getAttribute('p').split(',').map(Number);
-            const commentData = {
-                cid: p[7],
-                p: p[0] + ',' + p[1] + ',' + p[3] + ',' + p[6],
-                m: comment.textContent
-            };
-            comments.push(commentData);
+            for (const comment of data.getElementsByTagName('d')) {
+                const p = comment.getAttribute('p').split(',').map(Number);
+                const commentData = {
+                    cid: p[7],
+                    p: p[0] + ',' + p[1] + ',' + p[3] + ',' + p[6],
+                    m: comment.textContent
+                };
+                comments.push(commentData);
+            }
+
+            return comments;
+        } catch (error) {
+            return null;
         }
-
-        return comments;
     }
 
     async function createDanmaku(comments) {
