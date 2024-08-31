@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.43
+// @version      1.44
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -154,7 +154,7 @@
                         </div>
                         <div style="display: flex;">
                             <span id="lbfontSize" style="flex: auto;">字体大小:</span>
-                            <input style="width: 50%;" type="range" id="fontSize" min="8" max="40" step="1" value="${window.ede.fontSize || 18}" />
+                            <input style="width: 50%;" type="range" id="fontSize" min="8" max="80" step="1" value="${window.ede.fontSize || 18}" />
                         </div>
                         <div style="display: flex;">
                             <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
@@ -192,6 +192,13 @@
                                 <label for="chConvert1">简体</label></div>
                             <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${(window.ede.chConvert === 2) ? 'checked' : ''}>
                                 <label for="chConvert2">繁体</label></div>
+                        </div>
+                        <div style="display: flex;">
+                            <label style="flex: auto;">使用本地xml弹幕:</label>
+                            <div><input type="radio" id="enableXmlDanmaku" name="useXmlDanmaku" value="1" ${(window.ede.useXmlDanmaku === 1) ? 'checked' : ''}>
+                                <label for="chConvert0">是</label></div>
+                            <div><input type="radio" id="disableXmlDanmaku" name="useXmlDanmaku" value="0" ${(window.ede.useXmlDanmaku === 0) ? 'checked' : ''}>
+                                <label for="chConvert1">否</label></div>
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">当前弹幕偏移时间:</label>
@@ -258,6 +265,9 @@
                     window.ede.chConvert = parseInt(document.querySelector('input[name="chConvert"]:checked').value);
                     window.localStorage.setItem('chConvert', window.ede.chConvert);
                     showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
+                    window.ede.useXmlDanmaku = parseInt(document.querySelector('input[name="useXmlDanmaku"]:checked').value);
+                    window.localStorage.setItem('useXmlDanmaku', window.ede.useXmlDanmaku);
+                    showDebugInfo(`是否使用本地xml弹幕：${window.ede.useXmlDanmaku}`);
                     const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value);
                     window.ede.curEpOffsetModified = epOffset !== window.ede.curEpOffset;
                     if (window.ede.curEpOffsetModified) {
@@ -459,6 +469,9 @@
             // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
             const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
             this.danmakuDensityLimit = danmakuDensityLimit ? parseInt(danmakuDensityLimit) : 0;
+            // 使用Jellyfin弹幕插件提供的xml弹幕替代本脚本在线搜索的弹幕
+            const useXmlDanmaku = window.localStorage.getItem('useXmlDanmaku');
+            this.useXmlDanmaku = useXmlDanmaku ? parseInt(useXmlDanmaku) : 0;
             // 当前剧集弹幕偏移时间
             this.curEpOffset = 0;
             this.curEpOffsetModified = false;
@@ -722,6 +735,16 @@
     }
 
     async function postRelatedSource(relatedUrl) {
+        if (!ddplayStatus.isLogin) {
+            showDebugInfo('发送相关链接失败 未登录');
+            alert('请先登录');
+            return;
+        }
+        if (!window.ede.episode_info || !window.ede.episode_info.episodeId) {
+            showDebugInfo('发送弹幕失败 未获取到弹幕信息');
+            alert('请先获取弹幕信息');
+            return;
+        }
         const url = apiPrefix + '/api/v2/related/' + window.ede.episode_info.episodeId;
         const params = {
             'episodeId': window.ede.episode_info.episodeId,
@@ -1018,6 +1041,44 @@
         return null;
     }
 
+    async function getItemId() {
+        let item = await getEmbyItemInfo();
+        if (!item) {
+            return null;
+        }
+        return item.Id || null;
+    }
+
+    async function getCommentsByPluginApi(jellyfinItemId) {
+        const path = window.location.pathname.replace(/\/web\//, '/api/danmu/');
+        const url = window.location.origin + path + jellyfinItemId + '/raw';
+        const response = await makeGetRequest(url);
+        if (!response || response.length === 0) {
+            return null;
+        }
+
+        // parse the xml data
+        // xml data: <d p="392.00000,1,25,16777215,0,0,[BiliBili]e6860b30,1723088443,1">弹幕内容</d>
+        //           <d p="stime, type, fontSize, color, date, pool, sender, dbid, unknown">content</d>
+        // comment data: {cid: "1723088443", p: "392.00,1,16777215,[BiliBili]e6860b30", m: "弹幕内容"}
+        //               {cid: "dbid", p: "stime, type, color, sender", m: "content"}
+        const parser = new DOMParser();
+        const data = parser.parseFromString(response, 'text/xml');
+        const comments = [];
+
+        for (const comment of data.getElementsByTagName('d')) {
+            const p = comment.getAttribute('p').split(',').map(Number);
+            const commentData = {
+                cid: p[7],
+                p: p[0] + ',' + p[1] + ',' + p[3] + ',' + p[6],
+                m: comment.textContent
+            };
+            comments.push(commentData);
+        }
+
+        return comments;
+    }
+
     async function createDanmaku(comments) {
         if (!window.obVideo) {
             window.obVideo = new MutationObserver((mutationList, _observer) => {
@@ -1166,12 +1227,41 @@
         infoContainer.innerText = `弹幕匹配信息：${info.animeTitle} - ${info.episodeTitle}`;
     }
 
-    function reloadDanmaku(type = 'check') {
+    async function reloadDanmaku(type = 'check') {
         if (window.ede.loading) {
             showDebugInfo('正在重新加载');
             return;
         }
         window.ede.loading = true;
+        if (window.ede.useXmlDanmaku === 1) {
+            const comments = await getItemId().then((itemId) => {
+                return new Promise((resolve, reject) => {
+                    if (!itemId) {
+                        if (type != 'init') {
+                            reject('播放器未完成加载');
+                        } else {
+                            reject(null);
+                        }
+                    }
+                    resolve(itemId);
+                });
+            }).then((itemId) => getCommentsByPluginApi(itemId));
+            
+            if (comments.length > 0) {
+                createDanmaku(comments).then(() => {
+                    showDebugInfo('本地弹幕就位');
+                }).then(() => {
+                    window.ede.loading = false;
+                    const danmakuCtr = document.getElementById('danmakuCtr');
+                    if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
+                        danmakuCtr.style.opacity = 1;
+                    }
+                });
+                return;
+            }
+
+            showDebugInfo('本地弹幕加载失败，尝试在线加载');
+        }
         getEpisodeInfo(type != 'search')
             .then((info) => {
                 return new Promise((resolve, reject) => {
