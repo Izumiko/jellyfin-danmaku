@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.44
+// @version      1.45
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -909,7 +909,7 @@
         if (animaInfo.animes.length == 0) {
             const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId || item.Id);
             animeName = seriesInfo.OriginalTitle;
-            if (animeName.length > 0) {
+            if (animeName?.length > 0) {
                 searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
                 animaInfo = await makeGetRequest(searchUrl)
                     .then((response) => isInTampermonkey ? JSON.parse(response) : response.json())
@@ -1235,14 +1235,14 @@
         infoContainer.innerText = `弹幕匹配信息：${info.animeTitle} - ${info.episodeTitle}`;
     }
 
-    async function reloadDanmaku(type = 'check') {
+    function reloadDanmaku(type = 'check') {
         if (window.ede.loading) {
             showDebugInfo('正在重新加载');
             return;
         }
         window.ede.loading = true;
         if (window.ede.useXmlDanmaku === 1) {
-            const comments = await getItemId().then((itemId) => {
+            getItemId().then((itemId) => {
                 return new Promise((resolve, reject) => {
                     if (!itemId) {
                         if (type != 'init') {
@@ -1253,24 +1253,32 @@
                     }
                     resolve(itemId);
                 });
-            }).then((itemId) => getCommentsByPluginApi(itemId));
-            
-            if (comments.length > 0) {
-                createDanmaku(comments).then(() => {
-                    showDebugInfo('本地弹幕就位');
-                }).then(() => {
-                    window.ede.loading = false;
-                    const danmakuCtr = document.getElementById('danmakuCtr');
-                    if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
-                        danmakuCtr.style.opacity = 1;
+            }).then((itemId) => getCommentsByPluginApi(itemId))
+                .then((comments) => {
+                    if (comments?.length > 0) {
+                        return createDanmaku(comments).then(() => {
+                            showDebugInfo('本地弹幕就位');
+                        }).then(() => {
+                            window.ede.loading = false;
+                            const danmakuCtr = document.getElementById('danmakuCtr');
+                            if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
+                                danmakuCtr.style.opacity = 1;
+                            }
+                        });
                     }
+                    throw new Error('本地弹幕加载失败，尝试在线加载');
+                })
+                .catch((error) => {
+                    showDebugInfo(error.message);
+                    return loadOnlineDanmaku(type);
                 });
-                return;
-            }
-
-            showDebugInfo('本地弹幕加载失败，尝试在线加载');
+        } else {
+            loadOnlineDanmaku(type);
         }
-        getEpisodeInfo(type != 'search')
+    }
+
+    function loadOnlineDanmaku(type) {
+        return getEpisodeInfo(type != 'search')
             .then((info) => {
                 return new Promise((resolve, reject) => {
                     if (!info) {
@@ -1289,13 +1297,12 @@
                     }
                 });
             })
-            .then(
-                (episodeId) =>
-                    getComments(episodeId).then((comments) =>
-                        createDanmaku(comments).then(() => {
-                            showDebugInfo('弹幕就位');
-                        }),
-                    ),
+            .then((episodeId) =>
+                getComments(episodeId).then((comments) =>
+                    createDanmaku(comments).then(() => {
+                        showDebugInfo('弹幕就位');
+                    }),
+                ),
                 (msg) => {
                     if (msg) {
                         showDebugInfo(msg);
