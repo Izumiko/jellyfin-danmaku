@@ -977,7 +977,7 @@
         try {
             let response = await makeGetRequest(url_all);
             let data = isInTampermonkey ? JSON.parse(response) : await response.json();
-            const nonDandan = /^.{3,}\]/; // 匹配非弹弹play弹幕
+            const nonDandan = /^\[(?!BiliBili|Gamer).{3,}\]/; // 匹配其他弹幕
             let hasRelated = false;
             for (const c of data.comments) {
                 if (nonDandan.test(c.p.split(',').pop())) {
@@ -1406,7 +1406,7 @@
             .filter((comment) => {
                 const user = comment.p.split(',')[3];
                 const modeId = parseInt(comment.p.split(',')[1], 10);
-                return !danmakuFilteRule.test(comment.m) && enabledMode.includes(modeId);
+                return !danmakuFilteRule.test(user) && enabledMode.includes(modeId);
             })
             .map((comment) => {
                 const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
