@@ -977,19 +977,15 @@
         try {
             let response = await makeGetRequest(url_all);
             let data = isInTampermonkey ? JSON.parse(response) : await response.json();
-            const nonDandan = /^.{3,}\]/; // 匹配非弹弹play弹幕
-            let hasRelated = false;
-            for (const c of data.comments) {
-                if (nonDandan.test(c.p.split(',').pop())) {
-                    hasRelated = true;
-                    break;
+            const matchBili = /^\[BiliBili\]/;
+            let hasBili = false;
+            if ((danmakuFilter & 1) !== 1) {
+                for (const c of data.comments) {
+                    if (matchBili.test(c.p.split(',').pop())) {
+                        hasBili = true;
+                        break;
+                    }
                 }
-            }
-            if (hasRelated) { // 实际包含第三方弹幕
-                showDebugInfo('弹幕下载成功: ' + data.comments.length);
-                return data.comments;
-            } else {
-                showDebugInfo('缺少第三方弹幕，尝试获取');
             }
             let comments = data.comments;
             response = await makeGetRequest(url_related);
@@ -1000,7 +996,10 @@
                 // 根据设置过滤弹幕源
                 let src = [];
                 for (const s of data.relateds) {
-                    if ((danmakuFilter & 1) !== 1 && s.url.includes('bilibili')) {
+                    if ((danmakuFilter & 1) !== 1 && !hasBili && s.url.includes('bilibili.com/bangumi')) {
+                        src.push(s.url);
+                    }
+                    if ((danmakuFilter & 1) !== 1 && s.url.includes('bilibili.com/video')) {
                         src.push(s.url);
                     }
                     if ((danmakuFilter & 2) !== 2 && s.url.includes('gamer')) {
@@ -1406,7 +1405,7 @@
             .filter((comment) => {
                 const user = comment.p.split(',')[3];
                 const modeId = parseInt(comment.p.split(',')[1], 10);
-                return !danmakuFilteRule.test(comment.m) && enabledMode.includes(modeId);
+                return !danmakuFilteRule.test(user) && enabledMode.includes(modeId);
             })
             .map((comment) => {
                 const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
