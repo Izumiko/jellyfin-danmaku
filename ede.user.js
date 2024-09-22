@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.45
+// @version      1.46
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -1049,7 +1049,7 @@
     }
 
     async function getCommentsByPluginApi(jellyfinItemId) {
-        const path = window.location.pathname.replace(/\/web\//, '/api/danmu/');
+        const path = window.location.pathname.replace(/\/web\/(index\.html)?/, '/api/danmu/');
         const url = window.location.origin + path + jellyfinItemId + '/raw';
         const response = await makeGetRequest(url);
         if (!response.ok) {
