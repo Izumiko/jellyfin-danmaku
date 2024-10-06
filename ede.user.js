@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.46
+// @version      1.47
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -25,10 +25,15 @@
     }
     // ------ configs start------
     const isInTampermonkey = !(typeof GM_xmlhttpRequest === 'undefined');
+    const isLocalCors = (!isInTampermonkey && document.currentScript?.src) ? new URL(document.currentScript?.src).searchParams.has("noCors") : false;
     const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
-    const apiPrefix = isInTampermonkey ? 'https://api.dandanplay.net' : corsProxy + 'https://api.dandanplay.net';
+    const apiPrefix = isInTampermonkey 
+        ? 'https://api.dandanplay.net' 
+        : isLocalCors
+            ? `${window.location.origin}/ddplay-api`
+            : corsProxy + 'https://api.dandanplay.net';
     // const apiPrefix = 'https://api.930524.xyz';
-    const authPrefix = corsProxy + 'https://api.dandanplay.net';  // 在Worker上计算Hash
+    const authPrefix = isLocalCors ? apiPrefix : corsProxy + 'https://api.dandanplay.net';  // 在Worker上计算Hash
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
