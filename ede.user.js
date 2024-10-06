@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.47
+// @version      1.49
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -158,8 +158,16 @@
                             <input style="width: 50%;" type="range" id="speed" min="20" max="600" step="10" value="${window.ede.speed || 200}" />
                         </div>
                         <div style="display: flex;">
+                            <label style="flex: auto;">字体:</label>
+                            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${window.ede.fontFamily ?? "sans-serif"}" /></div>
+                        </div>
+                        <div style="display: flex;">
                             <span id="lbfontSize" style="flex: auto;">字体大小:</span>
                             <input style="width: 50%;" type="range" id="fontSize" min="8" max="80" step="1" value="${window.ede.fontSize || 18}" />
+                        </div>
+                        <div style="display: flex;">
+                            <label style="flex: auto;">其他字体选項:</label>
+                            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions ?? ""}" /></div>
                         </div>
                         <div style="display: flex;">
                             <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
@@ -279,6 +287,12 @@
                         window.ede.curEpOffset = epOffset;
                         showDebugInfo(`设置弹幕偏移时间：${window.ede.curEpOffset}`);
                     }
+                    window.ede.fontFamily = document.getElementById("danmakuFontFamily").value || "sans-serif";
+                    window.localStorage.setItem('danmakuFontFamily', window.ede.fontFamily);
+                    showDebugInfo(`字体：${window.ede.fontFamily}`);
+                    window.ede.fontOptions = document.getElementById("danmakuFontOptions").value;
+                    window.localStorage.setItem('danmakuFontOptions', window.ede.fontOptions);
+                    showDebugInfo(`字体选項：${window.ede.fontOptions}`);
                     reloadDanmaku('reload');
                     closeModal();
                 } catch (e) {
@@ -480,6 +494,12 @@
             // 当前剧集弹幕偏移时间
             this.curEpOffset = 0;
             this.curEpOffsetModified = false;
+            // 字體
+            const fontFamily = window.localStorage.getItem('danmakuFontFamily');
+            this.fontFamily = fontFamily ?? "sans-serif";
+            // 字体选項
+            const fontOptions = window.localStorage.getItem('danmakuFontOptions');
+            this.fontOptions = fontOptions ?? "";
 
             this.danmaku = null;
             this.episode_info = null;
@@ -719,7 +739,7 @@
                         mode: modemap,
                         time: time,
                         style: {
-                            font: `${window.ede.fontSize}px sans-serif`,
+                            font: `${window.ede.fontOptions} ${window.ede.fontSize}px ${window.ede.fontFamily}`,
                             fillStyle: `#${colorStr}`,
                             strokeStyle: colorStr === '000000' ? '#fff' : '#000',
                             lineWidth: 2.0,
@@ -1144,6 +1164,8 @@
         showDebugInfo(`弹幕来源过滤：${window.ede.danmakuFilter}`);
         showDebugInfo(`弹幕模式过滤：${window.ede.danmakuModeFilter}`);
         showDebugInfo(`弹幕字号：${window.ede.fontSize}`);
+        showDebugInfo(`弹幕字体：${window.ede.fontFamily}`);
+        showDebugInfo(`弹幕字体选項：${window.ede.fontOptions}`);
         showDebugInfo(`屏幕分辨率：${window.screen.width}x${window.screen.height}`);
         if (window.ede.curEpOffset !== 0) showDebugInfo(`当前弹幕偏移：${window.ede.curEpOffset} 秒`);
 
@@ -1374,7 +1396,7 @@
     }
 
     function danmakuParser(all_cmts) {
-        const { fontSize, danmakuFilter, danmakuModeFilter, curEpOffset } = window.ede;
+        const { fontSize, fontOptions, fontFamily, danmakuFilter, danmakuModeFilter, curEpOffset } = window.ede;
 
         const disableBilibili = (danmakuFilter & 1) === 1;
         const disableGamer = (danmakuFilter & 2) === 2;
@@ -1422,7 +1444,7 @@
                     mode,
                     time: time + curEpOffset,
                     style: {
-                        font: `${fontSize}px sans-serif`,
+                        font: `${fontOptions} ${fontSize}px ${fontFamily}`,
                         fillStyle: `#${color}`,
                         strokeStyle: color === '000000' ? '#fff' : '#000',
                         lineWidth: 2.0,
