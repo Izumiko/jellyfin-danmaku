@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.49
+// @version      1.50
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -52,6 +52,20 @@
     const uiQueryStr = '.osdTimeText';
     const mediaContainerQueryStr = "div[data-type='video-osd']";
     const mediaQueryStr = 'video';
+
+    let itemId = '';
+
+    // Intercept XMLHttpRequest
+    const originalOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (_, url) {
+        this.addEventListener('load', function () {
+            if (url.endsWith('PlaybackInfo')) {
+                const res = JSON.parse(this.responseText);
+                itemId = res.MediaSources[0].Id;
+            }
+        });
+        originalOpen.apply(this, arguments);
+    };
 
     const displayButtonOpts = {
         title: '弹幕开关',
@@ -836,15 +850,8 @@
         let playingInfo = null;
         while (!playingInfo) {
             await new Promise((resolve) => setTimeout(resolve, 200));
-            let sessionInfo = await ApiClient.getSessions({
-                userId: ApiClient.getCurrentUserId(),
-                deviceId: ApiClient.deviceId(),
-            });
-            if (!sessionInfo[0].NowPlayingItem) {
-                await new Promise(resolve => setTimeout(resolve, 150));
-                continue;
-            }
-            playingInfo = sessionInfo[0].NowPlayingItem;
+            // params: userId, itemId
+            playingInfo = await ApiClient.getItem("", itemId);
         }
         showDebugInfo('获取Item信息成功: ' + (playingInfo.SeriesName || playingInfo.Name));
         return playingInfo;
@@ -1507,8 +1514,13 @@
             }
 
             (async () => {
-                while (!(await ApiClient.getSessions())) {
+                let retry = 0;
+                while (!itemId) {
                     await new Promise((resolve) => setTimeout(resolve, 200));
+                    retry++;
+                    if (retry > 10) {
+                        throw new Error('获取itemId失败');
+                    }
                 }
 
                 setInterval(() => {
