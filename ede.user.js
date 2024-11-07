@@ -49,7 +49,7 @@
         is: 'paper-icon-button-light',
     };
     const uiAnchorStr = 'pause';
-    const uiQueryStr = '.osdTimeText';
+    const uiQueryStr = '.btnPause';
     const mediaContainerQueryStr = "div[data-type='video-osd']";
     const mediaQueryStr = 'video';
 
@@ -571,7 +571,7 @@
         let uiEle = null;
         document.querySelectorAll(uiQueryStr).forEach(function (element) {
             if (element.offsetParent != null) {
-                uiEle = element;
+                uiEle = element.parentNode;
             }
         });
         if (uiEle == null) {
@@ -585,7 +585,7 @@
             menubar.style.opacity = 0.5;
         }
 
-        parent.insertBefore(menubar, uiEle);
+        parent.insertBefore(menubar, uiEle.nextSibling);
         // 弹幕开关
         displayButtonOpts.class = danmaku_icons[window.ede.danmakuSwitch];
         menubar.appendChild(createButton(displayButtonOpts));
