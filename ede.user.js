@@ -3,13 +3,12 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.51
+// @version      1.52
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
 // @updateURL    https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js
 // @downloadURL  https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js
-// @grant        GM_xmlhttpRequest
 // @connect      *
 // @match        *://*/*/web/index.html
 // @match        *://*/web/index.html
@@ -24,16 +23,9 @@
         return;
     }
     // ------ configs start------
-    const isInTampermonkey = !(typeof GM_xmlhttpRequest === 'undefined');
-    const isLocalCors = (!isInTampermonkey && document.currentScript?.src) ? new URL(document.currentScript?.src).searchParams.has("noCors") : false;
     const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
-    const apiPrefix = isInTampermonkey 
-        ? 'https://api.dandanplay.net' 
-        : isLocalCors
-            ? `${window.location.origin}/ddplay-api`
-            : corsProxy + 'https://api.dandanplay.net';
-    // const apiPrefix = 'https://api.930524.xyz';
-    const authPrefix = isLocalCors ? apiPrefix : corsProxy + 'https://api.dandanplay.net';  // 在Worker上计算Hash
+    const apiPrefix = corsProxy + 'https://api.dandanplay.net';
+    const authPrefix = corsProxy + 'https://api.dandanplay.net';  // 在Worker上计算Hash
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
@@ -871,36 +863,14 @@
     }
 
     function makeGetRequest(url) {
-        if (isInTampermonkey) {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: "GET",
-                    url: url,
-                    headers: {
-                        "Accept-Encoding": "gzip,br",
-                        "Accept": "application/json"
-                    },
-                    onload: function (response) {
-                        response.json = () => Promise.resolve(JSON.parse(response.responseText));
-                        response.text = () => Promise.resolve(response.responseText);
-                        response.ok = response.status >= 200 && response.status < 300;
-                        resolve(response);
-                    },
-                    onerror: function (error) {
-                        reject(error);
-                    }
-                });
-            });
-        } else {
-            return fetch(url, {
-                method: 'GET',
-                headers: {
-                    "Accept-Encoding": "gzip,br",
-                    "Accept": "application/json",
-                    "User-Agent": navigator.userAgent
-                }
-            });
-        }
+        return fetch(url, {
+            method: 'GET',
+            headers: {
+                "Accept-Encoding": "gzip,br",
+                "Accept": "application/json",
+                "User-Agent": navigator.userAgent
+            }
+        });
     }
 
     async function getEpisodeInfo(is_auto = true) {
