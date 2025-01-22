@@ -917,7 +917,7 @@
         }
         window.ede.curEpOffset = window.localStorage.getItem(_episode_key_offset) || 0;
 
-        let searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
+        let searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName;
         let animaInfo = await makeGetRequest(searchUrl)
             .then((response) => response.json())
             .catch((error) => {
@@ -928,7 +928,7 @@
             const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId || item.Id);
             animeName = seriesInfo.OriginalTitle;
             if (animeName?.length > 0) {
-                searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName + '&withRelated=true';
+                searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName;
                 animaInfo = await makeGetRequest(searchUrl)
                     .then((response) => response.json())
                     .catch((error) => {
