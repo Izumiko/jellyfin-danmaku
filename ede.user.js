@@ -47,6 +47,7 @@
 
     let isNewJellyfin = true;
     let itemId = '';
+    const defaultFontFamily = '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
 
     // Intercept XMLHttpRequest
     const originalOpen = XMLHttpRequest.prototype.open;
@@ -166,7 +167,7 @@
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">字体:</label>
-                            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${window.ede.fontFamily ?? "sans-serif"}" /></div>
+                            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${window.ede.fontFamily?.replaceAll('"', "&quot;") ?? defaultFontFamily}" /></div>
                         </div>
                         <div style="display: flex;">
                             <span id="lbfontSize" style="flex: auto;">字体大小:</span>
@@ -174,7 +175,7 @@
                         </div>
                         <div style="display: flex;">
                             <label style="flex: auto;">其他字体选项:</label>
-                            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions ?? ""}" /></div>
+                            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions?.replaceAll('"', "&quot;") ?? ""}" /></div>
                         </div>
                         <div style="display: flex;">
                             <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
@@ -1163,7 +1164,7 @@
         if (window.ede.curEpOffset !== 0) showDebugInfo(`当前弹幕偏移：${window.ede.curEpOffset} 秒`);
 
         const waitForMediaContainer = async () => {
-            while (!document.querySelector(mediaContainerQueryStr)) {
+            while (!document.querySelector(mediaContainerQueryStr)?.children.length) {
                 await new Promise((resolve) => setTimeout(resolve, 200));
             }
         };
@@ -1230,6 +1231,7 @@
         const mutationObserverCallback = () => {
             if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                 showDebugInfo('探测播放媒体变化');
+                document.getElementById('danmakuInfoTitle')?.remove();
                 const sleep = new Promise(resolve => setTimeout(resolve, 3000));
                 sleep.then(() => reloadDanmaku('refresh'));
             }
