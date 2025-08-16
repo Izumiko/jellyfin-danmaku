@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.54
+// @version      1.55
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -215,6 +215,13 @@
                                 <label for="chConvert2">繁体</label></div>
                         </div>
                         <div style="display: flex;">
+                            <label style="flex: auto;">弹幕防重叠:</label>
+                            <div><input type="radio" id="enableAntiOverlap" name="useAnitOverlap" value="1" ${(window.ede.useAnitOverlap === 1) ? 'checked' : ''}>
+                                <label for="enableAntiOverlap">是</label></div>
+                            <div><input type="radio" id="disableAntiOverlap" name="useAnitOverlap" value="0" ${(window.ede.useAnitOverlap === 0) ? 'checked' : ''}>
+                                <label for="disableAntiOverlap">否</label></div>
+                        </div>
+                        <div style="display: flex;">
                             <label style="flex: auto;">使用本地xml弹幕:</label>
                             <div><input type="radio" id="enableXmlDanmaku" name="useXmlDanmaku" value="1" ${(window.ede.useXmlDanmaku === 1) ? 'checked' : ''}>
                                 <label for="chConvert0">是</label></div>
@@ -286,6 +293,9 @@
                     window.ede.chConvert = parseInt(document.querySelector('input[name="chConvert"]:checked').value);
                     window.localStorage.setItem('chConvert', window.ede.chConvert);
                     showDebugInfo(`设置简繁转换：${window.ede.chConvert}`);
+                    window.ede.useAnitOverlap = parseInt(document.querySelector('input[name="useAnitOverlap"]:checked').value);
+                    window.localStorage.setItem('useAnitOverlap', window.ede.useAnitOverlap);
+                    showDebugInfo(`是否使用弹幕防重叠：${window.ede.useAnitOverlap}`);
                     window.ede.useXmlDanmaku = parseInt(document.querySelector('input[name="useXmlDanmaku"]:checked').value);
                     window.localStorage.setItem('useXmlDanmaku', window.ede.useXmlDanmaku);
                     showDebugInfo(`是否使用本地xml弹幕：${window.ede.useXmlDanmaku}`);
@@ -496,6 +506,9 @@
             // 弹幕密度限制等级 0:不限制 1:低 2:中 3:高
             const danmakuDensityLimit = window.localStorage.getItem('danmakuDensityLimit');
             this.danmakuDensityLimit = danmakuDensityLimit ? parseInt(danmakuDensityLimit) : 0;
+            // 使用弹幕防重叠
+            const useAnitOverlap = window.localStorage.getItem('useAnitOverlap');
+            this.useAnitOverlap = useAnitOverlap ? parseInt(useAnitOverlap) : 0;
             // 使用Jellyfin弹幕插件提供的xml弹幕替代本脚本在线搜索的弹幕
             const useXmlDanmaku = window.localStorage.getItem('useXmlDanmaku');
             this.useXmlDanmaku = useXmlDanmaku ? parseInt(useXmlDanmaku) : 0;
@@ -1150,7 +1163,27 @@
             window.ede.danmaku = null;
         }
 
-        let _comments = danmakuFilter(danmakuParser(comments));
+        const waitForMediaContainer = async () => {
+            while (!document.querySelector(mediaContainerQueryStr)?.children.length) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+            }
+        };
+
+        await waitForMediaContainer();
+
+        let _container = null;
+        document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
+            if (!element.classList.contains('hide')) {
+                _container = element;
+            }
+        });
+        if (!_container) {
+            showDebugInfo('未找到播放器');
+            return;
+        }
+
+        let _comments = preProcessDanmaku(comments, _container.offsetWidth, _container.offsetHeight);
+
         showDebugInfo(`弹幕加载成功: ${_comments.length}`);
         showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
         showDebugInfo(`弹幕速度：${window.ede.speed}`);
@@ -1163,26 +1196,7 @@
         showDebugInfo(`屏幕分辨率：${window.screen.width}x${window.screen.height}`);
         if (window.ede.curEpOffset !== 0) showDebugInfo(`当前弹幕偏移：${window.ede.curEpOffset} 秒`);
 
-        const waitForMediaContainer = async () => {
-            while (!document.querySelector(mediaContainerQueryStr)?.children.length) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
-            }
-        };
-
-        await waitForMediaContainer();
-
-        let _container = null;
         const reactRoot = document.getElementById('reactRoot');
-        document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
-            if (!element.classList.contains('hide')) {
-                _container = element;
-            }
-        });
-
-        if (!_container) {
-            showDebugInfo('未找到播放器');
-            return;
-        }
 
         let _media = document.querySelector(mediaQueryStr);
         if (!_media) {
@@ -1204,10 +1218,17 @@
             _container.prepend(wrapper);
         }
 
+        let finalComments = [];
+        if (window.ede.useAnitOverlap === 1) {
+            finalComments = antiOverlapFilter(_comments, _container.offsetWidth, _container.offsetHeight);
+        } else {
+            finalComments = _comments;
+        }
+
         window.ede.danmaku = new Danmaku({
             container: wrapper,
             media: _media,
-            comments: _comments,
+            comments: finalComments,
             engine: 'canvas',
             speed: window.ede.speed,
         });
@@ -1339,113 +1360,262 @@
             });
     }
 
-    function danmakuFilter(comments) {
-        const level = window.ede.danmakuDensityLimit;
-        if (level === 0) {
-            return comments;
-        }
+    function preProcessDanmaku(all_cmts, containerWidth, containerHeight) {
+        const { fontSize, fontOptions, fontFamily, speed, heightRatio, danmakuFilter, danmakuModeFilter, danmakuDensityLimit, curEpOffset } = window.ede;
 
-        let _container = null;
-        document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
-            if (!element.classList.contains('hide')) {
-                _container = element;
-            }
-        });
-
-        const containerWidth = _container.offsetWidth;
-        const containerHeight = _container.offsetHeight * window.ede.heightRatio - 18;
-        const duration = Math.ceil(containerWidth / window.ede.speed);
-        const lines = Math.floor(containerHeight / window.ede.fontSize) - 1;
-
-        const limit = (9 - level * 2) * lines;
-        const verticalLimit = lines - 1 > 0 ? lines - 1 : 1;
-        const resultComments = [];
-
-        const timeBuckets = {};
-        const verticalTimeBuckets = {};
-
-        comments.forEach(comment => {
-            const timeIndex = Math.ceil(comment.time / duration);
-
-            if (!timeBuckets[timeIndex]) {
-                timeBuckets[timeIndex] = 0;
-            }
-            if (!verticalTimeBuckets[timeIndex]) {
-                verticalTimeBuckets[timeIndex] = 0;
-            }
-
-            if (comment.mode === 'top' || comment.mode === 'bottom') {
-                if (verticalTimeBuckets[timeIndex] < verticalLimit) {
-                    verticalTimeBuckets[timeIndex]++;
-                    resultComments.push(comment);
-                }
-            } else {
-                if (timeBuckets[timeIndex] < limit) {
-                    timeBuckets[timeIndex]++;
-                    resultComments.push(comment);
-                }
-            }
-        });
-
-        return resultComments;
-    }
-
-    function danmakuParser(all_cmts) {
-        const { fontSize, fontOptions, fontFamily, danmakuFilter, danmakuModeFilter, curEpOffset } = window.ede;
-
+        // 来源过滤规则
         const disableBilibili = (danmakuFilter & 1) === 1;
         const disableGamer = (danmakuFilter & 2) === 2;
         const disableDandan = (danmakuFilter & 4) === 4;
         const disableOther = (danmakuFilter & 8) === 8;
 
-        let filterule = '';
-        if (disableDandan) { filterule += '^(?!\\[)|\^.{0,3}\\]'; }
-        if (disableBilibili) { filterule += (filterule ? '|' : '') + '\^\\[BiliBili\\]'; }
-        if (disableGamer) { filterule += (filterule ? '|' : '') + '\^\\[Gamer\\]'; }
-        if (disableOther) { filterule += (filterule ? '|' : '') + '\^\\[\(\?\!\(BiliBili\|Gamer\)\).{3,}\\]'; }
-        if (filterule === '') { filterule = '!.*'; }
-        const danmakuFilteRule = new RegExp(filterule);
+        const dandanRegex = disableDandan ? /^(?!\[)|^.{0,3}\]/ : null;
+        const otherRegex = disableOther ? /^\[(?!(BiliBili|Gamer)).{3,}\]/ : null;
 
-        // 使用Map去重
-        const unique_cmts = [];
-        const cmtMap = new Map();
-        const removeUserRegex = /,[^,]+$/; //p: time,modeId,colorValue,user
-        all_cmts.forEach((comment) => {
-            const p = comment.p.replace(removeUserRegex, '');
-            if (!cmtMap.has(p + comment.m)) {
-                cmtMap.set(p + comment.m, true);
-                unique_cmts.push(comment);
+        // 模式过滤规则
+        let enabledModes = new Set([1, 4, 5, 6]);
+        if ((danmakuModeFilter & 1) === 1) enabledModes.delete(4); // bottom
+        if ((danmakuModeFilter & 2) === 2) enabledModes.delete(5); // top
+        if ((danmakuModeFilter & 4) === 4) { enabledModes.delete(1); enabledModes.delete(6); } // rtl & ltr
+
+        // 密度过滤参数
+        const shouldFilterDensity = danmakuDensityLimit > 0;
+        const duration = Math.ceil(containerWidth / speed);
+        const lines = Math.floor((containerHeight * heightRatio - 18) / fontSize) - 1;
+        const scrollLimit = (9 - danmakuDensityLimit * 2) * lines;
+        const verticalLimit = lines - 1 > 0 ? lines - 1 : 1;
+
+        // 初始化状态变量和结果数组
+        const uniqueMap = new Map();
+        const timeBuckets = {}; // 滚动弹幕计数桶
+        const verticalTimeBuckets = {}; // 顶部/底部弹幕计数桶
+        const resultComments = [];
+
+        for (const comment of all_cmts) {
+            // 去重
+            // p format: time,modeId,colorValue,user
+            const pWithoutUser = comment.p.substring(0, comment.p.lastIndexOf(','));
+            const uniqueKey = pWithoutUser + comment.m;
+            if (uniqueMap.has(uniqueKey)) {
+                continue;
             }
-        });
+            uniqueMap.set(uniqueKey, true);
 
-        let enabledMode = [1, 4, 5, 6];
-        if ((danmakuModeFilter & 1) === 1) { enabledMode = enabledMode.filter((v) => v !== 4); }
-        if ((danmakuModeFilter & 2) === 2) { enabledMode = enabledMode.filter((v) => v !== 5); }
-        if ((danmakuModeFilter & 4) === 4) { enabledMode = enabledMode.filter((v) => v !== 6 && v !== 1); }
+            // 解析数据
+            const parts = comment.p.split(',');
+            const time = parseFloat(parts[0]);
+            const modeId = parseInt(parts[1], 10);
+            const user = parts[3];
+            
+            // 来源过滤
+            if (
+                (disableBilibili && user.startsWith('[BiliBili]')) ||
+                (disableGamer && user.startsWith('[Gamer]')) ||
+                (dandanRegex && dandanRegex.test(user)) ||
+                (otherRegex && otherRegex.test(user))
+            ) {
+                continue;
+            }
 
-        return unique_cmts
-            .filter((comment) => {
-                const user = comment.p.split(',')[3];
-                const modeId = parseInt(comment.p.split(',')[1], 10);
-                return !danmakuFilteRule.test(user) && enabledMode.includes(modeId);
-            })
-            .map((comment) => {
-                const [time, modeId, colorValue] = comment.p.split(',').map((v, i) => i === 0 ? parseFloat(v) : parseInt(v, 10));
-                const mode = { 1: 'rtl', 4: 'bottom', 5: 'top', 6: 'ltr' }[modeId];
+            // 模式过滤
+            if (!enabledModes.has(modeId)) {
+                continue;
+            }
 
-                const color = colorValue.toString(16).padStart(6, '0');
-                return {
-                    text: comment.m,
-                    mode,
-                    time: time + curEpOffset,
-                    style: {
-                        font: `${fontOptions} ${fontSize}px ${fontFamily}`,
-                        fillStyle: `#${color}`,
-                        strokeStyle: color === '000000' ? '#fff' : '#000',
-                        lineWidth: 2.0,
-                    },
-                };
+            // 密度过滤
+            if (shouldFilterDensity) {
+                const timeIndex = Math.ceil(time / duration);
+                const isVertical = modeId === 4 || modeId === 5;
+
+                if (isVertical) {
+                    verticalTimeBuckets[timeIndex] = (verticalTimeBuckets[timeIndex] || 0) + 1;
+                    if (verticalTimeBuckets[timeIndex] > verticalLimit) {
+                        continue;
+                    }
+                } else {
+                    timeBuckets[timeIndex] = (timeBuckets[timeIndex] || 0) + 1;
+                    if (timeBuckets[timeIndex] > scrollLimit) {
+                        continue;
+                    }
+                }
+            }
+
+            // 格式转换
+            const mode = { 1: 'rtl', 4: 'bottom', 5: 'top', 6: 'ltr' }[modeId];
+            const colorValue = parseInt(parts[2], 10);
+            const color = colorValue.toString(16).padStart(6, '0');
+
+            resultComments.push({
+                text: comment.m,
+                mode,
+                time: time + curEpOffset,
+                style: {
+                    font: `${fontOptions} ${fontSize}px ${fontFamily}`,
+                    fillStyle: `#${color}`,
+                    strokeStyle: color === '000000' ? '#fff' : '#000',
+                    lineWidth: 2.0,
+                },
             });
+        }
+
+        return resultComments;
+    }
+
+    const widthCache = new Map();
+    const canvasContext = document.createElement('canvas').getContext('2d');
+    function calculateDanmakuWidth(text, font) {
+        if (widthCache.has(text)) {
+            return widthCache.get(text);
+        }
+
+        canvasContext.font = font;
+        const width = canvasContext.measureText(text).width;
+
+        widthCache.set(text, width);
+        return width;
+    }
+
+    function filterOverlappedScrollDanmaku(sortedScrollDanmaku, containerWidth, containerHeight) {
+        const {
+            speed,
+            fontSize,
+            fontOptions,
+            fontFamily,
+            heightRatio
+        } = window.ede;
+
+        if (!sortedScrollDanmaku || sortedScrollDanmaku.length === 0) {
+            return [];
+        }
+
+        const fontStyle = `${fontOptions} ${fontSize}px ${fontFamily}`;
+
+        const trackCount = Math.floor((containerHeight * heightRatio - 18) / fontSize) - 1;
+        if (trackCount === 0) return [];
+
+        const duration = Math.ceil(containerWidth / speed);
+
+        const tracksReleaseTimes = new Array(trackCount).fill(0);
+        const filteredList = [];
+
+        for (const danmaku of sortedScrollDanmaku) {
+            // 预计算弹幕自身属性
+            const danmakuWidth = calculateDanmakuWidth(danmaku.text, fontStyle);
+            const actualSpeed = (containerWidth + danmakuWidth) / duration;
+
+            // 弹幕自身进入屏幕所需时间
+            const timeToEnter = danmakuWidth / actualSpeed;
+
+            // 寻找可用轨道
+            for (let i = 0; i < tracksReleaseTimes.length; i++) {
+                // 检查该轨道是否在弹幕需要出现时已经空闲
+                if (danmaku.time >= tracksReleaseTimes[i]) {
+                    // 分配成功
+                    filteredList.push(danmaku);
+                    
+                    // 更新该轨道的下一次可用时间
+                    tracksReleaseTimes[i] = danmaku.time + timeToEnter;
+
+                    break; 
+                }
+            }
+        }
+
+        return filteredList;
+    }
+
+    function filterOverlappedFixedDanmaku(sortedFixedDanmaku, containerWidth, containerHeight) {
+        const {
+            speed,
+            fontSize,
+            heightRatio
+        } = window.ede;
+
+        const trackCount = Math.floor((containerHeight * heightRatio - 18) / fontSize) - 1;
+
+        if (!sortedFixedDanmaku || sortedFixedDanmaku.length === 0 || trackCount === 0) {
+            return [];
+        }
+
+        const duration = Math.ceil(containerWidth / speed);
+
+        const tracksReleaseTimes = new Array(trackCount).fill(0);
+        const filteredList = [];
+
+        for (const danmaku of sortedFixedDanmaku) {
+            for (let i = 0; i < tracksReleaseTimes.length; i++) {
+                // 检查轨道在该弹幕需要出现时，是否已经空闲
+                if (danmaku.time >= tracksReleaseTimes[i]) {
+                    // 分配成功
+                    filteredList.push(danmaku);
+
+                    // 更新轨道的释放时间
+                    tracksReleaseTimes[i] = danmaku.time + duration;
+
+                    break;
+                }
+            }
+        }
+
+        return filteredList;
+    }
+
+    function antiOverlapFilter(allDanmaku, containerWidth, containerHeight) {
+        const sortedDanmaku = allDanmaku.sort((a, b) => a.time - b.time);
+
+        // 按类型对弹幕进行分类
+        const segregatedDanmaku = {
+            rtl: [],
+            ltr: [],
+            top: [],
+            bottom: []
+        };
+        for (const d of sortedDanmaku) {
+            if (segregatedDanmaku[d.mode]) {
+                segregatedDanmaku[d.mode].push(d);
+            }
+        }
+
+        // 处理滚动弹幕
+        let rtlResults = [];
+        if (segregatedDanmaku.rtl.length > 0) {
+            rtlResults = filterOverlappedScrollDanmaku(
+                segregatedDanmaku.rtl,
+                containerWidth,
+                containerHeight
+            );
+        }
+        let ltrResults = [];
+        if (segregatedDanmaku.ltr.length > 0) {
+            ltrResults = filterOverlappedScrollDanmaku(
+                segregatedDanmaku.ltr,
+                containerWidth,
+                containerHeight
+            );
+        }
+
+        // 处理顶部弹幕
+        let topResults = [];
+        if (segregatedDanmaku.top.length > 0) {
+            topResults = filterOverlappedFixedDanmaku(
+                segregatedDanmaku.top,
+                containerWidth,
+                containerHeight
+            );
+        }
+
+        // 处理底部弹幕
+        let bottomResults = [];
+        if (segregatedDanmaku.bottom.length > 0) {
+            bottomResults = filterOverlappedFixedDanmaku(
+                segregatedDanmaku.bottom,
+                containerWidth,
+                containerHeight
+            );
+        }
+
+        return [...rtlResults, ...ltrResults, ...topResults, ...bottomResults]
+            .sort((a, b) => a.time - b.time);
     }
 
     function list2string($obj2) {
