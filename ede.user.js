@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.53
+// @version      1.54
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -992,7 +992,7 @@
         const { danmakuFilter } = window.ede;
         const url_all = apiPrefix + '/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
         const url_related = apiPrefix + '/api/v2/related/' + episodeId;
-        const url_ext = apiPrefix + '/api/v2/extcomment?url=';
+        const url_ext = apiPrefix + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=';
         try {
             let response = await makeGetRequest(url_all);
             let data = await response.json();
@@ -1045,7 +1045,7 @@
 
     async function getCommentsByUrl(src) {
         const url_encoded = encodeURIComponent(src);
-        const url = apiPrefix + '/api/v2/extcomment?url=' + url_encoded;
+        const url = apiPrefix + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=' + url_encoded;
         for (let i = 0; i < 2; i++) {
             try {
                 const response = await makeGetRequest(url);
