@@ -25,7 +25,7 @@
     // ------ configs start------
     const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
     const apiPrefix = corsProxy + 'https://api.dandanplay.net';
-    const authPrefix = corsProxy + 'https://api.dandanplay.net';  // 在Worker上计算Hash
+    const authPrefix = corsProxy + 'https://api.dandanplay.net'; // 在Worker上计算Hash
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
@@ -110,21 +110,21 @@
                     const account = document.getElementById('ddPlayAccount').value;
                     const password = document.getElementById('ddPlayPassword').value;
                     if (account && password) {
-                        loginDanDanPlay(account, password).then(status => {
+                        loginDanDanPlay(account, password).then((status) => {
                             if (status) {
                                 document.getElementById('loginBtn').innerText = '登录✔️';
-                                let sleep = new Promise(resolve => setTimeout(resolve, 1500));
+                                let sleep = new Promise((resolve) => setTimeout(resolve, 1500));
                                 sleep.then(() => {
                                     document.getElementById('loginDialog').style.display = 'none';
                                 });
-                                modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                                modal.removeEventListener('keydown', (event) => event.stopPropagation(), true);
                             }
                         });
                     }
                 };
                 document.getElementById('cancelBtn').onclick = () => {
                     document.getElementById('loginDialog').style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    modal.removeEventListener('keydown', (event) => event.stopPropagation(), true);
                 };
             }
 
@@ -178,11 +178,11 @@
                     // 清空输入框的值
                     document.getElementById('danmakuText').value = '';
                     modal.style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    modal.removeEventListener('keydown', (event) => event.stopPropagation(), true);
                 };
                 document.getElementById('cancelSendDanmakuBtn').onclick = () => {
                     modal.style.display = 'none';
-                    modal.removeEventListener('keydown', event => event.stopPropagation(), true);
+                    modal.removeEventListener('keydown', (event) => event.stopPropagation(), true);
                 };
             }
 
@@ -192,27 +192,24 @@
                 txt.value = '';
                 txt.focus();
                 document.getElementById('sendDanmakuDialog').style.display = 'block';
-                document.getElementById('sendDanmakuDialog').addEventListener('keydown', event => event.stopPropagation(), true);
+                document.getElementById('sendDanmakuDialog').addEventListener('keydown', (event) => event.stopPropagation(), true);
                 const animeTitle = window.ede.episode_info ? window.ede.episode_info.animeTitle : '';
                 const episodeTitle = window.ede.episode_info ? window.ede.episode_info.episodeTitle : '';
                 document.getElementById('lbAnimeTitle').innerText = `当前番剧: ${animeTitle || ''}`;
                 document.getElementById('lbEpisodeTitle').innerText = `当前集数: ${episodeTitle || ''}`;
             } else {
                 document.getElementById('loginDialog').style.display = 'block';
-                document.getElementById('loginDialog').addEventListener('keydown', event => event.stopPropagation(), true);
+                document.getElementById('loginDialog').addEventListener('keydown', (event) => event.stopPropagation(), true);
             }
-        }
+        },
     };
-
-
 
     // ------ configs end------
     /* eslint-disable */
     /* https://cdn.jsdelivr.net/npm/danmaku/dist/danmaku.min.js */
     // prettier-ignore
-    !function (t, e) { "object" == typeof exports && "undefined" != typeof module ? module.exports = e() : "function" == typeof define && define.amd ? define(e) : (t = "undefined" != typeof globalThis ? globalThis : t || self).Danmaku = e() }(this, (function () { "use strict"; var t = function () { if ("undefined" == typeof document) return "transform"; for (var t = ["oTransform", "msTransform", "mozTransform", "webkitTransform", "transform"], e = document.createElement("div").style, i = 0; i < t.length; i++)if (t[i] in e) return t[i]; return "transform" }(); function e(t) { var e = document.createElement("div"); if (e.style.cssText = "position:absolute;", "function" == typeof t.render) { var i = t.render(); if (i instanceof HTMLElement) return e.appendChild(i), e } if (e.textContent = t.text, t.style) for (var n in t.style) e.style[n] = t.style[n]; return e } var i = { name: "dom", init: function () { var t = document.createElement("div"); return t.style.cssText = "overflow:hidden;white-space:nowrap;transform:translateZ(0);", t }, clear: function (t) { for (var e = t.lastChild; e;)t.removeChild(e), e = t.lastChild }, resize: function (t, e, i) { t.style.width = e + "px", t.style.height = i + "px" }, framing: function () { }, setup: function (t, i) { var n = document.createDocumentFragment(), s = 0, r = null; for (s = 0; s < i.length; s++)(r = i[s]).node = r.node || e(r), n.appendChild(r.node); for (i.length && t.appendChild(n), s = 0; s < i.length; s++)(r = i[s]).width = r.width || r.node.offsetWidth, r.height = r.height || r.node.offsetHeight }, render: function (e, i) { i.node.style[t] = "translate(" + i.x + "px," + i.y + "px)" }, remove: function (t, e) { t.removeChild(e.node), this.media || (e.node = null) } }, n = "undefined" != typeof window && window.devicePixelRatio || 1, s = Object.create(null); function r(t, e) { if ("function" == typeof t.render) { var i = t.render(); if (i instanceof HTMLCanvasElement) return t.width = i.width, t.height = i.height, i } var r = document.createElement("canvas"), h = r.getContext("2d"), o = t.style || {}; o.font = o.font || "10px sans-serif", o.textBaseline = o.textBaseline || "bottom"; var a = 1 * o.lineWidth; for (var d in a = a > 0 && a !== 1 / 0 ? Math.ceil(a) : 1 * !!o.strokeStyle, h.font = o.font, t.width = t.width || Math.max(1, Math.ceil(h.measureText(t.text).width) + 2 * a), t.height = t.height || Math.ceil(function (t, e) { if (s[t]) return s[t]; var i = 12, n = t.match(/(\d+(?:\.\d+)?)(px|%|em|rem)(?:\s*\/\s*(\d+(?:\.\d+)?)(px|%|em|rem)?)?/); if (n) { var r = 1 * n[1] || 10, h = n[2], o = 1 * n[3] || 1.2, a = n[4]; "%" === h && (r *= e.container / 100), "em" === h && (r *= e.container), "rem" === h && (r *= e.root), "px" === a && (i = o), "%" === a && (i = r * o / 100), "em" === a && (i = r * o), "rem" === a && (i = e.root * o), void 0 === a && (i = r * o) } return s[t] = i, i }(o.font, e)) + 2 * a, r.width = t.width * n, r.height = t.height * n, h.scale(n, n), o) h[d] = o[d]; var u = 0; switch (o.textBaseline) { case "top": case "hanging": u = a; break; case "middle": u = t.height >> 1; break; default: u = t.height - a }return o.strokeStyle && h.strokeText(t.text, a, u), h.fillText(t.text, a, u), r } function h(t) { return 1 * window.getComputedStyle(t, null).getPropertyValue("font-size").match(/(.+)px/)[1] } var o = { name: "canvas", init: function (t) { var e = document.createElement("canvas"); return e.context = e.getContext("2d"), e._fontSize = { root: h(document.getElementsByTagName("html")[0]), container: h(t) }, e }, clear: function (t, e) { t.context.clearRect(0, 0, t.width, t.height); for (var i = 0; i < e.length; i++)e[i].canvas = null }, resize: function (t, e, i) { t.width = e * n, t.height = i * n, t.style.width = e + "px", t.style.height = i + "px" }, framing: function (t) { t.context.clearRect(0, 0, t.width, t.height) }, setup: function (t, e) { for (var i = 0; i < e.length; i++) { var n = e[i]; n.canvas = r(n, t._fontSize) } }, render: function (t, e) { t.context.drawImage(e.canvas, e.x * n, e.y * n) }, remove: function (t, e) { e.canvas = null } }, a = "undefined" != typeof window && (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame) || function (t) { return setTimeout(t, 50 / 3) }, d = "undefined" != typeof window && (window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.webkitCancelAnimationFrame) || clearTimeout; function u(t, e, i) { for (var n = 0, s = 0, r = t.length; s < r - 1;)i >= t[n = s + r >> 1][e] ? s = n : r = n; return t[s] && i < t[s][e] ? s : r } function m(t) { return /^(ltr|top|bottom)$/i.test(t) ? t.toLowerCase() : "rtl" } function c() { var t = 9007199254740991; return [{ range: 0, time: -t, width: t, height: 0 }, { range: t, time: t, width: 0, height: 0 }] } function l(t) { t.ltr = c(), t.rtl = c(), t.top = c(), t.bottom = c() } function f() { return void 0 !== window.performance && window.performance.now ? window.performance.now() : Date.now() } function p(t) { var e = this, i = this.media ? this.media.currentTime : f() / 1e3, n = this.media ? this.media.playbackRate : 1; function s(t, s) { if ("top" === s.mode || "bottom" === s.mode) return i - t.time < e._.duration; var r = (e._.width + t.width) * (i - t.time) * n / e._.duration; if (t.width > r) return !0; var h = e._.duration + t.time - i, o = e._.width + s.width, a = e.media ? s.time : s._utc, d = o * (i - a) * n / e._.duration, u = e._.width - d; return h > e._.duration * u / (e._.width + s.width) } for (var r = this._.space[t.mode], h = 0, o = 0, a = 1; a < r.length; a++) { var d = r[a], u = t.height; if ("top" !== t.mode && "bottom" !== t.mode || (u += d.height), d.range - d.height - r[h].range >= u) { o = a; break } s(d, t) && (h = a) } var m = r[h].range, c = { range: m + t.height, time: this.media ? t.time : t._utc, width: t.width, height: t.height }; return r.splice(h + 1, o - h - 1, c), "bottom" === t.mode ? this._.height - t.height - m % this._.height : m % (this._.height - t.height) } function g() { if (!this._.visible || !this._.paused) return this; if (this._.paused = !1, this.media) for (var t = 0; t < this._.runningList.length; t++) { var e = this._.runningList[t]; e._utc = f() / 1e3 - (this.media.currentTime - e.time) } var i = this, n = function (t, e, i, n) { return function (s) { t(this._.stage); var r = (s || f()) / 1e3, h = this.media ? this.media.currentTime : r, o = this.media ? this.media.playbackRate : 1, a = null, d = 0, u = 0; for (u = this._.runningList.length - 1; u >= 0; u--)a = this._.runningList[u], h - (d = this.media ? a.time : a._utc) > this._.duration && (n(this._.stage, a), this._.runningList.splice(u, 1)); for (var m = []; this._.position < this.comments.length && (a = this.comments[this._.position], !((d = this.media ? a.time : a._utc) >= h));)h - d > this._.duration || (this.media && (a._utc = r - (this.media.currentTime - a.time)), m.push(a)), ++this._.position; for (e(this._.stage, m), u = 0; u < m.length; u++)(a = m[u]).y = p.call(this, a), this._.runningList.push(a); for (u = 0; u < this._.runningList.length; u++) { a = this._.runningList[u]; var c = (this._.width + a.width) * (r - a._utc) * o / this._.duration; "ltr" === a.mode && (a.x = c - a.width), "rtl" === a.mode && (a.x = this._.width - c), "top" !== a.mode && "bottom" !== a.mode || (a.x = this._.width - a.width >> 1), i(this._.stage, a) } } }(this._.engine.framing.bind(this), this._.engine.setup.bind(this), this._.engine.render.bind(this), this._.engine.remove.bind(this)); return this._.requestID = a((function t(e) { n.call(i, e), i._.requestID = a(t) })), this } function _() { return !this._.visible || this._.paused || (this._.paused = !0, d(this._.requestID), this._.requestID = 0), this } function v() { if (!this.media) return this; this.clear(), l(this._.space); var t = u(this.comments, "time", this.media.currentTime); return this._.position = Math.max(0, t - 1), this } function w(t) { t.play = g.bind(this), t.pause = _.bind(this), t.seeking = v.bind(this), this.media.addEventListener("play", t.play), this.media.addEventListener("pause", t.pause), this.media.addEventListener("playing", t.play), this.media.addEventListener("waiting", t.pause), this.media.addEventListener("seeking", t.seeking) } function y(t) { this.media.removeEventListener("play", t.play), this.media.removeEventListener("pause", t.pause), this.media.removeEventListener("playing", t.play), this.media.removeEventListener("waiting", t.pause), this.media.removeEventListener("seeking", t.seeking), t.play = null, t.pause = null, t.seeking = null } function x(t) { this._ = {}, this.container = t.container || document.createElement("div"), this.media = t.media, this._.visible = !0, this.engine = (t.engine || "DOM").toLowerCase(), this._.engine = "canvas" === this.engine ? o : i, this._.requestID = 0, this._.speed = Math.max(0, t.speed) || 144, this._.duration = 4, this.comments = t.comments || [], this.comments.sort((function (t, e) { return t.time - e.time })); for (var e = 0; e < this.comments.length; e++)this.comments[e].mode = m(this.comments[e].mode); return this._.runningList = [], this._.position = 0, this._.paused = !0, this.media && (this._.listener = {}, w.call(this, this._.listener)), this._.stage = this._.engine.init(this.container), this._.stage.style.cssText += "position:relative;pointer-events:none;", this.resize(), this.container.appendChild(this._.stage), this._.space = {}, l(this._.space), this.media && this.media.paused || (v.call(this), g.call(this)), this } function b() { if (!this.container) return this; for (var t in _.call(this), this.clear(), this.container.removeChild(this._.stage), this.media && y.call(this, this._.listener), this) Object.prototype.hasOwnProperty.call(this, t) && (this[t] = null); return this } var L = ["mode", "time", "text", "render", "style"]; function T(t) { if (!t || "[object Object]" !== Object.prototype.toString.call(t)) return this; for (var e = {}, i = 0; i < L.length; i++)void 0 !== t[L[i]] && (e[L[i]] = t[L[i]]); if (e.text = (e.text || "").toString(), e.mode = m(e.mode), e._utc = f() / 1e3, this.media) { var n = 0; void 0 === e.time ? (e.time = this.media.currentTime, n = this._.position) : (n = u(this.comments, "time", e.time)) < this._.position && (this._.position += 1), this.comments.splice(n, 0, e) } else this.comments.push(e); return this } function E() { return this._.visible ? this : (this._.visible = !0, this.media && this.media.paused || (v.call(this), g.call(this)), this) } function k() { return this._.visible ? (_.call(this), this.clear(), this._.visible = !1, this) : this } function C() { return this._.engine.clear(this._.stage, this._.runningList), this._.runningList = [], this } function z() { return this._.width = this.container.offsetWidth, this._.height = this.container.offsetHeight, this._.engine.resize(this._.stage, this._.width, this._.height), this._.duration = this._.width / this._.speed, this } var D = { get: function () { return this._.speed }, set: function (t) { return "number" != typeof t || isNaN(t) || !isFinite(t) || t <= 0 ? this._.speed : (this._.speed = t, this._.width && (this._.duration = this._.width / t), t) } }; function M(t) { t && x.call(this, t) } return M.prototype.destroy = function () { return b.call(this) }, M.prototype.emit = function (t) { return T.call(this, t) }, M.prototype.show = function () { return E.call(this) }, M.prototype.hide = function () { return k.call(this) }, M.prototype.clear = function () { return C.call(this) }, M.prototype.resize = function () { return z.call(this) }, Object.defineProperty(M.prototype, "speed", D), M }));
+    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t="undefined"!=typeof globalThis?globalThis:t||self).Danmaku=e()}(this,(function(){"use strict";var t=function(){if("undefined"==typeof document)return"transform";for(var t=["oTransform","msTransform","mozTransform","webkitTransform","transform"],e=document.createElement("div").style,i=0;i<t.length;i++)if(t[i]in e)return t[i];return"transform"}();function e(t){var e=document.createElement("div");if(e.style.cssText="position:absolute;","function"==typeof t.render){var i=t.render();if(i instanceof HTMLElement)return e.appendChild(i),e}if(e.textContent=t.text,t.style)for(var n in t.style)e.style[n]=t.style[n];return e}var i={name:"dom",init:function(){var t=document.createElement("div");return t.style.cssText="overflow:hidden;white-space:nowrap;transform:translateZ(0);",t},clear:function(t){for(var e=t.lastChild;e;)t.removeChild(e),e=t.lastChild},resize:function(t,e,i){t.style.width=e+"px",t.style.height=i+"px"},framing:function(){},setup:function(t,i){var n=document.createDocumentFragment(),s=0,r=null;for(s=0;s<i.length;s++)(r=i[s]).node=r.node||e(r),n.appendChild(r.node);for(i.length&&t.appendChild(n),s=0;s<i.length;s++)(r=i[s]).width=r.width||r.node.offsetWidth,r.height=r.height||r.node.offsetHeight},render:function(e,i){i.node.style[t]="translate("+i.x+"px,"+i.y+"px)"},remove:function(t,e){t.removeChild(e.node),this.media||(e.node=null)}},n="undefined"!=typeof window&&window.devicePixelRatio||1,s=Object.create(null);function r(t,e){if("function"==typeof t.render){var i=t.render();if(i instanceof HTMLCanvasElement)return t.width=i.width,t.height=i.height,i}var r=document.createElement("canvas"),h=r.getContext("2d"),o=t.style||{};o.font=o.font||"10px sans-serif",o.textBaseline=o.textBaseline||"bottom";var a=1*o.lineWidth;for(var d in a=a>0&&a!==1/0?Math.ceil(a):1*!!o.strokeStyle,h.font=o.font,t.width=t.width||Math.max(1,Math.ceil(h.measureText(t.text).width)+2*a),t.height=t.height||Math.ceil(function(t,e){if(s[t])return s[t];var i=12,n=t.match(/(\d+(?:\.\d+)?)(px|%|em|rem)(?:\s*\/\s*(\d+(?:\.\d+)?)(px|%|em|rem)?)?/);if(n){var r=1*n[1]||10,h=n[2],o=1*n[3]||1.2,a=n[4];"%"===h&&(r*=e.container/100),"em"===h&&(r*=e.container),"rem"===h&&(r*=e.root),"px"===a&&(i=o),"%"===a&&(i=r*o/100),"em"===a&&(i=r*o),"rem"===a&&(i=e.root*o),void 0===a&&(i=r*o)}return s[t]=i,i}(o.font,e))+2*a,r.width=t.width*n,r.height=t.height*n,h.scale(n,n),o)h[d]=o[d];var u=0;switch(o.textBaseline){case"top":case"hanging":u=a;break;case"middle":u=t.height>>1;break;default:u=t.height-a}return o.strokeStyle&&h.strokeText(t.text,a,u),h.fillText(t.text,a,u),r}function h(t){return 1*window.getComputedStyle(t,null).getPropertyValue("font-size").match(/(.+)px/)[1]}var o={name:"canvas",init:function(t){var e=document.createElement("canvas");return e.context=e.getContext("2d"),e._fontSize={root:h(document.getElementsByTagName("html")[0]),container:h(t)},e},clear:function(t,e){t.context.clearRect(0,0,t.width,t.height);for(var i=0;i<e.length;i++)e[i].canvas=null},resize:function(t,e,i){t.width=e*n,t.height=i*n,t.style.width=e+"px",t.style.height=i+"px"},framing:function(t){t.context.clearRect(0,0,t.width,t.height)},setup:function(t,e){for(var i=0;i<e.length;i++){var n=e[i];n.canvas=r(n,t._fontSize)}},render:function(t,e){t.context.drawImage(e.canvas,e.x*n,e.y*n)},remove:function(t,e){e.canvas=null}},a=function(){if("undefined"!=typeof window){var t=window.requestAnimationFrame||window.mozRequestAnimationFrame||window.webkitRequestAnimationFrame;if(t)return t.bind(window)}return function(t){return setTimeout(t,50/3)}}(),d=function(){if("undefined"!=typeof window){var t=window.cancelAnimationFrame||window.mozCancelAnimationFrame||window.webkitCancelAnimationFrame;if(t)return t.bind(window)}return clearTimeout}();function u(t,e,i){for(var n=0,s=0,r=t.length;s<r-1;)i>=t[n=s+r>>1][e]?s=n:r=n;return t[s]&&i<t[s][e]?s:r}function m(t){return/^(ltr|top|bottom)$/i.test(t)?t.toLowerCase():"rtl"}function c(){var t=9007199254740991;return[{range:0,time:-t,width:t,height:0},{range:t,time:t,width:0,height:0}]}function l(t){t.ltr=c(),t.rtl=c(),t.top=c(),t.bottom=c()}function f(){return void 0!==window.performance&&window.performance.now?window.performance.now():Date.now()}function p(t){var e=this,i=this.media?this.media.currentTime:f()/1e3,n=this.media?this.media.playbackRate:1;function s(t,s){if("top"===s.mode||"bottom"===s.mode)return i-t.time<e._.duration;var r=(e._.width+t.width)*(i-t.time)*n/e._.duration;if(t.width>r)return!0;var h=e._.duration+t.time-i,o=e._.width+s.width,a=e.media?s.time:s._utc,d=o*(i-a)*n/e._.duration,u=e._.width-d;return h>e._.duration*u/(e._.width+s.width)}for(var r=this._.space[t.mode],h=0,o=0,a=1;a<r.length;a++){var d=r[a],u=t.height;if("top"!==t.mode&&"bottom"!==t.mode||(u+=d.height),d.range-d.height-r[h].range>=u){o=a;break}s(d,t)&&(h=a)}var m=r[h].range,c={range:m+t.height,time:this.media?t.time:t._utc,width:t.width,height:t.height};return r.splice(h+1,o-h-1,c),"bottom"===t.mode?this._.height-t.height-m%this._.height:m%(this._.height-t.height)}function g(){if(!this._.visible||!this._.paused)return this;if(this._.paused=!1,this.media)for(var t=0;t<this._.runningList.length;t++){var e=this._.runningList[t];e._utc=f()/1e3-(this.media.currentTime-e.time)}var i=this,n=function(t,e,i,n){return function(s){t(this._.stage);var r=(s||f())/1e3,h=this.media?this.media.currentTime:r,o=this.media?this.media.playbackRate:1,a=null,d=0,u=0;for(u=this._.runningList.length-1;u>=0;u--)a=this._.runningList[u],h-(d=this.media?a.time:a._utc)>this._.duration&&(n(this._.stage,a),this._.runningList.splice(u,1));for(var m=[];this._.position<this.comments.length&&(a=this.comments[this._.position],!((d=this.media?a.time:a._utc)>=h));)h-d>this._.duration||(this.media&&(a._utc=r-(this.media.currentTime-a.time)),m.push(a)),++this._.position;for(e(this._.stage,m),u=0;u<m.length;u++)(a=m[u]).y=p.call(this,a),this._.runningList.push(a);for(u=0;u<this._.runningList.length;u++){a=this._.runningList[u];var c=(this._.width+a.width)*(r-a._utc)*o/this._.duration;"ltr"===a.mode&&(a.x=c-a.width),"rtl"===a.mode&&(a.x=this._.width-c),"top"!==a.mode&&"bottom"!==a.mode||(a.x=this._.width-a.width>>1),i(this._.stage,a)}}}(this._.engine.framing.bind(this),this._.engine.setup.bind(this),this._.engine.render.bind(this),this._.engine.remove.bind(this));return this._.requestID=a((function t(e){n.call(i,e),i._.requestID=a(t)})),this}function _(){return!this._.visible||this._.paused||(this._.paused=!0,d(this._.requestID),this._.requestID=0),this}function v(){if(!this.media)return this;this.clear(),l(this._.space);var t=u(this.comments,"time",this.media.currentTime);return this._.position=Math.max(0,t-1),this}function w(t){t.play=g.bind(this),t.pause=_.bind(this),t.seeking=v.bind(this),this.media.addEventListener("play",t.play),this.media.addEventListener("pause",t.pause),this.media.addEventListener("playing",t.play),this.media.addEventListener("waiting",t.pause),this.media.addEventListener("seeking",t.seeking)}function y(t){this.media.removeEventListener("play",t.play),this.media.removeEventListener("pause",t.pause),this.media.removeEventListener("playing",t.play),this.media.removeEventListener("waiting",t.pause),this.media.removeEventListener("seeking",t.seeking),t.play=null,t.pause=null,t.seeking=null}function x(t){this._={},this.container=t.container||document.createElement("div"),this.media=t.media,this._.visible=!0,this.engine=(t.engine||"DOM").toLowerCase(),this._.engine="canvas"===this.engine?o:i,this._.requestID=0,this._.speed=Math.max(0,t.speed)||144,this._.duration=4,this.comments=t.comments||[],this.comments.sort((function(t,e){return t.time-e.time}));for(var e=0;e<this.comments.length;e++)this.comments[e].mode=m(this.comments[e].mode);return this._.runningList=[],this._.position=0,this._.paused=!0,this.media&&(this._.listener={},w.call(this,this._.listener)),this._.stage=this._.engine.init(this.container),this._.stage.style.cssText+="position:relative;pointer-events:none;",this.resize(),this.container.appendChild(this._.stage),this._.space={},l(this._.space),this.media&&this.media.paused||(v.call(this),g.call(this)),this}function b(){if(!this.container)return this;for(var t in _.call(this),this.clear(),this.container.removeChild(this._.stage),this.media&&y.call(this,this._.listener),this)Object.prototype.hasOwnProperty.call(this,t)&&(this[t]=null);return this}var L=["mode","time","text","render","style"];function T(t){if(!t||"[object Object]"!==Object.prototype.toString.call(t))return this;for(var e={},i=0;i<L.length;i++)void 0!==t[L[i]]&&(e[L[i]]=t[L[i]]);if(e.text=(e.text||"").toString(),e.mode=m(e.mode),e._utc=f()/1e3,this.media){var n=0;void 0===e.time?(e.time=this.media.currentTime,n=this._.position):(n=u(this.comments,"time",e.time))<this._.position&&(this._.position+=1),this.comments.splice(n,0,e)}else this.comments.push(e);return this}function E(){return this._.visible?this:(this._.visible=!0,this.media&&this.media.paused||(v.call(this),g.call(this)),this)}function k(){return this._.visible?(_.call(this),this.clear(),this._.visible=!1,this):this}function C(){return this._.engine.clear(this._.stage,this._.runningList),this._.runningList=[],this}function z(){return this._.width=this.container.offsetWidth,this._.height=this.container.offsetHeight,this._.engine.resize(this._.stage,this._.width,this._.height),this._.duration=this._.width/this._.speed,this}var D={get:function(){return this._.speed},set:function(t){return"number"!=typeof t||isNaN(t)||!isFinite(t)||t<=0?this._.speed:(this._.speed=t,this._.width&&(this._.duration=this._.width/t),t)}};function M(t){t&&x.call(this,t)}return M.prototype.destroy=function(){return b.call(this)},M.prototype.emit=function(t){return T.call(this,t)},M.prototype.show=function(){return E.call(this)},M.prototype.hide=function(){return k.call(this)},M.prototype.clear=function(){return C.call(this)},M.prototype.resize=function(){return z.call(this)},Object.defineProperty(M.prototype,"speed",D),M}));
     /* eslint-enable */
-
 
     class EDE {
         constructor() {
@@ -227,16 +224,16 @@
             this.logSwitch = logSwitch ? parseInt(logSwitch) : 0;
             // 弹幕透明度
             const opacityRecord = window.localStorage.getItem('danmakuopacity');
-            this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7
+            this.opacity = opacityRecord ? parseFloatOfRange(opacityRecord, 0.0, 1.0) : 0.7;
             // 弹幕速度
             const speedRecord = window.localStorage.getItem('danmakuspeed');
-            this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200
+            this.speed = speedRecord ? parseFloatOfRange(speedRecord, 0.0, 1000.0) : 200;
             // 弹幕字体大小
             const sizeRecord = window.localStorage.getItem('danmakusize');
-            this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18
+            this.fontSize = sizeRecord ? parseFloatOfRange(sizeRecord, 0.0, 50.0) : 18;
             // 弹幕高度
             const heightRecord = window.localStorage.getItem('danmakuheight');
-            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9
+            this.heightRatio = heightRecord ? parseFloatOfRange(heightRecord, 0.0, 1.0) : 0.9;
             // 弹幕过滤
             const danmakuFilter = window.localStorage.getItem('danmakuFilter');
             this.danmakuFilter = danmakuFilter ? parseInt(danmakuFilter) : 0;
@@ -259,10 +256,10 @@
             this.curEpOffsetModified = false;
             // 字体
             const fontFamily = window.localStorage.getItem('danmakuFontFamily');
-            this.fontFamily = fontFamily ?? "sans-serif";
+            this.fontFamily = fontFamily ?? 'sans-serif';
             // 字体选项
             const fontOptions = window.localStorage.getItem('danmakuFontOptions');
-            this.fontOptions = fontOptions ?? "";
+            this.fontOptions = fontOptions ?? '';
 
             this.danmaku = null;
             this.episode_info = null;
@@ -276,7 +273,6 @@
     function isFirefox() {
         return navigator.userAgent.toLowerCase().includes('firefox');
     }
-
 
     // 切换弹幕显示
     function danmuShowSwitch() {
@@ -308,13 +304,13 @@
             window.localStorage.setItem('danmakuheight', window.ede.heightRatio.toString());
             showDebugInfo(`设置弹幕高度：${window.ede.heightRatio}`);
             window.ede.danmakuFilter = 0;
-            document.querySelectorAll('input[name="danmakuFilter"]:checked').forEach(element => {
+            document.querySelectorAll('input[name="danmakuFilter"]:checked').forEach((element) => {
                 window.ede.danmakuFilter += parseInt(element.value, 10);
             });
             window.localStorage.setItem('danmakuFilter', window.ede.danmakuFilter);
             showDebugInfo(`设置弹幕过滤：${window.ede.danmakuFilter}`);
             window.ede.danmakuModeFilter = 0;
-            document.querySelectorAll('input[name="danmakuModeFilter"]:checked').forEach(element => {
+            document.querySelectorAll('input[name="danmakuModeFilter"]:checked').forEach((element) => {
                 window.ede.danmakuModeFilter += parseInt(element.value, 10);
             });
             window.localStorage.setItem('danmakuModeFilter', window.ede.danmakuModeFilter);
@@ -337,10 +333,10 @@
                 window.ede.curEpOffset = epOffset;
                 showDebugInfo(`设置弹幕偏移时间：${window.ede.curEpOffset}`);
             }
-            window.ede.fontFamily = document.getElementById("danmakuFontFamily").value || "sans-serif";
+            window.ede.fontFamily = document.getElementById('danmakuFontFamily').value || 'sans-serif';
             window.localStorage.setItem('danmakuFontFamily', window.ede.fontFamily);
             showDebugInfo(`字体：${window.ede.fontFamily}`);
-            window.ede.fontOptions = document.getElementById("danmakuFontOptions").value;
+            window.ede.fontOptions = document.getElementById('danmakuFontOptions').value;
             window.localStorage.setItem('danmakuFontOptions', window.ede.fontOptions);
             showDebugInfo(`字体选项：${window.ede.fontOptions}`);
             reloadDanmaku('reload');
@@ -509,7 +505,7 @@
         backdrop.style.cssText = `
             z-index: 999999;
         `;
-        
+
         // 将遮罩和侧边栏都添加到body
         document.body.appendChild(backdrop);
         document.body.appendChild(sidebar);
@@ -669,7 +665,7 @@
             input.focus();
             input.select();
 
-            input.addEventListener('keydown', event => event.stopPropagation(), true);
+            input.addEventListener('keydown', (event) => event.stopPropagation(), true);
 
             const cleanup = () => {
                 document.body.removeChild(overlay);
@@ -953,7 +949,6 @@
         });
     }
 
-
     // 设置弹幕设置内容
     function setupDanmakuSettings(container) {
         function htmlToElement(html) {
@@ -972,25 +967,25 @@
         `),
                 htmlToElement(`                            
             <label style="flex: auto;">弹幕防重叠:</label>
-            <div><input type="radio" id="enableAntiOverlap" name="useAnitOverlap" value="1" ${(window.ede.useAnitOverlap === 1) ? 'checked' : ''}>
+            <div><input type="radio" id="enableAntiOverlap" name="useAnitOverlap" value="1" ${window.ede.useAnitOverlap === 1 ? 'checked' : ''}>
                 <label for="enableAntiOverlap">是</label></div>
-            <div><input type="radio" id="disableAntiOverlap" name="useAnitOverlap" value="0" ${(window.ede.useAnitOverlap === 0) ? 'checked' : ''}>
+            <div><input type="radio" id="disableAntiOverlap" name="useAnitOverlap" value="0" ${window.ede.useAnitOverlap === 0 ? 'checked' : ''}>
                 <label for="disableAntiOverlap">否</label></div>
         `),
                 htmlToElement(`
             <label style="flex: auto;">简繁转换:</label>
-            <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${(window.ede.chConvert === 0) ? 'checked' : ''}>
+            <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${window.ede.chConvert === 0 ? 'checked' : ''}>
                 <label for="chConvert0">不转换</label></div>
-            <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${(window.ede.chConvert === 1) ? 'checked' : ''}>
+            <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${window.ede.chConvert === 1 ? 'checked' : ''}>
                 <label for="chConvert1">简体</label></div>
-            <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${(window.ede.chConvert === 2) ? 'checked' : ''}>
+            <div><input type="radio" id="chConvert2" name="chConvert" value="2" ${window.ede.chConvert === 2 ? 'checked' : ''}>
                 <label for="chConvert2">繁体</label></div>
         `),
                 htmlToElement(`
             <label style="flex: auto;">使用本地xml弹幕:</label>
-            <div><input type="radio" id="enableXmlDanmaku" name="useXmlDanmaku" value="1" ${(window.ede.useXmlDanmaku === 1) ? 'checked' : ''}>
+            <div><input type="radio" id="enableXmlDanmaku" name="useXmlDanmaku" value="1" ${window.ede.useXmlDanmaku === 1 ? 'checked' : ''}>
                 <label for="chConvert0">是</label></div>
-            <div><input type="radio" id="disableXmlDanmaku" name="useXmlDanmaku" value="0" ${(window.ede.useXmlDanmaku === 0) ? 'checked' : ''}>
+            <div><input type="radio" id="disableXmlDanmaku" name="useXmlDanmaku" value="0" ${window.ede.useXmlDanmaku === 0 ? 'checked' : ''}>
                 <label for="chConvert1">否</label></div>
         `),
                 htmlToElement(`
@@ -1009,7 +1004,9 @@
         `),
                 htmlToElement(`
             <label style="flex: auto;">字体:</label>
-            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${window.ede.fontFamily?.replaceAll('"', "&quot;") ?? defaultFontFamily}" /></div>
+            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${
+                window.ede.fontFamily?.replaceAll('"', '&quot;') ?? defaultFontFamily
+            }" /></div>
         `),
                 htmlToElement(`
             <span id="lbfontSize" style="flex: auto;">字体大小:</span>
@@ -1017,7 +1014,7 @@
         `),
                 htmlToElement(`
             <label style="flex: auto;">其他字体选项:</label>
-            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions?.replaceAll('"', "&quot;") ?? ""}" /></div>
+            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions?.replaceAll('"', '&quot;') ?? ''}" /></div>
         `),
                 htmlToElement(`
             <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
@@ -1027,27 +1024,26 @@
             filter: [
                 htmlToElement(`
             <label style="flex: auto;">弹幕过滤:</label>
-            <div><input type="checkbox" id="filterBilibili" name="danmakuFilter" value="1" ${((window.ede.danmakuFilter & 1) === 1) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterBilibili" name="danmakuFilter" value="1" ${(window.ede.danmakuFilter & 1) === 1 ? 'checked' : ''} />
                 <label for="filterBilibili">B站</label></div>
-            <div><input type="checkbox" id="filterGamer" name="danmakuFilter" value="2" ${((window.ede.danmakuFilter & 2) === 2) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterGamer" name="danmakuFilter" value="2" ${(window.ede.danmakuFilter & 2) === 2 ? 'checked' : ''} />
                 <label for="filterGamer">巴哈</label></div>
-            <div><input type="checkbox" id="filterDanDanPlay" name="danmakuFilter" value="4" ${((window.ede.danmakuFilter & 4) === 4) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterDanDanPlay" name="danmakuFilter" value="4" ${(window.ede.danmakuFilter & 4) === 4 ? 'checked' : ''} />
                 <label for="filterDanDanPlay">弹弹</label></div>
-            <div><input type="checkbox" id="filterOthers" name="danmakuFilter" value="8" ${((window.ede.danmakuFilter & 8) === 8) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterOthers" name="danmakuFilter" value="8" ${(window.ede.danmakuFilter & 8) === 8 ? 'checked' : ''} />
                 <label for="filterOthers">其他</label></div>
         `),
                 htmlToElement(`
             <label style="flex: auto;">弹幕类型过滤:</label>
-            <div><input type="checkbox" id="filterBottom" name="danmakuModeFilter" value="1" ${((window.ede.danmakuModeFilter & 1) === 1) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterBottom" name="danmakuModeFilter" value="1" ${(window.ede.danmakuModeFilter & 1) === 1 ? 'checked' : ''} />
                 <label for="filterBottom">底部</label></div>
-            <div><input type="checkbox" id="filterTop" name="danmakuModeFilter" value="2" ${((window.ede.danmakuModeFilter & 2) === 2) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterTop" name="danmakuModeFilter" value="2" ${(window.ede.danmakuModeFilter & 2) === 2 ? 'checked' : ''} />
                 <label for="filterTop">顶部</label></div>
-            <div><input type="checkbox" id="filterRoll" name="danmakuModeFilter" value="4" ${((window.ede.danmakuModeFilter & 4) === 4) ? 'checked' : ''} />
+            <div><input type="checkbox" id="filterRoll" name="danmakuModeFilter" value="4" ${(window.ede.danmakuModeFilter & 4) === 4 ? 'checked' : ''} />
                 <label for="filterRoll">滚动</label></div>
         `),
             ],
         };
-
 
         // 创建控制功能卡片
         const controlItems = createControlFunctions();
@@ -1085,11 +1081,11 @@
 
         // 先清空容器的旧内容（除了tabsContainer）
         Array.from(container.children)
-            .filter(child => child !== tabsContainer)
-            .forEach(child => child.remove());
+            .filter((child) => child !== tabsContainer)
+            .forEach((child) => child.remove());
 
         // 一次性创建所有标签页内容区域，并加入container
-        tabs.forEach(tab => {
+        tabs.forEach((tab) => {
             const tabContent = document.createElement('div');
             tabContent.className = 'danmaku-tab-content';
             tabContent.dataset.tabId = tab.id;
@@ -1104,11 +1100,11 @@
                 tabContent.style.marginBottom = '20px';
                 tabContent.style.padding = '0';
 
-                tab.items.forEach(item => {
+                tab.items.forEach((item) => {
                     tabContent.appendChild(item);
                 });
             } else {
-                tab.items.forEach(item => {
+                tab.items.forEach((item) => {
                     styleSettingItemForContent(item);
                     tabContent.appendChild(item);
                 });
@@ -1121,7 +1117,7 @@
         let activeTabId = tabs.length > 0 ? tabs[0].id : null;
 
         // 创建标签按钮并绑定切换事件
-        tabs.forEach(tab => {
+        tabs.forEach((tab) => {
             const tabButton = document.createElement('button');
             tabButton.textContent = tab.title;
             tabButton.dataset.tabId = tab.id;
@@ -1143,7 +1139,7 @@
 
             tabButton.addEventListener('click', function () {
                 // 切换按钮样式
-                document.querySelectorAll('.danmaku-tab-button').forEach(btn => {
+                document.querySelectorAll('.danmaku-tab-button').forEach((btn) => {
                     btn.style.background = 'rgba(255, 255, 255, 0.08)';
                     btn.style.fontWeight = '500';
                     btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
@@ -1164,7 +1160,7 @@
             activeTabId = tabId;
 
             // 隐藏所有标签页内容
-            container.querySelectorAll('.danmaku-tab-content').forEach(div => {
+            container.querySelectorAll('.danmaku-tab-content').forEach((div) => {
                 div.style.display = 'none';
             });
 
@@ -1178,9 +1174,9 @@
                 }
             }
         }
-        document.getElementById('danmakuFontOptions').addEventListener('keydown', event => event.stopPropagation(), true);
-        document.getElementById('danmakuFontFamily').addEventListener('keydown', event => event.stopPropagation(), true);
-        document.getElementById('danmakuOffsetTime').addEventListener('keydown', event => event.stopPropagation(), true);
+        document.getElementById('danmakuFontOptions').addEventListener('keydown', (event) => event.stopPropagation(), true);
+        document.getElementById('danmakuFontFamily').addEventListener('keydown', (event) => event.stopPropagation(), true);
+        document.getElementById('danmakuOffsetTime').addEventListener('keydown', (event) => event.stopPropagation(), true);
         // 初始化显示默认标签内容
         if (activeTabId) {
             showTabContent(activeTabId);
@@ -1468,24 +1464,22 @@
                 showDebugInfo('手动增加弹幕源');
                 let source = await createInputDialog('添加弹幕源', '请输入弹幕源地址(如B站播放链接)', '');
                 if (source) {
-                    getCommentsByUrl(source)
-                        .then(comments => {
-                            if (comments !== null) {
-                                createDanmaku(comments)
-                                    .then(() => {
-                                        showDebugInfo('弹幕就位');
+                    getCommentsByUrl(source).then((comments) => {
+                        if (comments !== null) {
+                            createDanmaku(comments)
+                                .then(() => {
+                                    showDebugInfo('弹幕就位');
 
-                                        // 如果已经登录，把弹幕源提交给弹弹Play
-                                        if (ddplayStatus.isLogin) {
-                                            postRelatedSource(source);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('创建弹幕失败:', error);
-                                    });
-                            }
+                                    // 如果已经登录，把弹幕源提交给弹弹Play
+                                    if (ddplayStatus.isLogin) {
+                                        postRelatedSource(source);
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('创建弹幕失败:', error);
+                                });
                         }
-                        )
+                    });
                 } else {
                     showDebugInfo('未获取弹幕源地址');
                 }
@@ -1569,16 +1563,17 @@
             mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === 1) {
                     // 检测播放器设置菜单的创建 - 更精确的选择器
-                    if (node.classList && node.classList.contains('actionSheet') &&
+                    if (
+                        node.classList &&
+                        node.classList.contains('actionSheet') &&
                         node.querySelector('[data-id="aspectratio"]') &&
-                        node.querySelector('[data-id="playbackrate"]')) {
+                        node.querySelector('[data-id="playbackrate"]')
+                    ) {
                         addDanmakuSettingsToMenu(node);
                     }
                     // 也检查子节点，以防菜单是在容器内添加的
                     const actionSheet = node.querySelector && node.querySelector('.actionSheet');
-                    if (actionSheet &&
-                        actionSheet.querySelector('[data-id="aspectratio"]') &&
-                        actionSheet.querySelector('[data-id="playbackrate"]')) {
+                    if (actionSheet && actionSheet.querySelector('[data-id="aspectratio"]') && actionSheet.querySelector('[data-id="playbackrate"]')) {
                         addDanmakuSettingsToMenu(actionSheet);
                     }
                 }
@@ -1673,10 +1668,9 @@
         span.style.color = '#fff';
         span.style.padding = '20px';
         span.style.borderRadius = '.3em';
-        span.style.maxHeight = '50%'
+        span.style.maxHeight = '50%';
         window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
         _container.appendChild(span);
-
 
         showDebugInfo('UI初始化完成');
         reloadDanmaku('init');
@@ -1686,8 +1680,8 @@
     async function loginDanDanPlay(account, passwd) {
         const loginUrl = authPrefix + '/api/v2/login';
         const params = {
-            'userName': account,
-            'password': passwd
+            userName: account,
+            password: passwd,
         };
 
         try {
@@ -1695,10 +1689,10 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'User-Agent': navigator.userAgent
+                    Accept: 'application/json',
+                    'User-Agent': navigator.userAgent,
                 },
-                body: JSON.stringify(params)
+                body: JSON.stringify(params),
             });
 
             if (resp.status !== 200) {
@@ -1734,18 +1728,20 @@
             if (expire < now) {
                 ddplayStatus.isLogin = false;
                 return;
-            } else if (expire - now > 259200) { // Token expires in more than 3 days, no need to refresh
+            } else if (expire - now > 259200) {
+                // Token expires in more than 3 days, no need to refresh
                 return;
-            } else { // Refresh token before 3 days
+            } else {
+                // Refresh token before 3 days
                 const refreshUrl = apiPrefix + '/api/v2/login/renew';
                 try {
                     const resp = await fetch(refreshUrl, {
                         method: 'GET',
                         headers: {
-                            'Accept': 'application/json',
+                            Accept: 'application/json',
                             'User-Agent': navigator.userAgent,
-                            'Authorization': 'Bearer ' + ddplayStatus.token
-                        }
+                            Authorization: 'Bearer ' + ddplayStatus.token,
+                        },
                     });
 
                     if (resp.status !== 200) {
@@ -1778,21 +1774,21 @@
             }
             const danmakuUrl = apiPrefix + '/api/v2/comment/' + window.ede.episode_info.episodeId;
             const params = {
-                'time': time,
-                'mode': mode,
-                'color': color,
-                'comment': danmakuText
+                time: time,
+                mode: mode,
+                color: color,
+                comment: danmakuText,
             };
             try {
                 const resp = await fetch(danmakuUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json',
+                        Accept: 'application/json',
                         'User-Agent': navigator.userAgent,
-                        'Authorization': 'Bearer ' + ddplayStatus.token
+                        Authorization: 'Bearer ' + ddplayStatus.token,
                     },
-                    body: JSON.stringify(params)
+                    body: JSON.stringify(params),
                 });
 
                 if (resp.status !== 200) {
@@ -1842,20 +1838,20 @@
         }
         const url = apiPrefix + '/api/v2/related/' + window.ede.episode_info.episodeId;
         const params = {
-            'episodeId': window.ede.episode_info.episodeId,
-            'url': relatedUrl,
-            'shift': 0
+            episodeId: window.ede.episode_info.episodeId,
+            url: relatedUrl,
+            shift: 0,
         };
         try {
             const resp = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
+                    Accept: 'application/json',
                     'User-Agent': navigator.userAgent,
-                    'Authorization': 'Bearer ' + ddplayStatus.token
+                    Authorization: 'Bearer ' + ddplayStatus.token,
                 },
-                body: JSON.stringify(params)
+                body: JSON.stringify(params),
             });
             if (resp.status !== 200) {
                 showDebugInfo('发送相关链接失败 http error:' + resp.code);
@@ -1915,7 +1911,7 @@
                     deviceId: ApiClient.deviceId(),
                 });
                 if (!sessionInfo[0].NowPlayingItem) {
-                    await new Promise(resolve => setTimeout(resolve, 150));
+                    await new Promise((resolve) => setTimeout(resolve, 150));
                     continue;
                 }
                 playingInfo = sessionInfo[0].NowPlayingItem;
@@ -1929,10 +1925,10 @@
         return fetch(url, {
             method: 'GET',
             headers: {
-                "Accept-Encoding": "gzip,br",
-                "Accept": "application/json",
-                "User-Agent": navigator.userAgent
-            }
+                'Accept-Encoding': 'gzip,br',
+                Accept: 'application/json',
+                'User-Agent': navigator.userAgent,
+            },
         });
     }
 
@@ -2049,7 +2045,7 @@
             let initialTitle = animaInfo.animes[selecAnime_id].episodes[0].episodeTitle;
             const match = initialTitle.match(/第(\d+)话/);
             const initialep = match ? parseInt(match[1]) : 1;
-            episode = (parseInt(episode) < initialep) ? parseInt(episode) - 1 : (parseInt(episode) - initialep);
+            episode = parseInt(episode) < initialep ? parseInt(episode) - 1 : parseInt(episode) - initialep;
         }
 
         if (episode + 1 > animaInfo.animes[selecAnime_id].episodes.length) {
@@ -2057,7 +2053,7 @@
             return null;
         }
 
-        const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${session}E${episode + 1}` : (animaInfo.animes[selecAnime_id].type);
+        const epTitlePrefix = animaInfo.animes[selecAnime_id].type === 'tvseries' ? `S${session}E${episode + 1}` : animaInfo.animes[selecAnime_id].type;
         let episodeInfo = {
             episodeId: animaInfo.animes[selecAnime_id].episodes[episode].episodeId,
             animeTitle: animaInfo.animes[selecAnime_id].animeTitle,
@@ -2108,11 +2104,13 @@
                     }
                 }
                 // 获取第三方弹幕
-                await Promise.all(src.map(async (s) => {
-                    const response = await makeGetRequest(url_ext + encodeURIComponent(s));
-                    const data = await response.json();
-                    comments = comments.concat(data.comments);
-                }));
+                await Promise.all(
+                    src.map(async (s) => {
+                        const response = await makeGetRequest(url_ext + encodeURIComponent(s));
+                        const data = await response.json();
+                        comments = comments.concat(data.comments);
+                    }),
+                );
             }
             showDebugInfo('弹幕下载成功: ' + comments.length);
             return comments;
@@ -2173,7 +2171,7 @@
                 const commentData = {
                     cid: p[7],
                     p: p[0] + ',' + p[1] + ',' + p[3] + ',' + p[6],
-                    m: comment.textContent
+                    m: comment.textContent,
                 };
                 comments.push(commentData);
             }
@@ -2319,7 +2317,7 @@
             if (window.ede.danmaku && document.querySelector(mediaQueryStr)) {
                 showDebugInfo('探测播放媒体变化');
                 document.getElementById('danmakuInfoTitle')?.remove();
-                const sleep = new Promise(resolve => setTimeout(resolve, 3000));
+                const sleep = new Promise((resolve) => setTimeout(resolve, 3000));
                 sleep.then(() => reloadDanmaku('refresh'));
             }
         };
@@ -2350,29 +2348,33 @@
         }
         window.ede.loading = true;
         if (window.ede.useXmlDanmaku === 1) {
-            getItemId().then((itemId) => {
-                return new Promise((resolve, reject) => {
-                    if (!itemId) {
-                        if (type != 'init') {
-                            reject('播放器未完成加载');
-                        } else {
-                            reject(null);
+            getItemId()
+                .then((itemId) => {
+                    return new Promise((resolve, reject) => {
+                        if (!itemId) {
+                            if (type != 'init') {
+                                reject('播放器未完成加载');
+                            } else {
+                                reject(null);
+                            }
                         }
-                    }
-                    resolve(itemId);
-                });
-            }).then((itemId) => getCommentsByPluginApi(itemId))
+                        resolve(itemId);
+                    });
+                })
+                .then((itemId) => getCommentsByPluginApi(itemId))
                 .then((comments) => {
                     if (comments?.length > 0) {
-                        return createDanmaku(comments).then(() => {
-                            showDebugInfo('本地弹幕就位');
-                        }).then(() => {
-                            window.ede.loading = false;
-                            const danmakuCtr = document.getElementById('danmakuCtr');
-                            if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
-                                danmakuCtr.style.opacity = 1;
-                            }
-                        });
+                        return createDanmaku(comments)
+                            .then(() => {
+                                showDebugInfo('本地弹幕就位');
+                            })
+                            .then(() => {
+                                window.ede.loading = false;
+                                const danmakuCtr = document.getElementById('danmakuCtr');
+                                if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
+                                    danmakuCtr.style.opacity = 1;
+                                }
+                            });
                     }
                     throw new Error('本地弹幕加载失败，尝试在线加载');
                 })
@@ -2405,12 +2407,13 @@
                     }
                 });
             })
-            .then((episodeId) =>
-                getComments(episodeId).then((comments) =>
-                    createDanmaku(comments).then(() => {
-                        showDebugInfo('弹幕就位');
-                    }),
-                ),
+            .then(
+                (episodeId) =>
+                    getComments(episodeId).then((comments) =>
+                        createDanmaku(comments).then(() => {
+                            showDebugInfo('弹幕就位');
+                        }),
+                    ),
                 (msg) => {
                     if (msg) {
                         showDebugInfo(msg);
@@ -2442,7 +2445,10 @@
         let enabledModes = new Set([1, 4, 5, 6]);
         if ((danmakuModeFilter & 1) === 1) enabledModes.delete(4); // bottom
         if ((danmakuModeFilter & 2) === 2) enabledModes.delete(5); // top
-        if ((danmakuModeFilter & 4) === 4) { enabledModes.delete(1); enabledModes.delete(6); } // rtl & ltr
+        if ((danmakuModeFilter & 4) === 4) {
+            enabledModes.delete(1);
+            enabledModes.delete(6);
+        } // rtl & ltr
 
         // 密度过滤参数
         const shouldFilterDensity = danmakuDensityLimit > 0;
@@ -2472,7 +2478,7 @@
             const time = parseFloat(parts[0]);
             const modeId = parseInt(parts[1], 10);
             const user = parts[3];
-            
+
             // 来源过滤
             if (
                 (disableBilibili && user.startsWith('[BiliBili]')) ||
@@ -2542,13 +2548,7 @@
     }
 
     function filterOverlappedScrollDanmaku(sortedScrollDanmaku, containerWidth, containerHeight) {
-        const {
-            speed,
-            fontSize,
-            fontOptions,
-            fontFamily,
-            heightRatio
-        } = window.ede;
+        const { speed, fontSize, fontOptions, fontFamily, heightRatio } = window.ede;
 
         if (!sortedScrollDanmaku || sortedScrollDanmaku.length === 0) {
             return [];
@@ -2578,11 +2578,11 @@
                 if (danmaku.time >= tracksReleaseTimes[i]) {
                     // 分配成功
                     filteredList.push(danmaku);
-                    
+
                     // 更新该轨道的下一次可用时间
                     tracksReleaseTimes[i] = danmaku.time + timeToEnter;
 
-                    break; 
+                    break;
                 }
             }
         }
@@ -2591,11 +2591,7 @@
     }
 
     function filterOverlappedFixedDanmaku(sortedFixedDanmaku, containerWidth, containerHeight) {
-        const {
-            speed,
-            fontSize,
-            heightRatio
-        } = window.ede;
+        const { speed, fontSize, heightRatio } = window.ede;
 
         const trackCount = Math.floor((containerHeight * heightRatio - 18) / fontSize) - 1;
 
@@ -2634,7 +2630,7 @@
             rtl: [],
             ltr: [],
             top: [],
-            bottom: []
+            bottom: [],
         };
         for (const d of sortedDanmaku) {
             if (segregatedDanmaku[d.mode]) {
@@ -2645,43 +2641,26 @@
         // 处理滚动弹幕
         let rtlResults = [];
         if (segregatedDanmaku.rtl.length > 0) {
-            rtlResults = filterOverlappedScrollDanmaku(
-                segregatedDanmaku.rtl,
-                containerWidth,
-                containerHeight
-            );
+            rtlResults = filterOverlappedScrollDanmaku(segregatedDanmaku.rtl, containerWidth, containerHeight);
         }
         let ltrResults = [];
         if (segregatedDanmaku.ltr.length > 0) {
-            ltrResults = filterOverlappedScrollDanmaku(
-                segregatedDanmaku.ltr,
-                containerWidth,
-                containerHeight
-            );
+            ltrResults = filterOverlappedScrollDanmaku(segregatedDanmaku.ltr, containerWidth, containerHeight);
         }
 
         // 处理顶部弹幕
         let topResults = [];
         if (segregatedDanmaku.top.length > 0) {
-            topResults = filterOverlappedFixedDanmaku(
-                segregatedDanmaku.top,
-                containerWidth,
-                containerHeight
-            );
+            topResults = filterOverlappedFixedDanmaku(segregatedDanmaku.top, containerWidth, containerHeight);
         }
 
         // 处理底部弹幕
         let bottomResults = [];
         if (segregatedDanmaku.bottom.length > 0) {
-            bottomResults = filterOverlappedFixedDanmaku(
-                segregatedDanmaku.bottom,
-                containerWidth,
-                containerHeight
-            );
+            bottomResults = filterOverlappedFixedDanmaku(segregatedDanmaku.bottom, containerWidth, containerHeight);
         }
 
-        return [...rtlResults, ...ltrResults, ...topResults, ...bottomResults]
-            .sort((a, b) => a.time - b.time);
+        return [...rtlResults, ...ltrResults, ...topResults, ...bottomResults].sort((a, b) => a.time - b.time);
     }
 
     function list2string($obj2) {
@@ -2737,7 +2716,7 @@
         }
 
         return 0;
-    }
+    };
 
     waitForElement('.htmlvideoplayer').then(() => {
         if (!window.ede) {
@@ -2946,7 +2925,7 @@
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             minHeight: '56px',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
         };
 
         // 应用基础样式
@@ -2987,12 +2966,12 @@
                     // 获取滑块的映射显示文本
                     const getDisplayValue = (value, inputElement) => {
                         // 检查是否是弹幕密度相关的滑块
-                        if (inputElement.id === "danmakuDensityLimit") {
+                        if (inputElement.id === 'danmakuDensityLimit') {
                             const densityMap = {
-                                '0': '不限制',
-                                '1': '低',
-                                '2': '中',
-                                '3': '高'
+                                0: '不限制',
+                                1: '低',
+                                2: '中',
+                                3: '高',
                             };
                             return densityMap[value] || value;
                         }
@@ -3033,8 +3012,7 @@
                     inputParent.insertBefore(rangeContainer, input);
                     rangeContainer.appendChild(valueLabel);
                     rangeContainer.appendChild(input);
-                }
-                else if (input.type === 'text' || input.type === 'number') {
+                } else if (input.type === 'text' || input.type === 'number') {
                     // 文本/数值输入框样式
                     const inputBaseStyles = `
                         min-width: 180px;
@@ -3064,27 +3042,28 @@
                         focus: {
                             background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.18), rgba(0, 164, 219, 0.18))',
                             borderColor: 'rgba(0, 164, 220, 0.8)',
-                            boxShadow: '0 0 0 5px rgba(0, 164, 220, 0.2), 0 6px 25px rgba(0, 164, 220, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(-1px) scale(1.01)'
+                            boxShadow:
+                                '0 0 0 5px rgba(0, 164, 220, 0.2), 0 6px 25px rgba(0, 164, 220, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
+                            transform: 'translateY(-1px) scale(1.01)',
                         },
                         blur: {
                             background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08))',
                             border: '2px solid rgba(0, 164, 220, 0.4)',
                             boxShadow: '0 2px 8px rgba(0, 164, 220, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(0) scale(1)'
+                            transform: 'translateY(0) scale(1)',
                         },
                         mouseenter: {
                             background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.12), rgba(0, 164, 219, 0.12))',
                             border: '2px solid rgba(0, 164, 220, 0.6)',
                             boxShadow: '0 4px 15px rgba(0, 164, 220, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(-1px) scale(1.01)'
+                            transform: 'translateY(-1px) scale(1.01)',
                         },
                         mouseleave: {
                             background: 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))',
                             border: '2px solid rgba(128, 128, 128, 0.4)',
                             boxShadow: '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(0) scale(1)'
-                        }
+                            transform: 'translateY(0) scale(1)',
+                        },
                     };
 
                     // 绑定事件 - 使用统一的处理函数
@@ -3106,8 +3085,7 @@
                             applyStyles(this, stateChanges.mouseleave);
                         }
                     });
-                }
-                else if (input.type === 'checkbox' || input.type === 'radio') {
+                } else if (input.type === 'checkbox' || input.type === 'radio') {
                     // 复选框/单选框基础样式
                     const checkStyles = `
                         width: 18px;
@@ -3130,15 +3108,17 @@
 
                     // 添加选中状态的样式更新函数
                     const updateCheckboxStyle = () => {
-                        const styles = input.checked ? {
-                            background: 'rgba(0, 164, 220, 1)',
-                            border: '2px solid rgba(0, 164, 220, 0.8)',
-                            boxShadow: '0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)'
-                        } : {
-                            background: 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))',
-                            border: '2px solid rgba(128, 128, 128, 0.4)',
-                            boxShadow: '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)'
-                        };
+                        const styles = input.checked
+                            ? {
+                                  background: 'rgba(0, 164, 220, 1)',
+                                  border: '2px solid rgba(0, 164, 220, 0.8)',
+                                  boxShadow: '0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
+                              }
+                            : {
+                                  background: 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))',
+                                  border: '2px solid rgba(128, 128, 128, 0.4)',
+                                  boxShadow: '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
+                              };
 
                         Object.entries(styles).forEach(([prop, val]) => {
                             input.style[prop] = val;
@@ -3188,7 +3168,7 @@
             `;
 
             // 处理每个复选框的容器
-            checkboxGroup.forEach(checkbox => {
+            checkboxGroup.forEach((checkbox) => {
                 const parent = checkbox.parentElement;
                 if (parent) {
                     // 设置父容器样式
@@ -3243,7 +3223,7 @@
                     `;
 
                     // 处理标签文本和右对齐
-                    parent.childNodes.forEach(node => {
+                    parent.childNodes.forEach((node) => {
                         if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
                             const span = document.createElement('span');
                             span.textContent = node.textContent.trim();
@@ -3316,7 +3296,7 @@
 
                             // 如果是单选框，更新同组中的其他单选框样式
                             if (checkbox.type === 'radio' && checkbox.name) {
-                                document.querySelectorAll(`input[type="radio"][name="${checkbox.name}"]`).forEach(radio => {
+                                document.querySelectorAll(`input[type="radio"][name="${checkbox.name}"]`).forEach((radio) => {
                                     if (radio !== checkbox && radio.checked === false) {
                                         const radioParent = radio.parentElement;
                                         const radioIndicator = radio.querySelector('.radio-dot');
@@ -3324,13 +3304,15 @@
                                         // 应用未选中样式
                                         radio.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))';
                                         radio.style.border = '2px solid rgba(128, 128, 128, 0.4)';
-                                        radio.style.boxShadow = '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
+                                        radio.style.boxShadow =
+                                            '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
                                         radio.style.transform = 'scale(1)';
 
                                         if (radioParent) {
                                             radioParent.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.06), rgba(160, 160, 160, 0.06))';
                                             radioParent.style.border = '2px solid rgba(128, 128, 128, 0.2)';
-                                            radioParent.style.boxShadow = '0 2px 8px rgba(128, 128, 128, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.08), inset 0 -1px 1px rgba(0, 0, 0, 0.03)';
+                                            radioParent.style.boxShadow =
+                                                '0 2px 8px rgba(128, 128, 128, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.08), inset 0 -1px 1px rgba(0, 0, 0, 0.03)';
                                         }
 
                                         // 隐藏指示器
@@ -3364,7 +3346,7 @@
                         // Firefox兼容性：确保单选框组至少有一个保持选中状态
                         if (isFirefox() && checkbox.type === 'radio' && checkbox.name) {
                             const radioGroup = document.querySelectorAll(`input[type="radio"][name="${checkbox.name}"]`);
-                            const checkedCount = Array.from(radioGroup).filter(radio => radio.checked).length;
+                            const checkedCount = Array.from(radioGroup).filter((radio) => radio.checked).length;
 
                             // 如果当前单选框被取消选中，且这是组中唯一选中的，则阻止取消选中
                             if (!checkbox.checked && checkedCount === 0) {
@@ -3383,25 +3365,25 @@
                                 background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08))',
                                 border: '2px solid rgba(0, 164, 220, 0.4)',
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 12px rgba(0, 164, 220, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15)'
+                                boxShadow: '0 4px 12px rgba(0, 164, 220, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
                             },
                             checked: {
                                 background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.2), rgba(0, 164, 219, 0.2))',
                                 border: '2px solid rgba(0, 164, 220, 0.45)',
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 16px rgba(0, 164, 220, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2)'
+                                boxShadow: '0 4px 16px rgba(0, 164, 220, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2)',
                             },
                             checkbox: {
                                 unchecked: {
                                     border: '2px solid rgba(0, 164, 220, 0.6)',
                                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 164, 220, 0.1))',
-                                    transform: 'scale(1.1)'
+                                    transform: 'scale(1.1)',
                                 },
                                 checked: {
-                                    transform: 'scale(1.15)'
-                                }
-                            }
-                        }
+                                    transform: 'scale(1.15)',
+                                },
+                            },
+                        },
                     };
 
                     parent.addEventListener('mouseenter', function () {
@@ -3439,7 +3421,7 @@
                                 // Firefox兼容性：特殊处理单选框组
                                 if (checkbox.type === 'radio' && checkbox.name) {
                                     const radioGroup = document.querySelectorAll(`input[type="radio"][name="${checkbox.name}"]`);
-                                    const checkedCount = Array.from(radioGroup).filter(radio => radio.checked).length;
+                                    const checkedCount = Array.from(radioGroup).filter((radio) => radio.checked).length;
 
                                     // 如果当前单选框已选中且是组中唯一选中的，则不允许取消选中
                                     if (checkbox.checked && checkedCount === 1) {
@@ -3453,7 +3435,7 @@
                                 // 手动触发change事件
                                 const changeEvent = new Event('change', {
                                     bubbles: true,
-                                    cancelable: true
+                                    cancelable: true,
                                 });
                                 checkbox.dispatchEvent(changeEvent);
                             }
