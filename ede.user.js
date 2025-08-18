@@ -2524,7 +2524,7 @@
             });
         }
 
-        return filteredList;
+        return resultComments;
     }
 
     const widthCache = new Map();
