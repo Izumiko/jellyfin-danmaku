@@ -48,6 +48,7 @@
   - 当前集数弹幕偏移时间
 - **日志开关**: 开启/关闭调试日志输出
 - ~~**发送弹幕**~~: *(暂时隐藏)* 登录弹弹Play，并在播放界面发送弹幕
+- **自定义CORS代理和API接口**: 可使用自己搭建的cors代理；另外可以切换[l429609201/misaka_danmu_server](https://github.com/l429609201/misaka_danmu_server)替代弹弹Play（自定义API填入`http://<服务器IP>:<端口>/api/<你的Token>`）
 
  **除0级外均带有每3秒6条的垂直方向弹幕密度限制,高于该限制密度的顶部/底部弹幕将会被转为普通弹幕*
 
@@ -206,13 +207,9 @@ sed -i 's#</body>#<script src="https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danm
 1. 译名导致的异常: 如『よふかしのうた』 Emby 识别为《彻夜之歌》后因为弹弹 play 中为《夜曲》导致无法匹配
 2. 存在多季/剧场版/OVA 等导致的异常: 如『OVERLORD』第四季若使用S[N]格式归档(如OVERLORD/S4E1.mkv或OVERLORD/S4/E1.mkv),可能出现匹配失败/错误等现象
 3. 其他加载BUG: ~~鉴定为后端程序猿不会前端还要硬写JS~~,有BUG麻烦 [开个issue](https://github.com/Izumiko/jellyfin-danmaku/issues/new/choose) THX
+4. 使用l429609201/misaka_danmu_server且通过https访问Jellyfin时，需要反代misaka_danmu_server并自行处理CORS问题。
 
 > 首次播放时请检查当前弹幕信息是否正确匹配,若匹配错误请尝试手动匹配
 
-## 鸣谢
-
-感谢JetBrains [OpenSourceSupport](https://jb.gg/OpenSourceSupport)所提供的支持
-
-![JetBrains Logo (Main) logo](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg)
 
 [![Stargazers over time](https://starchart.cc/Izumiko/jellyfin-danmaku.svg)](https://starchart.cc/Izumiko/jellyfin-danmaku)
