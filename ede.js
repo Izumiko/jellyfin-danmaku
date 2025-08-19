@@ -1495,7 +1495,7 @@
                                     }
                                 })
                                 .catch((error) => {
-                                    console.error('创建弹幕失败:', error);
+                                    console.error(`创建弹幕失败: ${error.message}`);
                                 });
                         }
                     });
@@ -1772,7 +1772,7 @@
             showDebugInfo('登录成功');
             return true;
         } catch (error) {
-            console.error('登录失败', error);
+            console.error(`登录失败: ${error.message}`);
             alert('登录失败');
             return false;
         }
@@ -1816,7 +1816,7 @@
                         showDebugInfo(json.errorMessage);
                     }
                 } catch (error) {
-                    console.error('刷新弹弹Play Token失败', error);
+                    console.error(`刷新弹弹Play Token失败 ${error.message}`);
                 }
             }
         }
@@ -1876,7 +1876,7 @@
                     alert('发送失败：' + json.errorMessage);
                 }
             } catch (error) {
-                console.error('发送弹幕失败', error);
+                console.error(`发送弹幕失败 ${error.message}`);
                 showDebugInfo('发送弹幕失败');
             }
         }
@@ -1923,7 +1923,7 @@
                 alert('弹幕源提交弹弹Play失败：' + json.errorMessage);
             }
         } catch (error) {
-            console.error('发送相关链接失败', error);
+            console.error(`发送相关链接失败 ${error.message}`);
             showDebugInfo('发送相关链接失败');
         }
     }
@@ -2037,7 +2037,7 @@
         let animaInfo = await makeGetRequest(searchUrl)
             .then((response) => response.json())
             .catch((error) => {
-                showDebugInfo('查询失败:', error);
+                showDebugInfo(`查询失败: ${error.message}`);
                 return null;
             });
         if (animaInfo.animes.length == 0) {
@@ -2048,7 +2048,7 @@
                 animaInfo = await makeGetRequest(searchUrl)
                     .then((response) => response.json())
                     .catch((error) => {
-                        showDebugInfo('查询失败:', error);
+                        showDebugInfo(`查询失败: ${error.message}`);
                         return null;
                     });
             }
@@ -2141,9 +2141,9 @@
             let comments = data.comments;
             response = await makeGetRequest(url_related);
             data = await response.json();
-            showDebugInfo('第三方弹幕源个数：' + data.relateds.length);
+            showDebugInfo('第三方弹幕源个数：' + (data?.relateds?.length || '0'));
 
-            if (data.relateds.length > 0) {
+            if (data?.relateds?.length > 0) {
                 // 根据设置过滤弹幕源
                 let src = [];
                 for (const s of data.relateds) {
@@ -2172,7 +2172,7 @@
             showDebugInfo('弹幕下载成功: ' + comments.length);
             return comments;
         } catch (error) {
-            showDebugInfo('获取弹幕失败:', error);
+            showDebugInfo(`获取弹幕失败: ${error.message}`);
             return null;
         }
     }
@@ -2187,7 +2187,7 @@
                 showDebugInfo('弹幕下载成功: ' + data.comments.length);
                 return data.comments;
             } catch (error) {
-                showDebugInfo('获取弹幕失败:', error);
+                showDebugInfo(`获取弹幕失败: ${error.message}`);
             }
         }
         return null;
