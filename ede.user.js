@@ -3,7 +3,7 @@
 // @description  Jellyfin弹幕插件
 // @namespace    https://github.com/RyoLee
 // @author       RyoLee
-// @version      1.60
+// @version      1.61
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -24,8 +24,7 @@
     }
     // ------ configs start------
     const corsProxy = 'https://ddplay-api.930524.xyz/cors/';
-    const apiPrefix = corsProxy + 'https://api.dandanplay.net';
-    const authPrefix = corsProxy + 'https://api.dandanplay.net'; // 在Worker上计算Hash
+    const apiPrefix = 'https://api.dandanplay.net';
     let ddplayStatus = JSON.parse(localStorage.getItem('ddplayStatus')) || { isLogin: false, token: '', tokenExpire: 0 };
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
@@ -261,6 +260,10 @@
             const fontOptions = window.localStorage.getItem('danmakuFontOptions');
             this.fontOptions = fontOptions ?? '';
 
+            // 自定义CORS代理和API
+            this.customCorsProxy = window.localStorage.getItem('customCorsProxy') ?? '';
+            this.customApiPrefix = window.localStorage.getItem('customApiPrefix') ?? '';
+
             this.danmaku = null;
             this.episode_info = null;
             this.obResize = null;
@@ -339,11 +342,25 @@
             window.ede.fontOptions = document.getElementById('danmakuFontOptions').value;
             window.localStorage.setItem('danmakuFontOptions', window.ede.fontOptions);
             showDebugInfo(`字体选项：${window.ede.fontOptions}`);
+
+            window.ede.customCorsProxy = document.getElementById('customCorsProxy').value;
+            window.localStorage.setItem('customCorsProxy', window.ede.customCorsProxy);
+            showDebugInfo(`自定义CORS代理：${window.ede.customCorsProxy}`);
+            window.ede.customApiPrefix = document.getElementById('customApiPrefix').value;
+            window.localStorage.setItem('customApiPrefix', window.ede.customApiPrefix);
+            showDebugInfo(`自定义API：${window.ede.customApiPrefix}`);
+
             reloadDanmaku('reload');
             closeDanmakuSidebar();
         } catch (e) {
             alert(`Invalid input: ${e.message}`);
         }
+    }
+
+    function getApiPrefix() {
+        const cors = window.ede.customCorsProxy.length > 7 ? window.ede.customCorsProxy : corsProxy;
+        const api = window.ede.customApiPrefix.length > 7 ? window.ede.customApiPrefix : cors + apiPrefix;
+        return api;
     }
 
     // 创建弹幕设置侧边栏
@@ -1177,6 +1194,8 @@
         document.getElementById('danmakuFontOptions').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('danmakuFontFamily').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('danmakuOffsetTime').addEventListener('keydown', (event) => event.stopPropagation(), true);
+        document.getElementById('customCorsProxy').addEventListener('keydown', (event) => event.stopPropagation(), true);
+        document.getElementById('customApiPrefix').addEventListener('keydown', (event) => event.stopPropagation(), true);
         // 初始化显示默认标签内容
         if (activeTabId) {
             showTabContent(activeTabId);
@@ -1476,7 +1495,7 @@
                                     }
                                 })
                                 .catch((error) => {
-                                    console.error('创建弹幕失败:', error);
+                                    console.error(`创建弹幕失败: ${error.message}`);
                                 });
                         }
                     });
@@ -1500,7 +1519,45 @@
             });
 
             controlItems.push(addSourceItem);
-            // }
+        }
+
+        // 添加自定义cors代理和API选项
+        {
+            const customCorsProxy = document.createElement('div');
+            customCorsProxy.className = 'control-item control-card';
+            customCorsProxy.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 20px;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                min-height: 64px;
+                flex: 1 1 calc(50% - 8px);
+                min-width: 280px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            `;
+
+            customCorsProxy.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+            <label for="customCorsProxy" style="width: 75px; text-align: right; flex-shrink: 0;">CORS代理:</label>
+            <input id="customCorsProxy" placeholder="自定义CORS代理，留空使用默认" value="${
+                window.ede.customCorsProxy ?? ''
+            }" style="flex-grow: 1; width: 100%; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; background-color: rgba(0,0,0,0.2); color: white;" /></div>
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+            <label for="customApiPrefix" style="width: 75px; text-align: right; flex-shrink: 0;">API:</label>
+            <input id="customApiPrefix" placeholder="自定义API，留空使用默认" value="${
+                window.ede.customApiPrefix ?? ''
+            }" style="flex-grow: 1; width: 100%; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; background-color: rgba(0,0,0,0.2); color: white;" /></div>
+            `;
+
+            controlItems.push(customCorsProxy);
         }
 
         return controlItems.length > 0 ? controlItems : null;
@@ -1678,7 +1735,7 @@
     }
 
     async function loginDanDanPlay(account, passwd) {
-        const loginUrl = authPrefix + '/api/v2/login';
+        const loginUrl = getApiPrefix() + '/api/v2/login';
         const params = {
             userName: account,
             password: passwd,
@@ -1715,7 +1772,7 @@
             showDebugInfo('登录成功');
             return true;
         } catch (error) {
-            console.error('登录失败', error);
+            console.error(`登录失败: ${error.message}`);
             alert('登录失败');
             return false;
         }
@@ -1733,7 +1790,7 @@
                 return;
             } else {
                 // Refresh token before 3 days
-                const refreshUrl = apiPrefix + '/api/v2/login/renew';
+                const refreshUrl = getApiPrefix() + '/api/v2/login/renew';
                 try {
                     const resp = await fetch(refreshUrl, {
                         method: 'GET',
@@ -1759,7 +1816,7 @@
                         showDebugInfo(json.errorMessage);
                     }
                 } catch (error) {
-                    console.error('刷新弹弹Play Token失败', error);
+                    console.error(`刷新弹弹Play Token失败 ${error.message}`);
                 }
             }
         }
@@ -1772,7 +1829,7 @@
                 alert('请先获取弹幕信息');
                 return;
             }
-            const danmakuUrl = apiPrefix + '/api/v2/comment/' + window.ede.episode_info.episodeId;
+            const danmakuUrl = getApiPrefix() + '/api/v2/comment/' + window.ede.episode_info.episodeId;
             const params = {
                 time: time,
                 mode: mode,
@@ -1819,7 +1876,7 @@
                     alert('发送失败：' + json.errorMessage);
                 }
             } catch (error) {
-                console.error('发送弹幕失败', error);
+                console.error(`发送弹幕失败 ${error.message}`);
                 showDebugInfo('发送弹幕失败');
             }
         }
@@ -1836,7 +1893,7 @@
             alert('请先获取弹幕信息');
             return;
         }
-        const url = apiPrefix + '/api/v2/related/' + window.ede.episode_info.episodeId;
+        const url = getApiPrefix() + '/api/v2/related/' + window.ede.episode_info.episodeId;
         const params = {
             episodeId: window.ede.episode_info.episodeId,
             url: relatedUrl,
@@ -1866,7 +1923,7 @@
                 alert('弹幕源提交弹弹Play失败：' + json.errorMessage);
             }
         } catch (error) {
-            console.error('发送相关链接失败', error);
+            console.error(`发送相关链接失败 ${error.message}`);
             showDebugInfo('发送相关链接失败');
         }
     }
@@ -1976,22 +2033,22 @@
         }
         window.ede.curEpOffset = window.localStorage.getItem(_episode_key_offset) || 0;
 
-        let searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName;
+        let searchUrl = getApiPrefix() + '/api/v2/search/episodes?anime=' + animeName;
         let animaInfo = await makeGetRequest(searchUrl)
             .then((response) => response.json())
             .catch((error) => {
-                showDebugInfo('查询失败:', error);
+                showDebugInfo(`查询失败: ${error.message}`);
                 return null;
             });
         if (animaInfo.animes.length == 0) {
             const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId || item.Id);
             animeName = seriesInfo.OriginalTitle;
             if (animeName?.length > 0) {
-                searchUrl = apiPrefix + '/api/v2/search/episodes?anime=' + animeName;
+                searchUrl = getApiPrefix() + '/api/v2/search/episodes?anime=' + animeName;
                 animaInfo = await makeGetRequest(searchUrl)
                     .then((response) => response.json())
                     .catch((error) => {
-                        showDebugInfo('查询失败:', error);
+                        showDebugInfo(`查询失败: ${error.message}`);
                         return null;
                     });
             }
@@ -2065,9 +2122,9 @@
 
     async function getComments(episodeId) {
         const { danmakuFilter } = window.ede;
-        const url_all = apiPrefix + '/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
-        const url_related = apiPrefix + '/api/v2/related/' + episodeId;
-        const url_ext = apiPrefix + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=';
+        const url_all = getApiPrefix() + '/api/v2/comment/' + episodeId + '?withRelated=true&chConvert=' + window.ede.chConvert;
+        const url_related = getApiPrefix() + '/api/v2/related/' + episodeId;
+        const url_ext = getApiPrefix() + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=';
         try {
             let response = await makeGetRequest(url_all);
             let data = await response.json();
@@ -2084,9 +2141,9 @@
             let comments = data.comments;
             response = await makeGetRequest(url_related);
             data = await response.json();
-            showDebugInfo('第三方弹幕源个数：' + data.relateds.length);
+            showDebugInfo('第三方弹幕源个数：' + (data?.relateds?.length || '0'));
 
-            if (data.relateds.length > 0) {
+            if (data?.relateds?.length > 0) {
                 // 根据设置过滤弹幕源
                 let src = [];
                 for (const s of data.relateds) {
@@ -2115,14 +2172,14 @@
             showDebugInfo('弹幕下载成功: ' + comments.length);
             return comments;
         } catch (error) {
-            showDebugInfo('获取弹幕失败:', error);
+            showDebugInfo(`获取弹幕失败: ${error.message}`);
             return null;
         }
     }
 
     async function getCommentsByUrl(src) {
         const url_encoded = encodeURIComponent(src);
-        const url = apiPrefix + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=' + url_encoded;
+        const url = getApiPrefix() + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=' + url_encoded;
         for (let i = 0; i < 2; i++) {
             try {
                 const response = await makeGetRequest(url);
@@ -2130,7 +2187,7 @@
                 showDebugInfo('弹幕下载成功: ' + data.comments.length);
                 return data.comments;
             } catch (error) {
-                showDebugInfo('获取弹幕失败:', error);
+                showDebugInfo(`获取弹幕失败: ${error.message}`);
             }
         }
         return null;
