@@ -29,10 +29,6 @@
     const check_interval = 200;
     // 0:当前状态关闭 1:当前状态打开
     let danmaku_icons = ['comments_disabled', 'comment'];
-    const search_icon = 'find_replace';
-    const source_icon = 'library_add';
-    let log_icons = ['code_off', 'code'];
-    const settings_icon = 'tune';
     const send_icon = 'send';
     const spanClass = 'xlargePaperIconButton material-icons ';
     const buttonOptions = {
@@ -370,125 +366,42 @@
             return;
         }
 
-        // const dialog = originalModal.querySelector('.dialog');
-        // if (!dialog) return;
-
         const sidebar = document.createElement('div');
         sidebar.id = 'danmakuSidebar';
         sidebar.className = 'danmakuSidebar';
-        sidebar.style.cssText = `
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 450px;
-            max-width: 90vw;
-            height: 100vh;
-            background: rgba(18, 18, 20, 0.95);
-            backdrop-filter: blur(15px);
-            z-index: 1000000;
-            display: flex;
-            flex-direction: column;
-            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
-            transform: translateX(100%);
-            transition: transform 0.3s ease-in-out;
-            overflow: hidden;
-            box-sizing: border-box;
-            border-radius: 20px 0 0 0;
-        `;
 
         // 创建头部
         const header = document.createElement('div');
-        header.style.cssText = `
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            min-height: 60px;
-        `;
+        header.className = 'danmakuSidebarHeader';
 
         const titleEl = document.createElement('h2');
         titleEl.textContent = '弹幕设置';
-        titleEl.style.cssText = `
-            color: #fff;
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        `;
+        titleEl.className = 'danmakuSidebarTitle';
 
         // 创建右侧按钮组
         const buttonsContainer = document.createElement('div');
-        buttonsContainer.style.cssText = `
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        `;
+        buttonsContainer.className = 'danmakuSidebarButtons';
 
         // 保存按钮
         const saveButton = document.createElement('button');
         saveButton.innerHTML = '保存';
         saveButton.title = '保存设置';
-        saveButton.style.cssText = `
-            background: rgba(0, 164, 220, 1);
-            border: none;
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            padding: 10px 20px;
-            border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 60px;
-        `;
+        saveButton.className = 'danmakuSidebarSaveButton';
+
         saveButton.onclick = () => {
             saveSettings();
             closeDanmakuSidebar();
         };
 
-        saveButton.addEventListener('mouseenter', function () {
-            this.style.transform = 'translateY(-1px)';
-            this.style.boxShadow = '0 4px 12px rgba(0, 164, 220, 0.4)';
-        });
-
-        saveButton.addEventListener('mouseleave', function () {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = 'none';
-        });
-
         // 取消按钮
         const cancelButton = document.createElement('button');
         cancelButton.innerHTML = '取消';
         cancelButton.title = '取消设置';
-        cancelButton.style.cssText = `
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 10px 20px;
-            border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 60px;
-        `;
+        cancelButton.className = 'danmakuSidebarCancelButton';
+
         cancelButton.onclick = () => {
             closeDanmakuSidebar();
         };
-
-        cancelButton.addEventListener('mouseenter', function () {
-            this.style.background = 'rgba(255, 255, 255, 0.15)';
-            this.style.transform = 'translateY(-1px)';
-            this.style.boxShadow = '0 4px 12px rgba(255, 255, 255, 0.1)';
-        });
-
-        cancelButton.addEventListener('mouseleave', function () {
-            this.style.background = 'rgba(255, 255, 255, 0.1)';
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = 'none';
-        });
 
         buttonsContainer.appendChild(saveButton);
         buttonsContainer.appendChild(cancelButton);
@@ -499,15 +412,7 @@
 
         // 创建设置内容容器
         const settingsContainer = document.createElement('div');
-        settingsContainer.className = 'danmaku-settings-container';
-        settingsContainer.style.cssText = `
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-        `;
+        settingsContainer.className = 'danmakuSettingsContainer';
         sidebar.appendChild(settingsContainer);
 
         // 处理设置项
@@ -519,16 +424,10 @@
         const backdrop = document.createElement('div');
         backdrop.className = 'dialogBackdrop dialogBackdropOpened';
         backdrop.id = 'danmakuSidebarBackdrop';
-        backdrop.style.cssText = `
-            z-index: 999999;
-        `;
 
         // 将遮罩和侧边栏都添加到body
         document.body.appendChild(backdrop);
         document.body.appendChild(sidebar);
-
-        // 添加样式
-        addDanmakuSidebarStyles();
 
         // ESC键关闭
         const handleEscape = (e) => {
@@ -587,66 +486,19 @@
     function createInputDialog(title, placeholder, defaultValue = '') {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(8px);
-                z-index: 2000000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            `;
+            overlay.id = 'inputDialogOverlay';
+            overlay.className = 'dialogOverlay';
 
             const dialog = document.createElement('div');
-            dialog.style.cssText = `
-                background: rgba(20, 20, 25, 0.65);
-                backdrop-filter: blur(25px) saturate(1.5);
-                border-radius: 16px;
-                padding: 24px;
-                width: 400px;
-                max-width: 90vw;
-                box-shadow: 
-                    0 16px 40px rgba(0, 0, 0, 0.6),
-                    0 8px 20px rgba(0, 0, 0, 0.4),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                position: relative;
-                overflow: hidden;
-            `;
+            dialog.id = 'inputDialog';
+            dialog.className = 'inputDialog';
 
             dialog.innerHTML = `
-                <h3 style="color: #fff; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">${title}</h3>
-                <input type="text" id="dialogInput" placeholder="${placeholder}" value="${defaultValue}" style="
-                    width: 100%;
-                    margin-bottom: 20px;
-                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                " />
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button id="dialogCancel" style="
-                        padding: 10px 20px;
-                        border: 1px solid rgba(255, 255, 255, 0.2);
-                        border-radius: 8px;
-                        background: rgba(255, 255, 255, 0.1);
-                        color: #fff;
-                        font-size: 14px;
-                        cursor: pointer;
-                        transition: all 0.3s;
-                    ">取消</button>
-                    <button id="dialogConfirm" style="
-                        padding: 10px 20px;
-                        border: none;
-                        border-radius: 8px;
-                        background: rgba(0, 164, 220, 1);
-                        color: #fff;
-                        font-size: 14px;
-                        cursor: pointer;
-                        transition: all 0.3s;
-                    ">确认</button>
+                <h3 class="dialogTitle">${title}</h3>
+                <input type="text" id="dialogInput" placeholder="${placeholder}" value="${defaultValue}" />
+                <div class="dialogActions">
+                    <button id="dialogCancel">取消</button>
+                    <button id="dialogConfirm">确认</button>
                 </div>
             `;
 
@@ -655,25 +507,8 @@
 
             // 添加磨砂玻璃效果层
             const glassLayer = document.createElement('div');
-            glassLayer.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.1) 0%,
-                    rgba(255, 255, 255, 0.05) 50%,
-                    rgba(0, 0, 0, 0.1) 100%
-                );
-                border-radius: 16px;
-                pointer-events: none;
-                z-index: -1;
-            `;
+            glassLayer.className = 'glassLayer';
             dialog.appendChild(glassLayer);
-
-            // 确保样式已经应用到页面
-            addDanmakuSidebarStyles();
 
             const input = dialog.querySelector('#dialogInput');
             const cancelBtn = dialog.querySelector('#dialogCancel');
@@ -699,25 +534,6 @@
                 resolve(value || null);
             };
 
-            // 添加按钮hover效果
-            cancelBtn.onmouseenter = () => {
-                cancelBtn.style.background = 'rgba(255, 255, 255, 0.15)';
-                cancelBtn.style.transform = 'translateY(-1px)';
-            };
-            cancelBtn.onmouseleave = () => {
-                cancelBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-                cancelBtn.style.transform = 'translateY(0)';
-            };
-
-            confirmBtn.onmouseenter = () => {
-                confirmBtn.style.background = 'rgba(0, 164, 220, 0.8)';
-                confirmBtn.style.transform = 'translateY(-1px)';
-            };
-            confirmBtn.onmouseleave = () => {
-                confirmBtn.style.background = 'rgba(0, 164, 220, 1)';
-                confirmBtn.style.transform = 'translateY(0)';
-            };
-
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') {
                     confirmBtn.click();
@@ -738,112 +554,38 @@
     function createSelectDialog(title, options, defaultIndex = 0) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(8px);
-                z-index: 2000000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            `;
+            overlay.id = 'selectDialogOverlay';
+            overlay.className = 'dialogOverlay';
 
             const dialog = document.createElement('div');
-            dialog.style.cssText = `
-                background: rgba(20, 20, 25, 0.65);
-                backdrop-filter: blur(25px) saturate(1.5);
-                border-radius: 16px;
-                padding: 24px;
-                width: 500px;
-                max-width: 90vw;
-                max-height: 80vh;
-                box-shadow: 
-                    0 16px 40px rgba(0, 0, 0, 0.6),
-                    0 8px 20px rgba(0, 0, 0, 0.4),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                display: flex;
-                flex-direction: column;
-                position: relative;
-                overflow: hidden;
-            `;
+            dialog.id = 'selectDialog';
+            dialog.className = 'selectDialog';
 
             const titleEl = document.createElement('h3');
-            titleEl.style.cssText = `
-                color: #fff;
-                margin: 0 0 16px 0;
-                font-size: 18px;
-                font-weight: 600;
-            `;
+            titleEl.className = 'dialogTitle';
             titleEl.textContent = title;
 
             const listContainer = document.createElement('div');
-            listContainer.style.cssText = `
-                flex: 1;
-                overflow-y: auto;
-                margin-bottom: 20px;
-                max-height: 400px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 8px;
-                background: rgba(255, 255, 255, 0.05);
-                scrollbar-width: thin;
-                scrollbar-color: rgba(0, 164, 220, 0.5) rgba(0, 0, 0, 0.1);
-            `;
-
-            // 添加webkit滚动条样式
-            const style = document.createElement('style');
-            style.textContent = `
-                .danmaku-select-list::-webkit-scrollbar {
-                    width: 8px;
-                }
-                .danmaku-select-list::-webkit-scrollbar-track {
-                    background: rgba(0, 0, 0, 0.1);
-                    border-radius: 4px;
-                }
-                .danmaku-select-list::-webkit-scrollbar-thumb {
-                    background: rgba(0, 164, 220, 0.5);
-                    border-radius: 4px;
-                }
-                .danmaku-select-list::-webkit-scrollbar-thumb:hover {
-                    background: rgba(0, 164, 220, 0.7);
-                }
-            `;
-            document.head.appendChild(style);
-            listContainer.className = 'danmaku-select-list';
+            listContainer.className = 'selectDialogList';
 
             let selectedIndex = defaultIndex;
 
             options.forEach((option, index) => {
                 const item = document.createElement('div');
-                item.style.cssText = `
-                    padding: 12px 16px;
-                    color: #fff;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                    background: ${index === selectedIndex ? 'rgba(0, 164, 220, 0.2)' : 'transparent'};
-                `;
+                item.className = 'select-dialog-item';
+                if (index === selectedIndex) {
+                    item.classList.add('selected');
+                }
                 item.textContent = option;
-
-                item.onmouseenter = () => {
-                    if (index !== selectedIndex) {
-                        item.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }
-                };
-
-                item.onmouseleave = () => {
-                    item.style.background = index === selectedIndex ? 'rgba(0, 164, 220, 0.2)' : 'transparent';
-                };
 
                 item.onclick = () => {
                     // 更新选中状态
-                    listContainer.querySelectorAll('div').forEach((el, i) => {
-                        el.style.background = i === index ? 'rgba(0, 164, 220, 0.2)' : 'transparent';
+                    listContainer.querySelectorAll('.select-dialog-item').forEach((el, i) => {
+                        if (i === index) {
+                            el.classList.add('selected');
+                        } else {
+                            el.classList.remove('selected');
+                        }
                     });
                     selectedIndex = index;
                 };
@@ -852,37 +594,15 @@
             });
 
             const buttonsContainer = document.createElement('div');
-            buttonsContainer.style.cssText = `
-                display: flex;
-                gap: 12px;
-                justify-content: flex-end;
-            `;
+            buttonsContainer.className = 'dialogActions';
 
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = '取消';
-            cancelBtn.style.cssText = `
-                padding: 10px 20px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                background: rgba(255, 255, 255, 0.1);
-                color: #fff;
-                font-size: 14px;
-                cursor: pointer;
-                transition: all 0.3s;
-            `;
+            cancelBtn.className = 'dialogCancelButton';
 
             const confirmBtn = document.createElement('button');
             confirmBtn.textContent = '确认';
-            confirmBtn.style.cssText = `
-                padding: 10px 20px;
-                border: none;
-                border-radius: 8px;
-                background: rgba(0, 164, 220, 1);
-                color: #fff;
-                font-size: 14px;
-                cursor: pointer;
-                transition: all 0.3s;
-            `;
+            confirmBtn.className = 'dialogConfirmButton';
 
             buttonsContainer.appendChild(cancelBtn);
             buttonsContainer.appendChild(confirmBtn);
@@ -895,25 +615,8 @@
 
             // 添加磨砂玻璃效果层
             const glassLayer = document.createElement('div');
-            glassLayer.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.1) 0%,
-                    rgba(255, 255, 255, 0.05) 50%,
-                    rgba(0, 0, 0, 0.1) 100%
-                );
-                border-radius: 16px;
-                pointer-events: none;
-                z-index: -1;
-            `;
+            glassLayer.className = 'glassLayer';
             dialog.appendChild(glassLayer);
-
-            // 确保样式已经应用到页面
-            addDanmakuSidebarStyles();
 
             const cleanup = () => {
                 document.body.removeChild(overlay);
@@ -927,25 +630,6 @@
             confirmBtn.onclick = () => {
                 cleanup();
                 resolve(selectedIndex);
-            };
-
-            // 添加按钮hover效果
-            cancelBtn.onmouseenter = () => {
-                cancelBtn.style.background = 'rgba(255, 255, 255, 0.15)';
-                cancelBtn.style.transform = 'translateY(-1px)';
-            };
-            cancelBtn.onmouseleave = () => {
-                cancelBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-                cancelBtn.style.transform = 'translateY(0)';
-            };
-
-            confirmBtn.onmouseenter = () => {
-                confirmBtn.style.background = 'rgba(0, 164, 220, 0.8)';
-                confirmBtn.style.transform = 'translateY(-1px)';
-            };
-            confirmBtn.onmouseleave = () => {
-                confirmBtn.style.background = 'rgba(0, 164, 220, 1)';
-                confirmBtn.style.transform = 'translateY(0)';
             };
 
             overlay.onclick = (e) => {
@@ -970,7 +654,7 @@
     function setupDanmakuSettings(container) {
         function htmlToElement(html) {
             const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
+            wrapper.classList.add('settings-html-element');
             wrapper.innerHTML = html;
             return wrapper;
         }
@@ -979,18 +663,18 @@
             controls: [],
             display: [
                 htmlToElement(`
-            <span id="lbdanmakuDensityLimit" style="flex: auto;">密度限制等级:</span>
-            <input style="width: 50%;" type="range" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}" />
+            <span id="lbdanmakuDensityLimit" class="settings-flex-auto">密度限制等级:</span>
+            <input type="range" id="danmakuDensityLimit"  min="0" max="3" step="1" value="${window.ede.danmakuDensityLimit}" />
         `),
                 htmlToElement(`                            
-            <label style="flex: auto;">弹幕防重叠:</label>
+            <label class="settings-flex-auto">弹幕防重叠:</label>
             <div><input type="radio" id="enableAntiOverlap" name="useAnitOverlap" value="1" ${window.ede.useAnitOverlap === 1 ? 'checked' : ''}>
                 <label for="enableAntiOverlap">是</label></div>
             <div><input type="radio" id="disableAntiOverlap" name="useAnitOverlap" value="0" ${window.ede.useAnitOverlap === 0 ? 'checked' : ''}>
                 <label for="disableAntiOverlap">否</label></div>
         `),
                 htmlToElement(`
-            <label style="flex: auto;">简繁转换:</label>
+            <label class="settings-flex-auto">简繁转换:</label>
             <div><input type="radio" id="chConvert0" name="chConvert" value="0" ${window.ede.chConvert === 0 ? 'checked' : ''}>
                 <label for="chConvert0">不转换</label></div>
             <div><input type="radio" id="chConvert1" name="chConvert" value="1" ${window.ede.chConvert === 1 ? 'checked' : ''}>
@@ -999,48 +683,48 @@
                 <label for="chConvert2">繁体</label></div>
         `),
                 htmlToElement(`
-            <label style="flex: auto;">使用本地xml弹幕:</label>
+            <label class="settings-flex-auto">使用本地xml弹幕:</label>
             <div><input type="radio" id="enableXmlDanmaku" name="useXmlDanmaku" value="1" ${window.ede.useXmlDanmaku === 1 ? 'checked' : ''}>
                 <label for="chConvert0">是</label></div>
             <div><input type="radio" id="disableXmlDanmaku" name="useXmlDanmaku" value="0" ${window.ede.useXmlDanmaku === 0 ? 'checked' : ''}>
                 <label for="chConvert1">否</label></div>
         `),
                 htmlToElement(`
-            <label style="flex: auto;">当前弹幕偏移时间:</label>
-            <div><input style="flex-grow: 1;" id="danmakuOffsetTime" placeholder="秒" value="${window.ede.curEpOffset || 0}" /></div>
+            <label class="settings-flex-auto">当前弹幕偏移时间:</label>
+            <div><input class="settings-flex-grow" id="danmakuOffsetTime" placeholder="秒" value="${window.ede.curEpOffset || 0}" /></div>
         `),
             ],
             style: [
                 htmlToElement(`
-            <span id="lbopacity" style="flex: auto;">透明度:</span>
-            <input style="width: 50%;" type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
+            <span id="lbopacity" class="settings-flex-auto">透明度:</span>
+            <input type="range" id="opacity" min="0" max="1" step="0.1" value="${window.ede.opacity || 0.7}" />
         `),
                 htmlToElement(`
-            <span id="lbspeed" style="flex: auto;">弹幕速度:</span>
-            <input style="width: 50%;" type="range" id="speed" min="20" max="600" step="10" value="${window.ede.speed || 200}" />
+            <span id="lbspeed" class="settings-flex-auto">弹幕速度:</span>
+            <input type="range" id="speed" min="20" max="600" step="10" value="${window.ede.speed || 200}" />
         `),
                 htmlToElement(`
-            <label style="flex: auto;">字体:</label>
-            <div><input style="flex-grow: 1;" id="danmakuFontFamily" placeholder="sans-serif" value="${
+            <label class="settings-flex-auto">字体:</label>
+            <div><input class="settings-flex-grow" id="danmakuFontFamily" placeholder="sans-serif" value="${
                 window.ede.fontFamily?.replaceAll('"', '&quot;') ?? defaultFontFamily
             }" /></div>
         `),
                 htmlToElement(`
-            <span id="lbfontSize" style="flex: auto;">字体大小:</span>
-            <input style="width: 50%;" type="range" id="fontSize" min="8" max="80" step="1" value="${window.ede.fontSize || 18}" />
+            <span id="lbfontSize" class="settings-flex-auto">字体大小:</span>
+            <input type="range" id="fontSize" min="8" max="80" step="1" value="${window.ede.fontSize || 18}" />
         `),
                 htmlToElement(`
-            <label style="flex: auto;">其他字体选项:</label>
-            <div><input style="flex-grow: 1;" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions?.replaceAll('"', '&quot;') ?? ''}" /></div>
+            <label class="settings-flex-auto">其他字体选项:</label>
+            <div><input class="settings-flex-grow" id="danmakuFontOptions" placeholder="" value="${window.ede.fontOptions?.replaceAll('"', '&quot;') ?? ''}" /></div>
         `),
                 htmlToElement(`
-            <span id="lbheightRatio" style="flex: auto;">高度比例:</span>
-            <input style="width: 50%;" type="range" id="heightRatio" min="0" max="1" step="0.05" value="${window.ede.heightRatio || 0.9}" />
+            <span id="lbheightRatio" class="settings-flex-auto">高度比例:</span>
+            <input type="range" id="heightRatio" min="0" max="1" step="0.05" value="${window.ede.heightRatio || 0.9}" />
         `),
             ],
             filter: [
                 htmlToElement(`
-            <label style="flex: auto;">弹幕过滤:</label>
+            <label class="settings-flex-auto">弹幕过滤:</label>
             <div><input type="checkbox" id="filterBilibili" name="danmakuFilter" value="1" ${(window.ede.danmakuFilter & 1) === 1 ? 'checked' : ''} />
                 <label for="filterBilibili">B站</label></div>
             <div><input type="checkbox" id="filterGamer" name="danmakuFilter" value="2" ${(window.ede.danmakuFilter & 2) === 2 ? 'checked' : ''} />
@@ -1051,7 +735,7 @@
                 <label for="filterOthers">其他</label></div>
         `),
                 htmlToElement(`
-            <label style="flex: auto;">弹幕类型过滤:</label>
+            <label class="settings-flex-auto">弹幕类型过滤:</label>
             <div><input type="checkbox" id="filterBottom" name="danmakuModeFilter" value="1" ${(window.ede.danmakuModeFilter & 1) === 1 ? 'checked' : ''} />
                 <label for="filterBottom">底部</label></div>
             <div><input type="checkbox" id="filterTop" name="danmakuModeFilter" value="2" ${(window.ede.danmakuModeFilter & 2) === 2 ? 'checked' : ''} />
@@ -1073,20 +757,7 @@
 
         // 创建标签页结构
         const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'danmaku-tabs-container';
-        tabsContainer.style.cssText = `
-        display: flex;
-        overflow-x: auto;
-        padding: 16px 20px;
-        background: rgba(0, 0, 0, 0.2);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        scrollbar-width: thin;
-        scrollbar-color: rgba(0, 164, 220, 0.5) rgba(0, 0, 0, 0.1);
-        margin: -16px -16px 20px -16px;
-        backdrop-filter: blur(10px);
-        gap: 4px;
-    `;
-
+        tabsContainer.className = 'danmakuTabsContainer';
         container.appendChild(tabsContainer);
 
         const tabs = [
@@ -1106,17 +777,9 @@
             const tabContent = document.createElement('div');
             tabContent.className = 'danmaku-tab-content';
             tabContent.dataset.tabId = tab.id;
-            // 默认隐藏，后面根据activeTabId显示
-            tabContent.style.display = 'none';
-            tabContent.style.padding = '10px 0';
 
             if (tab.id === 'controls') {
-                tabContent.style.display = 'flex'; // 作为默认显示，flex布局
-                tabContent.style.flexWrap = 'wrap';
-                tabContent.style.gap = '16px';
-                tabContent.style.marginBottom = '20px';
-                tabContent.style.padding = '0';
-
+                tabContent.classList.add('controls', 'active'); // 默认显示控制功能页
                 tab.items.forEach((item) => {
                     tabContent.appendChild(item);
                 });
@@ -1139,31 +802,22 @@
             tabButton.textContent = tab.title;
             tabButton.dataset.tabId = tab.id;
             tabButton.className = 'danmaku-tab-button';
-            tabButton.style.cssText = `
-            padding: 10px 18px;
-            border: none;
-            border-radius: 8px;
-            background: ${tab.id === activeTabId ? 'rgba(0, 164, 220, 1)' : 'rgba(255, 255, 255, 0.08)'};
-            color: white;
-            font-weight: ${tab.id === activeTabId ? '600' : '500'};
-            font-size: 14px;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            border: 1px solid ${tab.id === activeTabId ? 'transparent' : 'rgba(255, 255, 255, 0.1)'};
-            backdrop-filter: blur(10px);
-        `;
+            
+            // 设置初始状态
+            if (tab.id === activeTabId) {
+                tabButton.classList.add('active');
+            } else {
+                tabButton.classList.add('inactive');
+            }
 
             tabButton.addEventListener('click', function () {
                 // 切换按钮样式
                 document.querySelectorAll('.danmaku-tab-button').forEach((btn) => {
-                    btn.style.background = 'rgba(255, 255, 255, 0.08)';
-                    btn.style.fontWeight = '500';
-                    btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    btn.classList.remove('active');
+                    btn.classList.add('inactive');
                 });
-                this.style.background = 'rgba(0, 164, 220, 1)';
-                this.style.fontWeight = '600';
-                this.style.borderColor = 'transparent';
+                this.classList.remove('inactive');
+                this.classList.add('active');
 
                 // 显示对应标签内容
                 showTabContent(this.dataset.tabId);
@@ -1178,24 +832,26 @@
 
             // 隐藏所有标签页内容
             container.querySelectorAll('.danmaku-tab-content').forEach((div) => {
-                div.style.display = 'none';
+                div.classList.remove('active');
+                div.classList.remove('controls');
             });
 
             // 显示当前激活的标签内容
             const activeContent = container.querySelector(`.danmaku-tab-content[data-tab-id="${tabId}"]`);
             if (activeContent) {
+                activeContent.classList.add('active');
                 if (tabId === 'controls') {
-                    activeContent.style.display = 'flex'; // controls使用flex布局
-                } else {
-                    activeContent.style.display = 'block';
+                    activeContent.classList.add('controls');
                 }
             }
         }
+        
         document.getElementById('danmakuFontOptions').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('danmakuFontFamily').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('danmakuOffsetTime').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('customCorsProxy').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('customApiPrefix').addEventListener('keydown', (event) => event.stopPropagation(), true);
+        
         // 初始化显示默认标签内容
         if (activeTabId) {
             showTabContent(activeTabId);
@@ -1209,54 +865,23 @@
         {
             let isDanmukuEnabled = window.localStorage.getItem('danmakuSwitch') === '1';
             const danmakuSwitchItem = document.createElement('div');
-            danmakuSwitchItem.className = 'control-item control-card';
-            danmakuSwitchItem.style.cssText = `
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-height: 64px;
-                flex: 1 1 calc(50% - 8px);
-                min-width: 280px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            `;
+            danmakuSwitchItem.className = 'controlItem controlCard danmakuSwitchCard';
 
             danmakuSwitchItem.innerHTML = `
-                <div class="control-info" style="display: flex; align-items: center; flex: 1;">
-                    <div class="control-text">
-                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 2px;">弹幕显示</div>
-                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">控制弹幕的显示与隐藏</div>
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">弹幕显示</div>
+                        <div class="controlDescription">控制弹幕的显示与隐藏</div>
                     </div>
                 </div>
-                <label class="modern-switch">
+                <label class="modernSwitch">
                     <input type="checkbox" ${isDanmukuEnabled ? 'checked' : ''}>
-                    <span class="modern-slider"></span>
+                    <span class="modernSlider"></span>
                 </label>
             `;
 
-            // 添加hover效果
-            danmakuSwitchItem.addEventListener('mouseenter', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(0, 164, 220, 0.12), rgba(0, 164, 219, 0.12))';
-                this.style.border = '2px solid rgba(0, 164, 220, 0.4)';
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 8px 25px rgba(0, 164, 220, 0.15)';
-            });
-
-            danmakuSwitchItem.addEventListener('mouseleave', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
-                this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            });
-
             const checkbox = danmakuSwitchItem.querySelector('input[type="checkbox"]');
-            const switchLabel = danmakuSwitchItem.querySelector('.modern-switch');
+            const switchLabel = danmakuSwitchItem.querySelector('.modernSwitch');
 
             // 为checkbox添加change事件
             checkbox.addEventListener('change', function (e) {
@@ -1278,7 +903,6 @@
                     }
                 });
             }
-
             controlItems.push(danmakuSwitchItem);
         }
 
@@ -1286,54 +910,23 @@
         {
             let isLogEnabled = window.localStorage.getItem('logSwitch') === '1';
             const logSwitchItem = document.createElement('div');
-            logSwitchItem.className = 'control-item control-card';
-            logSwitchItem.style.cssText = `
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-height: 64px;
-                flex: 1 1 calc(50% - 8px);
-                min-width: 280px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            `;
+            logSwitchItem.className = 'controlItem controlCard logSwitchCard';
 
             logSwitchItem.innerHTML = `
-                <div class="control-info" style="display: flex; align-items: center; flex: 1;">
-                    <div class="control-text">
-                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 2px;">日志显示</div>
-                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">显示调试信息和日志</div>
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle" >日志显示</div>
+                        <div class="controlDescription">显示调试信息和日志</div>
                     </div>
                 </div>
-                <label class="modern-switch">
+                <label class="modernSwitch">
                     <input type="checkbox" ${isLogEnabled ? 'checked' : ''}>
-                    <span class="modern-slider"></span>
+                    <span class="modernSlider"></span>
                 </label>
             `;
 
-            // 添加hover效果
-            logSwitchItem.addEventListener('mouseenter', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(33, 150, 243, 0.12))';
-                this.style.borderColor = 'rgba(76, 175, 80, 0.4)';
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 8px 25px rgba(76, 175, 80, 0.15)';
-            });
-
-            logSwitchItem.addEventListener('mouseleave', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
-                this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            });
-
             const checkbox = logSwitchItem.querySelector('input[type="checkbox"]');
-            const switchLabel = logSwitchItem.querySelector('.modern-switch');
+            const switchLabel = logSwitchItem.querySelector('.modernSwitch');
 
             // 为checkbox添加change事件
             checkbox.addEventListener('change', function (e) {
@@ -1370,47 +963,21 @@
         // 添加搜索弹幕控制项
         {
             const searchItem = document.createElement('div');
-            searchItem.className = 'control-item control-card';
-            searchItem.style.cssText = `
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-height: 64px;
-                flex: 1 1 calc(50% - 8px);
-                min-width: 280px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            `;
+            searchItem.className = 'controlItem controlCard searchItemCard';
 
             searchItem.innerHTML = `
-                <div class="control-info" style="display: flex; align-items: center; flex: 1;">
-                    <div class="control-text">
-                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 2px;">弹幕搜索</div>
-                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">搜索视频弹幕</div>
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle" >弹幕搜索</div>
+                        <div class="controlDescription">搜索视频弹幕</div>
                     </div>
                 </div>
-                <div class="control-action" style="
-                    padding: 6px 12px;
-                    background: rgba(0, 188, 212, 0.15);
-                    border-radius: 6px;
-                    color: #00BCD4;
-                    font-size: 12px;
-                    font-weight: 500;
-                    border: 1px solid rgba(0, 188, 212, 0.25);
-                ">搜索</div>
+                <div class="searchItemControlAction">搜索</div>
             `;
 
             searchItem.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                // searchButton.click();
                 if (window.ede.loading) {
                     showDebugInfo('正在加载,请稍后再试');
                     return;
@@ -1419,61 +986,22 @@
                 reloadDanmaku('search');
             });
 
-            searchItem.addEventListener('mouseenter', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.12), rgba(0, 229, 255, 0.12))';
-                this.style.borderColor = 'rgba(0, 188, 212, 0.4)';
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 8px 25px rgba(0, 188, 212, 0.15)';
-            });
-
-            searchItem.addEventListener('mouseleave', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
-                this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            });
-
             controlItems.push(searchItem);
         }
 
         // 添加增加弹幕源控制项
         {
             const addSourceItem = document.createElement('div');
-            addSourceItem.className = 'control-item control-card';
-            addSourceItem.style.cssText = `
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-height: 64px;
-                flex: 1 1 calc(50% - 8px);
-                min-width: 280px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            `;
+            addSourceItem.className = 'controlItem controlCard addSourceItemCard';
 
             addSourceItem.innerHTML = `
-                <div class="control-info" style="display: flex; align-items: center; flex: 1;">
-                    <div class="control-text">
-                        <div style="font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 2px;">增加弹幕源</div>
-                        <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">添加新的弹幕数据源，如B站播放链接</div>
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle" >增加弹幕源</div>
+                        <div class="controlDescription">添加新的弹幕数据源，如B站播放链接</div>
                     </div>
                 </div>
-                <div class="control-action" style="
-                    padding: 6px 12px;
-                    background: rgba(255, 152, 0, 0.15);
-                    border-radius: 6px;
-                    color: #FF9800;
-                    font-size: 12px;
-                    font-weight: 500;
-                    border: 1px solid rgba(255, 152, 0, 0.25);
-                ">添加</div>
+                <div class="addSourceItemControlAction">添加</div>
             `;
 
             addSourceItem.addEventListener('click', async function (e) {
@@ -1504,57 +1032,34 @@
                 }
             });
 
-            addSourceItem.addEventListener('mouseenter', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.12), rgba(255, 193, 7, 0.12))';
-                this.style.borderColor = 'rgba(255, 152, 0, 0.4)';
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 8px 25px rgba(255, 152, 0, 0.15)';
-            });
-
-            addSourceItem.addEventListener('mouseleave', function () {
-                this.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
-                this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-            });
-
             controlItems.push(addSourceItem);
         }
 
         // 添加自定义cors代理和API选项
         {
             const customCorsProxy = document.createElement('div');
-            customCorsProxy.className = 'control-item control-card';
-            customCorsProxy.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                min-height: 64px;
-                flex: 1 1 calc(50% - 8px);
-                min-width: 280px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            `;
+            customCorsProxy.className = 'controlItem controlCard customCorsProxyCard';
 
             customCorsProxy.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-            <label for="customCorsProxy" style="width: 75px; text-align: right; flex-shrink: 0;">CORS代理:</label>
-            <input id="customCorsProxy" placeholder="自定义CORS代理，留空使用默认" value="${
-                window.ede.customCorsProxy ?? ''
-            }" style="flex-grow: 1; width: 100%; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; background-color: rgba(0,0,0,0.2); color: white;" /></div>
-            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-            <label for="customApiPrefix" style="width: 75px; text-align: right; flex-shrink: 0;">API:</label>
-            <input id="customApiPrefix" placeholder="自定义API，留空使用默认" value="${
-                window.ede.customApiPrefix ?? ''
-            }" style="flex-grow: 1; width: 100%; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; background-color: rgba(0,0,0,0.2); color: white;" /></div>
+            <div class="controlInfo">
+                <div class="controlText">
+                    <div class="controlTitle" >配置第三方弹幕库，如御坂网络</div>
+                </div>
+            </div>
+            <div class="custom-input-group">
+                <label for="customCorsProxy" class="custom-input-label">CORS代理:</label>
+                <input id="customCorsProxy" 
+                       class="custom-input-field" 
+                       placeholder="自定义CORS代理，留空使用默认" 
+                       value="${window.ede.customCorsProxy ?? ''}" />
+            </div>
+            <div class="custom-input-group">
+                <label for="customApiPrefix" class="custom-input-label">API:</label>
+                <input id="customApiPrefix" 
+                       class="custom-input-field" 
+                       placeholder="自定义API，留空使用默认" 
+                       value="${window.ede.customApiPrefix ?? ''}" />
+            </div>
             `;
 
             controlItems.push(customCorsProxy);
@@ -2816,179 +2321,14 @@
         }
     });
 
-    // 添加侧边栏样式
-    function addDanmakuSidebarStyles() {
-        if (document.getElementById('danmakuSidebarStyles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'danmakuSidebarStyles';
-        style.textContent = `
-            /* 容器约束 - 防止布局溢出 */
-            .danmakuSidebar label,
-            .danmakuSidebar .checkbox-container,
-            .danmakuSidebar .radio-container,
-            .danmakuSidebar div[style*="flex-direction: column"] {
-                max-width: 100% !important;
-                box-sizing: border-box !important;
-                overflow: hidden !important;
-                word-wrap: break-word !important;
-            }
-
-            /* 统一滚动条样式 */
-            .danmakuSidebar .danmaku-settings-container::-webkit-scrollbar,
-            .danmaku-tabs-container::-webkit-scrollbar {
-                width: 6px;
-                height: 4px;
-            }
-
-            .danmakuSidebar .danmaku-settings-container::-webkit-scrollbar-track,
-            .danmaku-tabs-container::-webkit-scrollbar-track {
-                background: rgba(0, 0, 0, 0.1);
-                border-radius: 3px;
-            }
-
-            .danmakuSidebar .danmaku-settings-container::-webkit-scrollbar-thumb,
-            .danmaku-tabs-container::-webkit-scrollbar-thumb {
-                background: rgba(0, 164, 220, 1);
-                border-radius: 3px;
-            }
-
-            /* 控制卡片悬停效果 */
-            .control-card {
-                position: relative;
-                overflow: hidden;
-            }
-
-            .control-card::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(135deg, rgba(0, 164, 220, 0.05), rgba(0, 164, 219, 0.05));
-                opacity: 0;
-                transition: opacity 0.3s ease;
-                pointer-events: none;
-            }
-
-            .control-card:hover::before {
-                opacity: 1;
-            }
-
-            /* 滑块相关样式 */
-            .danmakuSidebar input[type="range"] {
-                -webkit-appearance: none;
-                appearance: none;
-                height: 6px;
-                border-radius: 3px;
-                outline: none;
-                background: rgba(0, 164, 220, 1);
-                cursor: pointer;
-            }
-
-            .danmakuSidebar input[type="range"]::-webkit-slider-thumb,
-            .danmakuSidebar input[type="range"]::-moz-range-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 18px;
-                height: 18px;
-                border-radius: 50%;
-                background: rgba(0, 164, 220, 1);
-                cursor: pointer;
-                border: none;
-                box-shadow: 0 2px 6px rgba(0, 164, 220, 0.3);
-                transition: all 0.3s ease;
-            }
-
-            .danmakuSidebar input[type="range"]::-webkit-slider-thumb:hover {
-                transform: scale(1.1);
-                box-shadow: 0 3px 8px rgba(0, 164, 220, 0.5);
-            }
-
-            /* 滑块值标签和容器 */
-            .danmakuSidebar .range-value-label {
-                color: rgba(0, 164, 220, 1) !important;
-                font-size: 14px !important;
-                font-weight: 600 !important;
-                min-width: 50px !important;
-                text-align: center !important;
-                background: rgba(0, 164, 220, 0.1) !important;
-                padding: 4px 8px !important;
-                border-radius: 6px !important;
-                border: 1px solid rgba(0, 164, 220, 0.3) !important;
-                backdrop-filter: blur(10px) !important;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                flex-shrink: 0 !important;
-                white-space: nowrap !important;
-            }
-
-            .danmakuSidebar .range-value-label:hover {
-                background: rgba(0, 164, 220, 0.15) !important;
-                border-color: rgba(0, 164, 220, 0.5) !important;
-                transform: scale(1.05) !important;
-            }
-
-            .danmakuSidebar .range-container {
-                display: flex !important;
-                align-items: center !important;
-                gap: 12px !important;
-                flex: 1 !important;
-            }
-
-            /* 响应式设计 */
-            @media (max-width: 600px) {
-                .danmakuSidebar {
-                    width: 95% !important;
-                    max-width: none !important;
-                }
-                
-                .control-card {
-                    flex: 1 1 100% !important;
-                    min-width: 100% !important;
-                }
-            }
-
-            @media (max-width: 400px) {
-                .control-card .control-info {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    text-align: left;
-                }
-                
-                .control-card .control-icon {
-                    margin-bottom: 8px;
-                    margin-right: 0 !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     // 为内容区域的设置项添加样式
     function styleSettingItemForContent(item) {
         // 检查是否是控制功能卡片，如果是则跳过样式处理
-        if (item.classList && item.classList.contains('control-card')) {
+        if (item.classList && item.classList.contains('controlCard')) {
             return;
         }
 
-        // 基础样式
-        const baseStyles = {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            marginBottom: '12px',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))',
-            borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            minHeight: '56px',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-        };
-
-        // 应用基础样式
-        Object.entries(baseStyles).forEach(([property, value]) => {
-            item.style[property] = value;
-        });
+        item.classList.add('settingItem');
 
         // 调整标签和输入控件布局
         const label = item.querySelector('span, label');
@@ -2996,21 +2336,9 @@
 
         if (label && input) {
             // 标签样式
-            label.style.cssText = `
-                font-size: 14px;
-                font-weight: 500;
-                color: #fff;
-                flex: 0 0 auto;
-                margin-right: 20px;
-                min-width: 120px;
-                text-align: left;
-                line-height: 1.4;
-            `;
+            label.classList.add('settingLabel');
 
             if (input.tagName === 'INPUT') {
-                input.style.flex = '1';
-
-                // 根据输入类型应用特定样式
                 if (input.type === 'range') {
                     // 创建滑块值显示容器
                     const rangeContainer = document.createElement('div');
@@ -3039,16 +2367,7 @@
                     valueLabel.textContent = getDisplayValue(input.value || '0', input);
 
                     // 设置滑块样式
-                    input.style.cssText += `
-                        max-width: 200px;
-                        height: 6px;
-                        border-radius: 3px;
-                        background: rgba(0, 164, 220, 1);
-                        outline: none;
-                        -webkit-appearance: none;
-                        appearance: none;
-                        flex: 1;
-                    `;
+                    input.classList.add('styledRange');
 
                     // 监听滑块值变化事件
                     input.addEventListener('input', function () {
@@ -3071,137 +2390,27 @@
                     rangeContainer.appendChild(input);
                 } else if (input.type === 'text' || input.type === 'number') {
                     // 文本/数值输入框样式
-                    const inputBaseStyles = `
-                        min-width: 180px;
-                        max-width: 100%;
-                        width: 100%;
-                        padding: 10px 16px;
-                        border-radius: 12px;
-                        border: 2px solid rgba(0, 164, 220, 0.4);
-                        background: linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08));
-                        color: #fff;
-                        font-size: 14px;
-                        font-weight: 500;
-                        min-height: 40px;
-                        line-height: 1.6;
-                        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                        backdrop-filter: blur(25px);
-                        box-sizing: border-box;
-                        box-shadow: 
-                            0 2px 8px rgba(0, 164, 220, 0.15),
-                            inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
-                    `;
-                    input.style.cssText += inputBaseStyles;
-
-                    // 添加状态响应事件
-                    const stateChanges = {
-                        focus: {
-                            background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.18), rgba(0, 164, 219, 0.18))',
-                            borderColor: 'rgba(0, 164, 220, 0.8)',
-                            boxShadow:
-                                '0 0 0 5px rgba(0, 164, 220, 0.2), 0 6px 25px rgba(0, 164, 220, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(-1px) scale(1.01)',
-                        },
-                        blur: {
-                            background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08))',
-                            border: '2px solid rgba(0, 164, 220, 0.4)',
-                            boxShadow: '0 2px 8px rgba(0, 164, 220, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(0) scale(1)',
-                        },
-                        mouseenter: {
-                            background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.12), rgba(0, 164, 219, 0.12))',
-                            border: '2px solid rgba(0, 164, 220, 0.6)',
-                            boxShadow: '0 4px 15px rgba(0, 164, 220, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(-1px) scale(1.01)',
-                        },
-                        mouseleave: {
-                            background: 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))',
-                            border: '2px solid rgba(128, 128, 128, 0.4)',
-                            boxShadow: '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                            transform: 'translateY(0) scale(1)',
-                        },
-                    };
-
-                    // 绑定事件 - 使用统一的处理函数
-                    const applyStyles = (element, styles) => {
-                        Object.entries(styles).forEach(([prop, val]) => {
-                            element.style[prop] = val;
-                        });
-                    };
-
-                    input.addEventListener('focus', () => applyStyles(input, stateChanges.focus));
-                    input.addEventListener('blur', () => applyStyles(input, stateChanges.blur));
-                    input.addEventListener('mouseenter', function () {
-                        if (document.activeElement !== this) {
-                            applyStyles(this, stateChanges.mouseenter);
-                        }
-                    });
-                    input.addEventListener('mouseleave', function () {
-                        if (document.activeElement !== this) {
-                            applyStyles(this, stateChanges.mouseleave);
-                        }
-                    });
+                    input.classList.add('styledTextInput');
                 } else if (input.type === 'checkbox' || input.type === 'radio') {
-                    // 复选框/单选框基础样式
-                    const checkStyles = `
-                        width: 18px;
-                        height: 18px;
-                        cursor: pointer;
-                        position: relative;
-                        -webkit-appearance: none;
-                        appearance: none;
-                        background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08));
-                        border: 2px solid rgba(128, 128, 128, 0.4);
-                        border-radius: ${input.type === 'radio' ? '50%' : '6px'};
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        backdrop-filter: blur(25px);
-                        box-shadow: 
-                            0 2px 8px rgba(0, 164, 220, 0.15),
-                            inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
-                    `;
-                    input.style.cssText += checkStyles;
+                    // 复选框/单选框基础样式 - 改用CSS类
+                    input.classList.add('checkbox-item-custom');
+                    input.classList.add(input.type === 'radio' ? 'radio' : 'checkbox');
 
-                    // 添加选中状态的样式更新函数
+                    // 添加选中状态更新函数
                     const updateCheckboxStyle = () => {
-                        const styles = input.checked
-                            ? {
-                                  background: 'rgba(0, 164, 220, 1)',
-                                  border: '2px solid rgba(0, 164, 220, 0.8)',
-                                  boxShadow: '0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                              }
-                            : {
-                                  background: 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))',
-                                  border: '2px solid rgba(128, 128, 128, 0.4)',
-                                  boxShadow: '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)',
-                              };
-
-                        Object.entries(styles).forEach(([prop, val]) => {
-                            input.style[prop] = val;
-                        });
+                        if (input.checked) {
+                            input.classList.add('checked');
+                        } else {
+                            input.classList.remove('checked');
+                        }
                     };
 
                     // 绑定事件
                     input.addEventListener('change', updateCheckboxStyle);
-                    input.addEventListener('mouseenter', function () {
-                        if (!this.checked) {
-                            this.style.border = '2px solid rgba(0, 164, 220, 0.6)';
-                            this.style.background = 'rgba(255, 255, 255, 0.15)';
-                        }
-                    });
-                    input.addEventListener('mouseleave', function () {
-                        if (!this.checked) {
-                            this.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                            this.style.background = 'rgba(255, 255, 255, 0.1)';
-                        }
-                    });
 
                     // 初始化样式
                     updateCheckboxStyle();
                 }
-            } else {
-                input.style.flex = '1';
             }
         }
 
@@ -3209,92 +2418,27 @@
         const checkboxGroup = item.querySelectorAll('input[type="checkbox"], input[type="radio"]');
         if (checkboxGroup.length > 1) {
             // 设置容器样式为列布局
-            item.style.flexDirection = 'column';
-            item.style.alignItems = 'flex-start';
-            item.style.padding = '20px';
+            item.classList.add('setting-item-column');
 
-            const container = item.querySelector('div:last-child') || item;
-            container.style.cssText = `
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                width: 100%;
-                max-width: 100%;
-                margin-top: 20px;
-                box-sizing: border-box;
-            `;
+            item.classList.add('checkbox-group-container');
 
             // 处理每个复选框的容器
             checkboxGroup.forEach((checkbox) => {
                 const parent = checkbox.parentElement;
                 if (parent) {
                     // 设置父容器样式
-                    parent.style.cssText = `
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        width: 100%;
-                        max-width: 100%;
-                        padding: 16px 20px;
-                        margin-bottom: 8px;
-                        border-radius: 12px;
-                        background: linear-gradient(135deg, rgba(0, 164, 220, 0.06), rgba(0, 164, 219, 0.06));
-                        font-size: 14px;
-                        font-weight: 500;
-                        color: rgba(255, 255, 255, 0.95);
-                        border: 2px solid rgba(0, 164, 220, 0.4);
-                        cursor: pointer;
-                        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                        min-height: 44px;
-                        backdrop-filter: blur(25px);
-                        position: relative;
-                        overflow: hidden;
-                        box-sizing: border-box;
-                        box-shadow: 
-                            0 2px 8px rgba(0, 164, 220, 0.1),
-                            inset 0 1px 2px rgba(255, 255, 255, 0.08),
-                            inset 0 -1px 1px rgba(0, 0, 0, 0.03);
-                    `;
+                    parent.classList.add('checkbox-item-parent');
 
                     // 设置复选框样式
-                    checkbox.style.cssText = `
-                        margin-right: 0;
-                        margin-left: 0;
-                        order: 1;
-                        width: 22px;
-                        height: 22px;
-                        cursor: pointer;
-                        position: relative;
-                        -webkit-appearance: none;
-                        appearance: none;
-                        background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08));
-                        border: 2px solid rgba(128, 128, 128, 0.4);
-                        border-radius: ${checkbox.type === 'radio' ? '50%' : '6px'};
-                        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                        backdrop-filter: blur(25px);
-                        flex-shrink: 0;
-                        box-shadow: 
-                            0 2px 8px rgba(0, 164, 220, 0.15),
-                            inset 0 1px 2px rgba(255, 255, 255, 0.1),
-                            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
-                    `;
+                    checkbox.classList.add('checkbox-item-custom');
+                    checkbox.classList.add(checkbox.type === 'radio' ? 'radio' : 'checkbox');
 
                     // 处理标签文本和右对齐
                     parent.childNodes.forEach((node) => {
                         if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
                             const span = document.createElement('span');
                             span.textContent = node.textContent.trim();
-                            span.style.cssText = `
-                                flex: 1;
-                                text-align: right;
-                                order: 2;
-                                margin-right: 12px;
-                                line-height: 1.4;
-                                word-wrap: break-word;
-                                overflow: hidden;
-                                max-width: calc(100% - 40px);
-                                box-sizing: border-box;
-                            `;
+                            span.classList.add('checkbox-item-label');
                             parent.replaceChild(span, node);
                         }
                     });
@@ -3302,53 +2446,21 @@
                     // 创建选中状态指示器（勾选标记或圆点）
                     const indicator = document.createElement('div');
                     indicator.className = checkbox.type === 'checkbox' ? 'check-mark' : 'radio-dot';
-
-                    if (checkbox.type === 'checkbox') {
-                        indicator.style.cssText = `
-                            position: absolute;
-                            left: 5px;
-                            top: 1px;
-                            width: 6px;
-                            height: 10px;
-                            border: solid white;
-                            border-width: 0 2px 2px 0;
-                            transform: rotate(45deg) scale(0);
-                            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                            opacity: 0;
-                        `;
-                    } else {
-                        indicator.style.cssText = `
-                            position: absolute;
-                            left: 50%;
-                            top: 50%;
-                            width: 8px;
-                            height: 8px;
-                            background: white;
-                            border-radius: 50%;
-                            transform: translate(-50%, -50%) scale(0);
-                            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                            opacity: 0;
-                        `;
-                    }
                     checkbox.appendChild(indicator);
 
                     // 更新样式函数，处理选中状态的外观变化
                     const updateStyle = () => {
                         const indicator = checkbox.querySelector('.check-mark, .radio-dot');
+                        
                         if (checkbox.checked) {
                             // 选中状态样式
-                            checkbox.style.background = 'rgba(0, 164, 220, 1)';
-                            checkbox.style.border = '2px solid rgba(0, 164, 220, 0.8)';
-                            checkbox.style.boxShadow = '0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
-                            checkbox.style.transform = 'scale(1.05)';
-                            parent.style.background = 'linear-gradient(135deg, rgba(0, 164, 220, 0.15), rgba(0, 164, 219, 0.15))';
-                            parent.style.border = '2px solid rgba(0, 164, 220, 0.6)';
-                            parent.style.boxShadow = '0 2px 12px rgba(0, 164, 220, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
+                            checkbox.classList.add('checked');
+                            parent.classList.add('checked');
+                            parent.classList.remove('unchecked');
 
                             // 显示指示器
                             if (indicator) {
-                                indicator.style.transform = checkbox.type === 'radio' ? 'translate(-50%, -50%) scale(1)' : 'rotate(45deg) scale(1)';
-                                indicator.style.opacity = '1';
+                                indicator.classList.add('visible');
                             }
 
                             // 如果是单选框，更新同组中的其他单选框样式
@@ -3359,41 +2471,28 @@
                                         const radioIndicator = radio.querySelector('.radio-dot');
 
                                         // 应用未选中样式
-                                        radio.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))';
-                                        radio.style.border = '2px solid rgba(128, 128, 128, 0.4)';
-                                        radio.style.boxShadow =
-                                            '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
-                                        radio.style.transform = 'scale(1)';
-
+                                        radio.classList.remove('checked');
                                         if (radioParent) {
-                                            radioParent.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.06), rgba(160, 160, 160, 0.06))';
-                                            radioParent.style.border = '2px solid rgba(128, 128, 128, 0.2)';
-                                            radioParent.style.boxShadow =
-                                                '0 2px 8px rgba(128, 128, 128, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.08), inset 0 -1px 1px rgba(0, 0, 0, 0.03)';
+                                            radioParent.classList.remove('checked');
+                                            radioParent.classList.add('unchecked');
                                         }
 
                                         // 隐藏指示器
                                         if (radioIndicator) {
-                                            radioIndicator.style.transform = 'translate(-50%, -50%) scale(0)';
-                                            radioIndicator.style.opacity = '0';
+                                            radioIndicator.classList.remove('visible');
                                         }
                                     }
                                 });
                             }
                         } else {
                             // 未选中状态样式
-                            checkbox.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08))';
-                            checkbox.style.border = '2px solid rgba(128, 128, 128, 0.4)';
-                            checkbox.style.boxShadow = '0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05)';
-                            checkbox.style.transform = 'scale(1)';
-                            parent.style.background = 'linear-gradient(135deg, rgba(128, 128, 128, 0.06), rgba(160, 160, 160, 0.06))';
-                            parent.style.border = '2px solid rgba(128, 128, 128, 0.2)';
-                            parent.style.boxShadow = '0 2px 8px rgba(128, 128, 128, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.08), inset 0 -1px 1px rgba(0, 0, 0, 0.03)';
+                            checkbox.classList.remove('checked');
+                            parent.classList.remove('checked');
+                            parent.classList.add('unchecked');
 
                             // 隐藏指示器
                             if (indicator) {
-                                indicator.style.transform = checkbox.type === 'radio' ? 'translate(-50%, -50%) scale(0)' : 'rotate(45deg) scale(0)';
-                                indicator.style.opacity = '0';
+                                indicator.classList.remove('visible');
                             }
                         }
                     };
@@ -3412,57 +2511,6 @@
                                 return;
                             }
                         }
-                        updateStyle();
-                    });
-
-                    // 父容器的鼠标事件
-                    const hoverStyles = {
-                        enter: {
-                            unchecked: {
-                                background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08))',
-                                border: '2px solid rgba(0, 164, 220, 0.4)',
-                                transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 12px rgba(0, 164, 220, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
-                            },
-                            checked: {
-                                background: 'linear-gradient(135deg, rgba(0, 164, 220, 0.2), rgba(0, 164, 219, 0.2))',
-                                border: '2px solid rgba(0, 164, 220, 0.45)',
-                                transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 16px rgba(0, 164, 220, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2)',
-                            },
-                            checkbox: {
-                                unchecked: {
-                                    border: '2px solid rgba(0, 164, 220, 0.6)',
-                                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 164, 220, 0.1))',
-                                    transform: 'scale(1.1)',
-                                },
-                                checked: {
-                                    transform: 'scale(1.15)',
-                                },
-                            },
-                        },
-                    };
-
-                    parent.addEventListener('mouseenter', function () {
-                        if (!checkbox.checked) {
-                            Object.entries(hoverStyles.enter.unchecked).forEach(([prop, val]) => {
-                                this.style[prop] = val;
-                            });
-                            Object.entries(hoverStyles.enter.checkbox.unchecked).forEach(([prop, val]) => {
-                                checkbox.style[prop] = val;
-                            });
-                        } else {
-                            Object.entries(hoverStyles.enter.checked).forEach(([prop, val]) => {
-                                this.style[prop] = val;
-                            });
-                            Object.entries(hoverStyles.enter.checkbox.checked).forEach(([prop, val]) => {
-                                checkbox.style[prop] = val;
-                            });
-                        }
-                    });
-
-                    parent.addEventListener('mouseleave', function () {
-                        this.style.transform = 'translateY(0)';
                         updateStyle();
                     });
 
@@ -3501,7 +2549,7 @@
                         }
                     });
 
-                    // 确保复选框/单选框点击事件不会出发父元素的点击
+                    // 确保复选框/单选框点击事件不会触发父元素的点击
                     checkbox.addEventListener('click', function (e) {
                         e.stopPropagation();
                     });
@@ -3513,7 +2561,631 @@
     // 添加CSS样式
     const style = document.createElement('style');
     style.textContent = `
+        /* 统一滚动条样式 */
+        .danmakuSidebar .danmakuSettingsContainer::-webkit-scrollbar,
+        .danmakuTabsContainer::-webkit-scrollbar {
+            width: 6px;
+            height: 4px;
+        }
+
+        .danmakuSidebar .danmakuSettingsContainer::-webkit-scrollbar-track,
+        .danmakuTabsContainer::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+
+        .danmakuSidebar .danmakuSettingsContainer::-webkit-scrollbar-thumb,
+        .danmakuTabsContainer::-webkit-scrollbar-thumb {
+            background: rgba(0, 164, 220, 1);
+            border-radius: 3px;
+        }
+
+        /* 控制卡片悬停效果 */
+        .controlCard {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .controlCard::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.05), rgba(0, 164, 219, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        /* 滑块相关样式 */
+        .danmakuSidebar input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            background: rgba(0, 164, 220, 1);
+            cursor: pointer;
+        }
+
+        .danmakuSidebar input[type="range"]::-webkit-slider-thumb,
+        .danmakuSidebar input[type="range"]::-moz-range-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(0, 164, 220, 1);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 164, 220, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .danmakuSidebar input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 8px rgba(0, 164, 220, 0.5);
+        }
+
+        /* 滑块值标签和容器 */
+        .danmakuSidebar .range-value-label {
+            color: rgba(0, 164, 220, 1) !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            min-width: 50px !important;
+            text-align: center !important;
+            background: rgba(0, 164, 220, 0.1) !important;
+            padding: 4px 8px !important;
+            border-radius: 6px !important;
+            border: 1px solid rgba(0, 164, 220, 0.3) !important;
+            backdrop-filter: blur(10px) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+        }
+
+        .danmakuSidebar .range-value-label:hover {
+            background: rgba(0, 164, 220, 0.15) !important;
+            border-color: rgba(0, 164, 220, 0.5) !important;
+            transform: scale(1.05) !important;
+        }
+
+        .danmakuSidebar .range-container {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            flex: 2 !important;
+        }
+
         /* 强制约束复选框和单选框容器宽度 */
+        .danmakuSidebar{
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 450px;
+            max-width: 90vw;
+            height: 100vh;
+            background: rgba(18, 18, 20, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 1000000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            overflow: hidden;
+            box-sizing: border-box;
+            border-radius: 20px 0 0 0;
+        }
+
+        .danmakuSidebarHeader {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 60px;
+        }
+
+        .danmakuSidebarTitle {
+            color: #fff;
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .danmakuSidebarButtons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .danmakuSidebarSaveButton {
+            background: rgba(0, 164, 220, 1);
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 60px;
+        }
+
+        .danmakuSidebarSaveButton:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 164, 220, 0.4);
+        }
+
+        .danmakuSidebarCancelButton {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 60px;
+        }
+
+        .danmakuSidebarCancelButton:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        .danmakuSettingsContainer {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dialogOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 2000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .inputDialog {
+            background: rgba(20, 20, 25, 0.65);
+            backdrop-filter: blur(25px) saturate(1.5);
+            border-radius: 16px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 
+                0 16px 40px rgba(0, 0, 0, 0.6),
+                0 8px 20px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .selectDialog {
+            background: rgba(20, 20, 25, 0.65);
+            backdrop-filter: blur(25px) saturate(1.5);
+            border-radius: 16px;
+            padding: 24px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 80vh;
+            box-shadow: 
+                0 16px 40px rgba(0, 0, 0, 0.6),
+                0 8px 20px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dialogTitle {
+            color: #fff;
+            margin: 0 0 16px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .dialogActions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        #dialogCancel,
+        .dialogCancelButton {
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #dialogCancel:hover,
+        .dialogCancelButton:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        #dialogConfirm,
+        .dialogConfirmButton {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(0, 164, 220, 1);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #dialogConfirm:hover,
+        .dialogConfirmButton:hover {
+            background: rgba(0, 164, 220, 0.8);
+            transform: translateY(-1px);
+        }
+
+        .glassLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(0, 0, 0, 0.1) 100%
+            );
+            border-radius: 16px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .selectDialogList {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            max-height: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 164, 220, 0.5) rgba(0, 0, 0, 0.1);
+        }
+
+        .selectDialogList::-webkit-scrollbar {
+            width: 8px;
+        }
+        .selectDialogList::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        .selectDialogList::-webkit-scrollbar-thumb {
+            background: rgba(0, 164, 220, 0.5);
+            border-radius: 4px;
+        }
+        .selectDialogList::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 164, 220, 0.7);
+        }
+
+        /* 选择对话框选项样式 */
+        .select-dialog-item {
+            padding: 12px 16px !important;
+            color: #fff !important;
+            cursor: pointer !important;
+            transition: all 0.3s !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            background: transparent !important;
+        }
+        
+        .select-dialog-item.selected {
+            background: rgba(0, 164, 220, 0.2) !important;
+        }
+        
+        .select-dialog-item:hover:not(.selected) {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* 弹幕设置相关样式 */
+        .settings-html-element {
+            display: flex !important;
+        }
+        
+        .settings-flex-auto {
+            flex: 1 !important;
+        }
+        
+        .settings-flex-grow {
+            flex-grow: 1 !important;
+        }
+        
+        /* 标签页按钮样式 */
+        .danmaku-tab-button {
+            padding: 10px 18px !important;
+            border: none !important;
+            border-radius: 8px !important;
+            color: white !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            backdrop-filter: blur(10px) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        
+        .danmaku-tab-button.inactive {
+            background: rgba(255, 255, 255, 0.08) !important;
+            font-weight: 500 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .danmaku-tab-button.active {
+            background: rgba(0, 164, 220, 1) !important;
+            font-weight: 600 !important;
+            border: 1px solid transparent !important;
+        }
+        
+        .danmaku-tab-button:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        /* 标签页内容样式 */
+        .danmaku-tab-content {
+            padding: 10px 0 !important;
+            display: none !important;
+        }
+        
+        .danmaku-tab-content.active {
+            display: block !important;
+        }
+        
+        .danmaku-tab-content.controls {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 16px !important;
+            margin-bottom: 20px !important;
+            padding: 0 !important;
+        }
+
+        .danmakuTabsContainer {
+            display: flex;
+            overflow-x: auto;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 164, 220, 0.5) rgba(0, 0, 0, 0.1);
+            margin: -16px -16px 20px -16px;
+            backdrop-filter: blur(10px);
+            gap: 4px;
+        }
+
+        .danmakuSwitchCard,
+        .logSwitchCard,
+        .searchItemCard,
+        .addSourceItemCard {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 64px;
+            flex: 1 1 calc(50% - 8px);
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .danmakuSwitchCard:hover {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.12), rgba(0, 164, 219, 0.12));
+            border-color: rgba(0, 164, 220, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 164, 220, 0.15);
+        }
+
+        .logSwitchCard:hover {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(33, 150, 243, 0.12));
+            border-color: rgba(76, 175, 80, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.15);
+        }
+        
+        .searchItemCard:hover {
+            background: linear-gradient(135deg, rgba(0, 188, 212, 0.12), rgba(0, 229, 255, 0.12));
+            border-color: rgba(0, 188, 212, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 188, 212, 0.15);
+        }
+
+        .addSourceItemCard:hover {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.12), rgba(255, 193, 7, 0.12));
+            border-color: rgba(255, 152, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.15);
+        }
+
+        .customCorsProxyCard {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 64px;
+            flex: 1 1 calc(50% - 8px);
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .controlInfo {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .controlTitle {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .controlDescription {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .searchItemControlAction {
+            padding: 6px 12px;
+            background: rgba(0, 188, 212, 0.15);
+            border-radius: 6px;
+            color: #00BCD4;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid rgba(0, 188, 212, 0.25);
+        }
+
+        .addSourceItemControlAction {
+            padding: 6px 12px;
+            background: rgba(255, 152, 0, 0.15);
+            border-radius: 6px;
+            color: #FF9800;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 152, 0, 0.25);
+        }
+
+        .settingLabel {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            flex: 0 0 auto;
+            margin-right: 20px;
+            min-width: 120px;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .styledRange {
+            max-width: 200px;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(0, 164, 220, 1);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+        }
+
+        .styledTextInput{
+            min-width: 180px;
+            max-width: 100%;
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 2px solid rgba(0, 164, 220, 0.4);
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08));
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            min-height: 40px;
+            line-height: 1.6;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(25px);
+            box-sizing: border-box;
+            box-shadow: 
+                0 2px 8px rgba(0, 164, 220, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+        }
+
+        .styledTextInput:focus {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.18), rgba(0, 164, 219, 0.18)) !important;
+            border-color: rgba(0, 164, 220, 0.8) !important;
+            box-shadow:
+                0 0 0 5px rgba(0, 164, 220, 0.2),
+                0 6px 25px rgba(0, 164, 220, 0.35),
+                inset 0 1px 2px rgba(255, 255, 255, 0.2),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(-1px) scale(1.01) !important;
+        }
+
+        .styledTextInput:blur {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.4) !important;
+            box-shadow: 0 2px 8px rgba(0, 164, 220, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(0) scale(1) !important;
+        }
+
+        .styledTextInput:hover:not(:focus) {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.12), rgba(0, 164, 219, 0.12)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.6) !important;
+            box-shadow: 0 4px 15px rgba(0, 164, 220, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(-1px) scale(1.01) !important;
+        }
+            
+        .styledTextInput:not(:focus):not(:hover) {
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            box-shadow: 0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(0) scale(1) !important;
+        }
+
+        .settingItem {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 56px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .settingItem input[type="text"],
+        .settingItem input[type="number"],
+        .settingItem input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+            flex: 1;
+        }
+
         .danmakuSidebar *{
             box-sizing: border-box !important;
         }
@@ -3527,14 +3199,247 @@
             text-overflow: ellipsis !important;
         }
 
-        /* 隐藏原始位置的按钮 */
-        #displayLog,
-        #searchDanmaku,
-        #addDanmakuSource,
-        #danmakuSettings,
-        /*#sendDanmaku {*/
-        /*    display: none !important;*/
-        /*}*/
+        /* 单个复选框/单选框样式（非组合） */
+        .checkbox-item-custom {
+            width: 18px !important;
+            height: 18px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            backdrop-filter: blur(25px) !important;
+            box-shadow: 
+                0 2px 8px rgba(0, 164, 220, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .checkbox-item-custom.checked {
+            background: rgba(0, 164, 220, 1) !important;
+            border: 2px solid rgba(0, 164, 220, 0.8) !important;
+            box-shadow: 0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .checkbox-item-custom:hover:not(.checked) {
+            border: 2px solid rgba(0, 164, 220, 0.6) !important;
+            background: rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        /* 复选框组合样式覆盖单个样式 */
+        .checkbox-item-parent .checkbox-item-custom {
+            margin-right: 0 !important;
+            margin-left: 0 !important;
+            order: 1 !important;
+            width: 22px !important;
+            height: 22px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            backdrop-filter: blur(25px) !important;
+            flex-shrink: 0 !important;
+            box-shadow: 
+                0 2px 8px rgba(0, 164, 220, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .checkbox-item-parent .checkbox-item-custom.checked {
+            background: rgba(0, 164, 220, 1) !important;
+            border: 2px solid rgba(0, 164, 220, 0.8) !important;
+            box-shadow: 0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: scale(1.05) !important;
+        }
+        
+        .checkbox-item-parent .checkbox-item-custom:not(.checked) {
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            box-shadow: 0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: scale(1) !important;
+        }
+
+        /* 复选框和单选框组样式 */
+        .checkbox-group-container {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        .checkbox-item-parent {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 16px 20px !important;
+            margin-bottom: 8px !important;
+            border-radius: 12px !important;
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.06), rgba(0, 164, 219, 0.06)) !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+            border: 2px solid rgba(0, 164, 220, 0.4) !important;
+            cursor: pointer !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            min-height: 44px !important;
+            backdrop-filter: blur(25px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            box-shadow: 
+                0 2px 8px rgba(0, 164, 220, 0.1),
+                inset 0 1px 2px rgba(255, 255, 255, 0.08),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+        }
+        
+        .checkbox-item-parent:hover {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.4) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0, 164, 220, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        .checkbox-item-parent.checked {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.15), rgba(0, 164, 219, 0.15)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.6) !important;
+            box-shadow: 0 2px 12px rgba(0, 164, 220, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .checkbox-item-parent.checked:hover {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.25), rgba(0, 164, 219, 0.25)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.7) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 16px rgba(0, 164, 220, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+        }
+        
+        .checkbox-item-parent.unchecked {
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.06), rgba(160, 160, 160, 0.06)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.2) !important;
+            box-shadow: 0 2px 8px rgba(128, 128, 128, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.08), inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+        }
+        
+        .checkbox-item-parent.unchecked:hover {
+            background: linear-gradient(135deg, rgba(0, 164, 220, 0.08), rgba(0, 164, 219, 0.08)) !important;
+            border: 2px solid rgba(0, 164, 220, 0.4) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0, 164, 220, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        .checkbox-item-custom {
+            margin-right: 0 !important;
+            margin-left: 0 !important;
+            order: 1 !important;
+            width: 22px !important;
+            height: 22px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            backdrop-filter: blur(25px) !important;
+            flex-shrink: 0 !important;
+            box-shadow: 
+                0 2px 8px rgba(0, 164, 220, 0.15),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .checkbox-item-custom.checkbox {
+            border-radius: 6px !important;
+        }
+        
+        .checkbox-item-custom.radio {
+            border-radius: 50% !important;
+        }
+        
+        .checkbox-item-custom.checked {
+            background: rgba(0, 164, 220, 1) !important;
+            border: 2px solid rgba(0, 164, 220, 0.8) !important;
+            box-shadow: 0 2px 12px rgba(0, 164, 220, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: scale(1.05) !important;
+        }
+        
+        .checkbox-item-custom:not(.checked) {
+            background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
+            border: 2px solid rgba(128, 128, 128, 0.4) !important;
+            box-shadow: 0 2px 8px rgba(128, 128, 128, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 1px rgba(0, 0, 0, 0.05) !important;
+            transform: scale(1) !important;
+        }
+        
+        .checkbox-item-parent:hover .checkbox-item-custom:not(.checked) {
+            border: 2px solid rgba(0, 164, 220, 0.6) !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(0, 164, 220, 0.1)) !important;
+            transform: scale(1.1) !important;
+        }
+        
+        .checkbox-item-parent:hover .checkbox-item-custom.checked {
+            transform: scale(1.15) !important;
+        }
+        
+        .checkbox-item-label {
+            flex: 1 !important;
+            text-align: right !important;
+            order: 2 !important;
+            margin-right: 12px !important;
+            line-height: 1.4 !important;
+            word-wrap: break-word !important;
+            overflow: hidden !important;
+            max-width: calc(100% - 40px) !important;
+            box-sizing: border-box !important;
+        }
+        
+        .check-mark {
+            position: absolute !important;
+            left: 5px !important;
+            top: 1px !important;
+            width: 6px !important;
+            height: 10px !important;
+            border: solid white !important;
+            border-width: 0 2px 2px 0 !important;
+            transform: rotate(45deg) scale(0) !important;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+            opacity: 0 !important;
+        }
+        
+        .check-mark.visible {
+            transform: rotate(45deg) scale(1) !important;
+            opacity: 1 !important;
+        }
+        
+        .radio-dot {
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            width: 8px !important;
+            height: 8px !important;
+            background: white !important;
+            border-radius: 50% !important;
+            transform: translate(-50%, -50%) scale(0) !important;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+            opacity: 0 !important;
+        }
+        
+        .radio-dot.visible {
+            transform: translate(-50%, -50%) scale(1) !important;
+            opacity: 1 !important;
+        }
+        
+        .setting-item-column {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            padding: 20px !important;
+        }
 
         /* 调整播放器设置菜单位置 - 距离底部5%屏幕高度，位于右侧 - 仅在视频播放界面生效 */
         .actionSheet.centeredDialog:has([data-id="aspectratio"]):has([data-id="playbackrate"]),
@@ -3542,8 +3447,6 @@
             position: fixed !important;
             bottom: 5vh !important;
             top: auto !important;
-            /* right: 20px !important; */
-            /* left: auto !important; */
             transform: none !important;
             margin: 0 !important;
         }
@@ -3554,8 +3457,6 @@
         .actionSheet.centeredDialog.video-player-settings-menu[style*="left:"] {
             bottom: 5vh !important;
             top: auto !important;
-            /* right: 20px !important; */
-            /* left: auto !important; */
             transform: none !important;
         }
 
@@ -3580,14 +3481,6 @@
 
         [data-id="danmaku-settings"] .actionSheetItemText {
             color: inherit !important;
-        }
-
-        /* 控制按钮容器 */
-        .control-buttons-container {
-            display: flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-            flex-wrap: wrap !important;
         }
 
         /* 自定义复选框和单选框样式 */
@@ -3657,7 +3550,7 @@
         }
 
         /* 现代化开关样式 */
-        .modern-switch {
+        .modernSwitch {
             position: relative !important;
             display: inline-block !important;
             width: 44px !important;
@@ -3669,7 +3562,7 @@
             cursor: pointer !important;
         }
 
-        .modern-switch input {
+        .modernSwitch input {
             opacity: 0 !important;
             width: 0 !important;
             height: 0 !important;
@@ -3677,7 +3570,7 @@
             margin: 0 !important;
         }
 
-        .modern-slider {
+        .modernSlider {
             position: absolute !important;
             cursor: pointer !important;
             top: 0 !important;
@@ -3692,7 +3585,7 @@
             height: 24px !important;
         }
 
-        .modern-slider:before {
+        .modernSlider:before {
             position: absolute !important;
             content: "" !important;
             height: 18px !important;
@@ -3705,41 +3598,41 @@
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
         }
 
-        .modern-switch input:checked + .modern-slider {
+        .modernSwitch input:checked + .modernSlider {
             background: rgba(0, 164, 220, 1) !important;
             border-color: transparent !important;
         }
 
-        .modern-switch input:checked + .modern-slider:before {
+        .modernSwitch input:checked + .modernSlider:before {
             transform: translateX(20px) !important;
             box-shadow: 0 1px 4px rgba(0, 164, 220, 0.3) !important;
         }
 
-        .modern-slider:hover {
+        .modernSlider:hover {
             box-shadow: 0 0 8px rgba(0, 164, 220, 0.2) !important;
         }
 
-        .modern-switch input:checked + .modern-slider:hover {
+        .modernSwitch input:checked + .modernSlider:hover {
             box-shadow: 0 0 8px rgba(0, 164, 220, 0.4) !important;
         }
 
         /* 控制卡片样式 */
-        .control-card {
+        .controlCard {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
-        .control-card:hover {
+        .controlCard:hover {
             transform: translateY(-2px) !important;
         }
 
         /* 控制项样式 */
-        .control-item,
-        .control-card {
+        .controlItem,
+        .controlCard {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
-        .control-item:hover,
-        .control-card:hover {
+        .controlItem:hover,
+        .controlCard:hover {
             transform: translateY(-2px) !important;
         }
 
@@ -3783,30 +3676,104 @@
             transform: translateY(-1px) scale(1.01) !important;
         }
 
-        /* 响应式设计 - 控制功能弹性布局 */
+        #dialogInput {
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 自定义CORS代理和API输入框样式 */
+        .custom-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .custom-input-label {
+            width: 75px;
+            text-align: right;
+            flex-shrink: 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .custom-input-field {
+            flex-grow: 1;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            backdrop-filter: blur(5px);
+        }
+
+        .custom-input-field::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .custom-input-field:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .custom-input-field:focus {
+            border-color: rgba(0, 164, 220, 0.6);
+            background: rgba(0, 164, 220, 0.08);
+            box-shadow: 0 0 0 2px rgba(0, 164, 220, 0.15);
+            transform: translateY(-1px);
+        }
+
+        
+        /* 响应式设计 */
         @media (max-width: 900px) {
-            .control-card {
+            .controlCard {
                 flex: 1 1 calc(50% - 12px) !important;
                 min-width: 260px !important;
             }
         }
-
+        
         @media (max-width: 600px) {
-            .control-card {
+            .danmakuSidebar {
+                width: 95% !important;
+                max-width: none !important;
+            }
+            
+            .controlCard {
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
             }
-            
-            /* 设置项在移动端堆叠布局 */
-            .setting-row {
-                flex-direction: column !important;
-                align-items: flex-start !important;
-                gap: 8px !important;
+        }
+
+        @media (max-width: 400px) {
+            .controlCard .controlInfo {
+                flex-direction: column;
+                align-items: flex-start;
+                text-align: left;
+            }
+
+            .custom-input-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
             }
             
-            .setting-row label {
-                min-width: auto !important;
-                margin-right: 0 !important;
+            .custom-input-label {
+                width: auto;
+                text-align: left;
+                font-size: 12px;
+            }
+            
+            .custom-input-field {
+                padding: 8px 10px;
+                font-size: 12px;
             }
         }
     `;
