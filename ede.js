@@ -2637,7 +2637,6 @@
             padding: 4px 8px !important;
             border-radius: 6px !important;
             border: 1px solid rgba(0, 164, 220, 0.3) !important;
-            backdrop-filter: blur(10px) !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             flex-shrink: 0 !important;
             white-space: nowrap !important;
@@ -2665,7 +2664,6 @@
             max-width: 90vw;
             height: 100vh;
             background: rgba(18, 18, 20, 0.95);
-            backdrop-filter: blur(15px);
             z-index: 1000000;
             display: flex;
             flex-direction: column;
@@ -2755,7 +2753,6 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
             z-index: 2000000;
             display: flex;
             align-items: center;
@@ -2764,7 +2761,6 @@
 
         .inputDialog {
             background: rgba(20, 20, 25, 0.65);
-            backdrop-filter: blur(25px) saturate(1.5);
             border-radius: 16px;
             padding: 24px;
             width: 400px;
@@ -2781,7 +2777,6 @@
 
         .selectDialog {
             background: rgba(20, 20, 25, 0.65);
-            backdrop-filter: blur(25px) saturate(1.5);
             border-radius: 16px;
             padding: 24px;
             width: 500px;
@@ -2932,7 +2927,6 @@
             cursor: pointer !important;
             white-space: nowrap !important;
             flex-shrink: 0 !important;
-            backdrop-filter: blur(10px) !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
         
@@ -2980,7 +2974,6 @@
             scrollbar-width: thin;
             scrollbar-color: rgba(0, 164, 220, 0.5) rgba(0, 0, 0, 0.1);
             margin: -16px -16px 20px -16px;
-            backdrop-filter: blur(10px);
             gap: 4px;
         }
 
@@ -3000,7 +2993,6 @@
             min-height: 64px;
             flex: 1 1 calc(50% - 8px);
             min-width: 280px;
-            backdrop-filter: blur(10px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
@@ -3047,7 +3039,6 @@
             min-height: 64px;
             flex: 1 1 calc(50% - 8px);
             min-width: 280px;
-            backdrop-filter: blur(10px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
@@ -3125,7 +3116,6 @@
             min-height: 40px;
             line-height: 1.6;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            backdrop-filter: blur(25px);
             box-sizing: border-box;
             box-shadow: 
                 0 2px 8px rgba(0, 164, 220, 0.15),
@@ -3176,7 +3166,6 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 56px;
-            backdrop-filter: blur(10px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
@@ -3210,7 +3199,6 @@
             background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
             border: 2px solid rgba(128, 128, 128, 0.4) !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            backdrop-filter: blur(25px) !important;
             box-shadow: 
                 0 2px 8px rgba(0, 164, 220, 0.15),
                 inset 0 1px 2px rgba(255, 255, 255, 0.1),
@@ -3242,7 +3230,6 @@
             background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
             border: 2px solid rgba(128, 128, 128, 0.4) !important;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            backdrop-filter: blur(25px) !important;
             flex-shrink: 0 !important;
             box-shadow: 
                 0 2px 8px rgba(0, 164, 220, 0.15),
@@ -3291,7 +3278,6 @@
             cursor: pointer !important;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
             min-height: 44px !important;
-            backdrop-filter: blur(25px) !important;
             position: relative !important;
             overflow: hidden !important;
             box-sizing: border-box !important;
@@ -3347,7 +3333,6 @@
             background: linear-gradient(135deg, rgba(128, 128, 128, 0.08), rgba(160, 160, 160, 0.08)) !important;
             border: 2px solid rgba(128, 128, 128, 0.4) !important;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            backdrop-filter: blur(25px) !important;
             flex-shrink: 0 !important;
             box-shadow: 
                 0 2px 8px rgba(0, 164, 220, 0.15),
@@ -3493,7 +3478,6 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             cursor: pointer !important;
             position: relative !important;
-            backdrop-filter: blur(25px) !important;
             box-shadow: 
                 0 2px 8px rgba(128, 128, 128, 0.15),
                 inset 0 1px 2px rgba(255, 255, 255, 0.1),
@@ -3652,7 +3636,6 @@
             font-weight: 500 !important;
             min-height: 40px !important;
             line-height: 1.6 !important;
-            backdrop-filter: blur(25px) !important;
             box-sizing: border-box !important;
             max-width: 100% !important;
             box-shadow: 
@@ -3712,7 +3695,6 @@
             font-family: inherit;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             outline: none;
-            backdrop-filter: blur(5px);
         }
 
         .custom-input-field::placeholder {
