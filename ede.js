@@ -2761,6 +2761,7 @@
 
         .inputDialog {
             background: rgba(20, 20, 25, 0.65);
+            backdrop-filter: blur(25px) saturate(1.5);
             border-radius: 16px;
             padding: 24px;
             width: 400px;
@@ -2777,6 +2778,7 @@
 
         .selectDialog {
             background: rgba(20, 20, 25, 0.65);
+            backdrop-filter: blur(25px) saturate(1.5);
             border-radius: 16px;
             padding: 24px;
             width: 500px;
