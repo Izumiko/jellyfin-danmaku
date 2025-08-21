@@ -1644,35 +1644,39 @@
                 }
             }
             let comments = data.comments;
-            response = await makeGetRequest(url_related);
-            data = await response.json();
-            showDebugInfo('第三方弹幕源个数：' + (data?.relateds?.length || '0'));
+            try{
+                response = await makeGetRequest(url_related);
+                data = await response.json();
+                showDebugInfo('第三方弹幕源个数：' + (data?.relateds?.length || '0'));
 
-            if (data?.relateds?.length > 0) {
-                // 根据设置过滤弹幕源
-                let src = [];
-                for (const s of data.relateds) {
-                    if ((danmakuFilter & 1) !== 1 && !hasBili && s.url.includes('bilibili.com/bangumi')) {
-                        src.push(s.url);
+                if (data?.relateds?.length > 0) {
+                    // 根据设置过滤弹幕源
+                    let src = [];
+                    for (const s of data.relateds) {
+                        if ((danmakuFilter & 1) !== 1 && !hasBili && s.url.includes('bilibili.com/bangumi')) {
+                            src.push(s.url);
+                        }
+                        if ((danmakuFilter & 1) !== 1 && s.url.includes('bilibili.com/video')) {
+                            src.push(s.url);
+                        }
+                        if ((danmakuFilter & 2) !== 2 && s.url.includes('gamer')) {
+                            src.push(s.url);
+                        }
+                        if ((danmakuFilter & 8) !== 8 && !s.url.includes('bilibili') && !s.url.includes('gamer')) {
+                            src.push(s.url);
+                        }
                     }
-                    if ((danmakuFilter & 1) !== 1 && s.url.includes('bilibili.com/video')) {
-                        src.push(s.url);
-                    }
-                    if ((danmakuFilter & 2) !== 2 && s.url.includes('gamer')) {
-                        src.push(s.url);
-                    }
-                    if ((danmakuFilter & 8) !== 8 && !s.url.includes('bilibili') && !s.url.includes('gamer')) {
-                        src.push(s.url);
-                    }
+                    // 获取第三方弹幕
+                    await Promise.all(
+                        src.map(async (s) => {
+                            const response = await makeGetRequest(url_ext + encodeURIComponent(s));
+                            const data = await response.json();
+                            comments = comments.concat(data.comments);
+                        }),
+                    );
                 }
-                // 获取第三方弹幕
-                await Promise.all(
-                    src.map(async (s) => {
-                        const response = await makeGetRequest(url_ext + encodeURIComponent(s));
-                        const data = await response.json();
-                        comments = comments.concat(data.comments);
-                    }),
-                );
+            }catch (error) {
+                showDebugInfo(`获取第三方弹幕失败: ${error.message}`);
             }
             showDebugInfo('弹幕下载成功: ' + comments.length);
             return comments;
