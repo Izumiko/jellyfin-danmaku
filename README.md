@@ -81,7 +81,7 @@
 > https://jellyfin-danmaku.vercel.app/ede.user.js   
 
 
-### 1. 浏览器插件(推荐)
+### 1. 浏览器插件 (推荐)
 
 1. [安装Tampermonkey插件](https://www.tampermonkey.net/)
 
@@ -89,7 +89,7 @@
 
 2. [添加脚本](https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js)
 
-### 2. 反向代理处理(推荐)
+### 2. 反向代理处理 (推荐)
 
 #### 2.1 Nginx
 
@@ -103,7 +103,7 @@ sub_filter_once on;
 
 - [`完整示例`](https://github.com/Izumiko/jellyfin-danmaku/issues/8)
 
-#### 2.2 Caddy
+#### 2.2 Caddy (`caddy2-filter` 插件)
 
 下载Caddy二进制文件时，增加第三方模块[`sjtug/caddy2-filter`](https://github.com/sjtug/caddy2-filter)，之后，在`Caddyfile`中按如下内容修改
 
@@ -120,6 +120,27 @@ example.com {
         search_pattern </body>
         replacement "<script src=\"https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js\" defer></script></body>"
         content_type text/html
+    }
+    reverse_proxy localhost:8096 {
+        header_up Accept-Encoding identity
+    }
+}
+```
+
+#### 2.3 Caddy (`replace_response` 插件)
+
+下载Caddy二进制文件时，增加模块[`caddyserver/replace-response`](https://github.com/caddyserver/replace-response)，之后，在`Caddyfile`中按如下内容修改
+
+```Caddyfile
+# 全局设置
+{
+    order filter after encode
+}
+
+# 网站设置
+example.com {
+    replace {
+        "</body>" "<script src=\"https://cdn.jsdelivr.net/gh/Izumiko/jellyfin-danmaku@gh-pages/ede.user.js\" defer></script></body>"
     }
     reverse_proxy localhost:8096 {
         header_up Accept-Encoding identity
