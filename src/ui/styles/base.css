@@ -1,0 +1,14 @@
+/* 基础样式 reset */
+.danmaku-ui * {
+    box-sizing: border-box;
+}
+
+.danmaku-ui button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.danmaku-ui input,
+.danmaku-ui select {
+    font-family: inherit;
+}

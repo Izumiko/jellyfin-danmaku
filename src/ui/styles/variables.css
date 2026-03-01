@@ -1,0 +1,9 @@
+:root {
+    --danmaku-primary: #00a4dc;
+    --danmaku-bg: rgba(30, 30, 30, 0.95);
+    --danmaku-text: #e0e0e0;
+    --danmaku-border: rgba(255, 255, 255, 0.1);
+    --danmaku-hover: rgba(255, 255, 255, 0.05);
+    --danmaku-radius: 8px;
+    --danmaku-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
