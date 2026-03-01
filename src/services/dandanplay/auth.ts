@@ -1,0 +1,117 @@
+import { post } from '../http';
+import { Storage } from '../../core/storage';
+import { logger } from '../../core/logger';
+import type { DanDanPlayStatus } from '../../types/index';
+
+export class DanDanPlayAuth {
+    private status: DanDanPlayStatus;
+
+    constructor(private apiPrefix: string) {
+        this.status = Storage.loadDanDanPlayStatus() ?? {
+            isLogin: false,
+            token: '',
+            tokenExpire: 0,
+        };
+    }
+
+    get isLoggedIn(): boolean {
+        return this.status.isLogin && this.status.tokenExpire > Date.now();
+    }
+
+    get token(): string {
+        return this.status.token;
+    }
+
+    /**
+     * 登录
+     */
+    async login(account: string, password: string): Promise<boolean> {
+        try {
+            const url = `${this.apiPrefix}/api/v2/login`;
+            logger.debug('auth', `Logging in as ${account}`);
+
+            const response = await post<{
+                token: string;
+                tokenExpireAt: string;
+                userName: string;
+            }>(url, {
+                userName: account,
+                password,
+            });
+
+            const tokenExpire = new Date(response.tokenExpireAt).getTime();
+
+            this.status = {
+                isLogin: true,
+                token: response.token,
+                tokenExpire,
+                userName: response.userName,
+            };
+
+            Storage.saveDanDanPlayStatus(this.status);
+            logger.info('auth', `Logged in successfully as ${response.userName}`);
+
+            return true;
+        } catch (error) {
+            logger.error('auth', 'Login failed', error);
+            return false;
+        }
+    }
+
+    /**
+     * 检查 token 是否需要刷新，如需则自动刷新
+     */
+    async refreshIfNeeded(): Promise<void> {
+        if (!this.isLoggedIn) return;
+
+        const daysUntilExpire = (this.status.tokenExpire - Date.now()) / (24 * 60 * 60 * 1000);
+
+        if (daysUntilExpire > 3) {
+            // Token 还有 3 天以上有效期，不需要刷新
+            return;
+        }
+
+        try {
+            const url = `${this.apiPrefix}/api/v2/login/renew`;
+            logger.debug('auth', 'Refreshing token');
+
+            const response = await post<{
+                token: string;
+                tokenExpireAt: string;
+            }>(
+                url,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${this.status.token}`,
+                    },
+                },
+            );
+
+            const tokenExpire = new Date(response.tokenExpireAt).getTime();
+
+            this.status.token = response.token;
+            this.status.tokenExpire = tokenExpire;
+
+            Storage.saveDanDanPlayStatus(this.status);
+            logger.info('auth', 'Token refreshed successfully');
+        } catch (error) {
+            logger.error('auth', 'Token refresh failed', error);
+            // 刷新失败，清除登录状态
+            this.logout();
+        }
+    }
+
+    /**
+     * 登出
+     */
+    logout(): void {
+        this.status = {
+            isLogin: false,
+            token: '',
+            tokenExpire: 0,
+        };
+        Storage.saveDanDanPlayStatus(this.status);
+        logger.info('auth', 'Logged out');
+    }
+}
