@@ -1,0 +1,48 @@
+{
+  "name": "jellyfin-danmaku",
+  "version": "2.0.0",
+  "description": "Jellyfin 弹幕插件 - TypeScript + Svelte 5 重构版",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config build/vite.userscript.config.ts",
+    "build": "vite build --config build/vite.standalone.config.ts",
+    "build:userscript": "vite build --config build/vite.userscript.config.ts",
+    "build:all": "npm run build && npm run build:userscript",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,svelte}'",
+    "lint": "eslint 'src/**/*.{ts,svelte}'"
+  },
+  "keywords": [
+    "jellyfin",
+    "danmaku",
+    "userscript",
+    "tampermonkey"
+  ],
+  "author": "RyoLee, Izumiko",
+  "license": "MIT",
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.2",
+    "@testing-library/svelte": "^5.2.5",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^3.0.5",
+    "eslint": "^9.18.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.4.2",
+    "prettier-plugin-svelte": "^3.3.2",
+    "svelte": "^5.18.2",
+    "svelte-check": "^4.1.3",
+    "typescript": "^5.7.3",
+    "valibot": "^1.0.0",
+    "vite": "^6.0.7",
+    "vite-plugin-monkey": "^7.1.9",
+    "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "danmaku": "^2.0.9"
+  }
+}
