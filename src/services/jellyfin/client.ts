@@ -1,6 +1,6 @@
 import { logger } from '../../core/logger';
 import type { JellyfinItem } from '../../types/index';
-import '../../types/jellyfin';
+import '../../types/jellyfin.d.ts';
 
 /**
  * 安全获取 ApiClient

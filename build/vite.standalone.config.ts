@@ -10,7 +10,7 @@ export default defineConfig({
         },
     },
     build: {
-        outDir: '../dist',
+        outDir: './dist',
         lib: {
             entry: path.resolve(__dirname, '../src/main.ts'),
             name: 'JellyfinDanmaku',
