@@ -107,23 +107,27 @@
                     </div>
 
                     <div class="setting-item">
-                        <label>CORS 代理:</label>
-                        <input 
-                            type="text" 
-                            class="setting-input"
-                            placeholder="留空使用默认"
-                            bind:value={danmakuState.customCorsProxy}
-                        />
+                        <label>
+                            CORS 代理:
+                            <input
+                                type="text"
+                                class="setting-input"
+                                placeholder="留空使用默认"
+                                bind:value={danmakuState.customCorsProxy}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>API 地址:</label>
-                        <input 
-                            type="text" 
-                            class="setting-input"
-                            placeholder="留空使用默认"
-                            bind:value={danmakuState.customApiPrefix}
-                        />
+                        <label>
+                            API 地址:
+                            <input
+                                type="text"
+                                class="setting-input"
+                                placeholder="留空使用默认"
+                                bind:value={danmakuState.customApiPrefix}
+                            />
+                        </label>
                     </div>
                 </div>
             {/if}
@@ -133,66 +137,78 @@
                     <h3>显示样式</h3>
 
                     <div class="setting-item">
-                        <label>透明度: {danmakuState.opacity}</label>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="1" 
-                            step="0.1" 
-                            bind:value={danmakuState.opacity}
-                        />
+                        <label>
+                            透明度: {danmakuState.opacity}
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                bind:value={danmakuState.opacity}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>弹幕速度: {danmakuState.speed}</label>
-                        <input 
-                            type="range" 
-                            min="50" 
-                            max="600" 
-                            step="10" 
-                            bind:value={danmakuState.speed}
-                        />
+                        <label>
+                            弹幕速度: {danmakuState.speed}
+                            <input
+                                type="range"
+                                min="50"
+                                max="600"
+                                step="10"
+                                bind:value={danmakuState.speed}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>字体大小: {danmakuState.fontSize}px</label>
-                        <input 
-                            type="range" 
-                            min="10" 
-                            max="60" 
-                            step="1" 
-                            bind:value={danmakuState.fontSize}
-                        />
+                        <label>
+                            字体大小: {danmakuState.fontSize}px
+                            <input
+                                type="range"
+                                min="10"
+                                max="60"
+                                step="1"
+                                bind:value={danmakuState.fontSize}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>显示区域比例: {danmakuState.heightRatio}</label>
-                        <input 
-                            type="range" 
-                            min="0.1" 
-                            max="1" 
-                            step="0.05" 
-                            bind:value={danmakuState.heightRatio}
-                        />
+                        <label>
+                            显示区域比例: {danmakuState.heightRatio}
+                            <input
+                                type="range"
+                                min="0.1"
+                                max="1"
+                                step="0.05"
+                                bind:value={danmakuState.heightRatio}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>字体:</label>
-                        <input 
-                            type="text" 
-                            class="setting-input"
-                            bind:value={danmakuState.fontFamily}
-                        />
+                        <label>
+                            字体:
+                            <input
+                                type="text"
+                                class="setting-input"
+                                bind:value={danmakuState.fontFamily}
+                            />
+                        </label>
                     </div>
 
                     <div class="setting-item">
-                        <label>字体选项:</label>
-                        <input 
-                            type="text" 
-                            class="setting-input"
-                            placeholder="如 bold"
-                            bind:value={danmakuState.fontOptions}
-                        />
+                        <label>
+                            字体选项:
+                            <input
+                                type="text"
+                                class="setting-input"
+                                placeholder="如 bold"
+                                bind:value={danmakuState.fontOptions}
+                            />
+                        </label>
                     </div>
                 </div>
             {/if}
@@ -202,13 +218,15 @@
                     <h3>显示设置</h3>
 
                     <div class="setting-item">
-                        <label>弹幕密度限制:</label>
-                        <select bind:value={danmakuState.densityLimit}>
-                            <option value={0}>无限制</option>
-                            <option value={1}>低</option>
-                            <option value={2}>中</option>
-                            <option value={3}>高</option>
-                        </select>
+                        <label>
+                            弹幕密度限制:
+                            <select bind:value={danmakuState.densityLimit}>
+                                <option value={0}>无限制</option>
+                                <option value={1}>低</option>
+                                <option value={2}>中</option>
+                                <option value={3}>高</option>
+                            </select>
+                        </label>
                     </div>
 
                     <div class="setting-item">
@@ -222,12 +240,14 @@
                     </div>
 
                     <div class="setting-item">
-                        <label>简繁转换:</label>
-                        <select bind:value={danmakuState.chConvert}>
-                            <option value={0}>不转换</option>
-                            <option value={1}>简体</option>
-                            <option value={2}>繁体</option>
-                        </select>
+                        <label>
+                            简繁转换:
+                            <select bind:value={danmakuState.chConvert}>
+                                <option value={0}>不转换</option>
+                                <option value={1}>简体</option>
+                                <option value={2}>繁体</option>
+                            </select>
+                        </label>
                     </div>
 
                     <div class="setting-item">
@@ -241,13 +261,15 @@
                     </div>
 
                     <div class="setting-item">
-                        <label>弹幕偏移时间 (秒):</label>
-                        <input 
-                            type="number" 
-                            class="setting-input"
-                            step="0.1"
-                            bind:value={danmakuState.curEpOffset}
-                        />
+                        <label>
+                            弹幕偏移时间 (秒):
+                            <input
+                                type="number"
+                                class="setting-input"
+                                step="0.1"
+                                bind:value={danmakuState.curEpOffset}
+                            />
+                        </label>
                     </div>
                 </div>
             {/if}
@@ -257,7 +279,7 @@
                     <h3>过滤设置</h3>
 
                     <div class="setting-item">
-                        <label>来源过滤:</label>
+                        <span class="group-label">来源过滤:</span>
                         <div class="checkbox-group">
                             <label>
                                 <input type="checkbox" bind:checked={danmakuState.sourceFilter.bilibili} />
@@ -279,7 +301,7 @@
                     </div>
 
                     <div class="setting-item">
-                        <label>模式过滤:</label>
+                        <span class="group-label">模式过滤:</span>
                         <div class="checkbox-group">
                             <label>
                                 <input type="checkbox" bind:checked={danmakuState.modeFilter.scroll} />
@@ -430,7 +452,8 @@
         margin-bottom: 16px;
     }
 
-    .setting-item label {
+    .setting-item label,
+    .group-label {
         display: block;
         margin-bottom: 8px;
         font-size: 14px;
