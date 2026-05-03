@@ -57,10 +57,7 @@ export class Storage {
      */
     static getEpisodeCache(seasonId: string, episodeIndex?: number): CachedEpisode | null {
         try {
-            const key =
-                episodeIndex !== undefined
-                    ? `${STORAGE_PREFIX}episode_${seasonId}_${episodeIndex}`
-                    : `${STORAGE_PREFIX}episode_${seasonId}`;
+            const key = episodeIndex !== undefined ? `${STORAGE_PREFIX}episode_${seasonId}_${episodeIndex}` : `${STORAGE_PREFIX}episode_${seasonId}`;
 
             const raw = localStorage.getItem(key);
             if (!raw) return null;
@@ -210,10 +207,10 @@ function migrateLegacyConfig(): DanmakuConfig | null {
         const danmakuFilter = getNumber('danmakuFilter');
         if (danmakuFilter !== undefined) {
             config.sourceFilter = {
-                bilibili: (danmakuFilter & 1) !== 1,   // bit 0: 1=disable
-                gamer: (danmakuFilter & 2) !== 2,      // bit 1: 2=disable
+                bilibili: (danmakuFilter & 1) !== 1, // bit 0: 1=disable
+                gamer: (danmakuFilter & 2) !== 2, // bit 1: 2=disable
                 dandanplay: (danmakuFilter & 4) !== 4, // bit 2: 4=disable
-                other: (danmakuFilter & 8) !== 8,      // bit 3: 8=disable
+                other: (danmakuFilter & 8) !== 8, // bit 3: 8=disable
             };
         }
 
@@ -221,9 +218,9 @@ function migrateLegacyConfig(): DanmakuConfig | null {
         const danmakuModeFilter = getNumber('danmakuModeFilter');
         if (danmakuModeFilter !== undefined) {
             config.modeFilter = {
-                bottom: (danmakuModeFilter & 1) !== 1,   // bit 0: 1=disable bottom
-                top: (danmakuModeFilter & 2) !== 2,      // bit 1: 2=disable top
-                scroll: (danmakuModeFilter & 4) !== 4,   // bit 2: 4=disable scroll
+                bottom: (danmakuModeFilter & 1) !== 1, // bit 0: 1=disable bottom
+                top: (danmakuModeFilter & 2) !== 2, // bit 1: 2=disable top
+                scroll: (danmakuModeFilter & 4) !== 4, // bit 2: 4=disable scroll
             };
         }
 

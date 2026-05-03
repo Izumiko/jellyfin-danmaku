@@ -69,10 +69,11 @@ export class EpisodeMatcher {
 
             // 4. 匹配剧集
             const episodeIndex = item.IndexNumber || 1;
-            const episode = selectedAnime.episodes.find((ep) => {
-                const match = ep.episodeTitle.match(/第(\d+)集/);
-                return match && parseInt(match[1]) === episodeIndex;
-            }) || selectedAnime.episodes[episodeIndex - 1];
+            const episode =
+                selectedAnime.episodes.find((ep) => {
+                    const match = ep.episodeTitle.match(/第(\d+)集/);
+                    return match && parseInt(match[1]) === episodeIndex;
+                }) || selectedAnime.episodes[episodeIndex - 1];
 
             if (!episode) {
                 logger.warn('matcher', `Episode ${episodeIndex} not found`);

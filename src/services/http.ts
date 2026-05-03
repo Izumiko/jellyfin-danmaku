@@ -11,15 +11,7 @@ import { logger } from '../core/logger';
  * - 结构化错误（NetworkError / HttpError / ParseError）
  */
 export async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const {
-        method = 'GET',
-        headers = {},
-        body,
-        timeout = 10000,
-        retries = 2,
-        retryDelay = 1000,
-        signal: externalSignal,
-    } = options;
+    const { method = 'GET', headers = {}, body, timeout = 10000, retries = 2, retryDelay = 1000, signal: externalSignal } = options;
 
     let lastError: Error | null = null;
 
@@ -29,9 +21,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         // 合并外部信号和超时信号
-        const combinedSignal = externalSignal
-            ? createCombinedSignal(externalSignal, controller.signal)
-            : controller.signal;
+        const combinedSignal = externalSignal ? createCombinedSignal(externalSignal, controller.signal) : controller.signal;
 
         try {
             logger.debug('http', `Request ${method} ${url} (attempt ${attempt + 1}/${retries + 1})`);
@@ -51,11 +41,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
             // HTTP 错误处理
             if (!response.ok) {
                 const errorText = await response.text().catch(() => 'Unknown error');
-                throw new DanmakuError(
-                    `HTTP ${response.status}: ${errorText}`,
-                    ErrorCode.HttpError,
-                    { status: response.status, url },
-                );
+                throw new DanmakuError(`HTTP ${response.status}: ${errorText}`, ErrorCode.HttpError, { status: response.status, url });
             }
 
             // 解析响应
@@ -100,11 +86,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
     }
 
     // 所有重试都失败
-    throw new DanmakuError(
-        `Request failed after ${retries + 1} attempts: ${lastError?.message}`,
-        ErrorCode.Network,
-        lastError,
-    );
+    throw new DanmakuError(`Request failed after ${retries + 1} attempts: ${lastError?.message}`, ErrorCode.Network, lastError);
 }
 
 /**
@@ -138,11 +120,7 @@ export async function get<T>(url: string, options?: Omit<RequestOptions, 'method
 /**
  * POST 请求便捷方法
  */
-export async function post<T>(
-    url: string,
-    data?: unknown,
-    options?: Omit<RequestOptions, 'method' | 'body'>,
-): Promise<T> {
+export async function post<T>(url: string, data?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
     return request<T>(url, {
         ...options,
         method: 'POST',

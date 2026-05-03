@@ -33,11 +33,7 @@ export function antiOverlapFilter(comments: ProcessedComment[], config: AntiOver
 /**
  * 滚动弹幕防重叠
  */
-export function filterOverlappedScroll(
-    sorted: ProcessedComment[],
-    config: AntiOverlapConfig,
-    direction: 'rtl' | 'ltr',
-): ProcessedComment[] {
+export function filterOverlappedScroll(sorted: ProcessedComment[], config: AntiOverlapConfig, direction: 'rtl' | 'ltr'): ProcessedComment[] {
     const { containerWidth, containerHeight, fontSize } = config;
 
     // 计算轨道数量

@@ -17,12 +17,7 @@ export class DisposableStore {
     /**
      * 添加 addEventListener 并自动返回 removeEventListener
      */
-    addEventListener(
-        target: EventTarget,
-        event: string,
-        handler: EventListener,
-        options?: AddEventListenerOptions,
-    ): void {
+    addEventListener(target: EventTarget, event: string, handler: EventListener, options?: AddEventListenerOptions): void {
         target.addEventListener(event, handler, options);
         this.disposables.push(() => target.removeEventListener(event, handler, options));
     }

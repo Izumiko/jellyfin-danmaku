@@ -1,21 +1,11 @@
 import { get, post } from '../http';
 import { logger } from '../../core/logger';
-import type {
-    SearchResponse,
-    DanDanPlayComment,
-    RelatedSource,
-    RawComment,
-    ChConvertMode,
-} from '../../types/index';
+import type { SearchResponse, DanDanPlayComment, RelatedSource, RawComment, ChConvertMode } from '../../types/index';
 
 /**
  * 搜索剧集
  */
-export async function searchEpisodes(
-    apiPrefix: string,
-    animeName: string,
-    options?: { signal?: AbortSignal },
-): Promise<SearchResponse> {
+export async function searchEpisodes(apiPrefix: string, animeName: string, options?: { signal?: AbortSignal }): Promise<SearchResponse> {
     const url = `${apiPrefix}/api/v2/search/episodes?anime=${encodeURIComponent(animeName)}`;
     logger.debug('dandanplay', `Searching episodes: ${animeName}`);
 
@@ -58,11 +48,7 @@ export async function getComments(
 /**
  * 获取关联弹幕源
  */
-export async function getRelatedSources(
-    apiPrefix: string,
-    episodeId: number,
-    options?: { signal?: AbortSignal },
-): Promise<RelatedSource[]> {
+export async function getRelatedSources(apiPrefix: string, episodeId: number, options?: { signal?: AbortSignal }): Promise<RelatedSource[]> {
     const url = `${apiPrefix}/api/v2/related/${episodeId}`;
     logger.debug('dandanplay', `Fetching related sources for episode ${episodeId}`);
 
@@ -81,12 +67,7 @@ export async function getRelatedSources(
 /**
  * 获取外部弹幕源评论
  */
-export async function getExtComments(
-    apiPrefix: string,
-    sourceUrl: string,
-    config: { chConvert: ChConvertMode },
-    options?: { signal?: AbortSignal },
-): Promise<DanDanPlayComment[]> {
+export async function getExtComments(apiPrefix: string, sourceUrl: string, config: { chConvert: ChConvertMode }, options?: { signal?: AbortSignal }): Promise<DanDanPlayComment[]> {
     const { chConvert } = config;
     const url = `${apiPrefix}/api/v2/extcomment?chConvert=${chConvert}&url=${encodeURIComponent(sourceUrl)}`;
 
@@ -140,13 +121,7 @@ export async function postComment(
 /**
  * 提交关联弹幕源
  */
-export async function postRelatedSource(
-    apiPrefix: string,
-    episodeId: number,
-    url: string,
-    token: string,
-    options?: { signal?: AbortSignal },
-): Promise<void> {
+export async function postRelatedSource(apiPrefix: string, episodeId: number, url: string, token: string, options?: { signal?: AbortSignal }): Promise<void> {
     const apiUrl = `${apiPrefix}/api/v2/related/${episodeId}`;
 
     logger.debug('dandanplay', `Posting related source: ${url}`);

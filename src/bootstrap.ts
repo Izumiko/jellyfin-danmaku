@@ -195,7 +195,9 @@ function cleanupPlayer() {
 
     // 清理 UI
     if (toggleApp) {
-        try { unmount(toggleApp); } catch (e) {}
+        try {
+            unmount(toggleApp);
+        } catch (e) {}
         toggleApp = null;
     }
     if (toggleContainer) {
@@ -204,7 +206,9 @@ function cleanupPlayer() {
     }
 
     if (debugApp) {
-        try { unmount(debugApp); } catch (e) {}
+        try {
+            unmount(debugApp);
+        } catch (e) {}
         debugApp = null;
     }
     if (debugContainer) {
@@ -214,7 +218,9 @@ function cleanupPlayer() {
 
     // 关闭侧边栏
     if (sidebarApp) {
-        try { unmount(sidebarApp); } catch (e) {}
+        try {
+            unmount(sidebarApp);
+        } catch (e) {}
         sidebarApp = null;
     }
     if (sidebarContainer) {
@@ -316,9 +322,7 @@ function setupMenuInjection(): () => void {
             for (const node of mutation.addedNodes) {
                 if (!(node instanceof HTMLElement)) continue;
 
-                const actionSheet = node.classList.contains('actionSheet')
-                    ? node
-                    : node.querySelector('.actionSheet');
+                const actionSheet = node.classList.contains('actionSheet') ? node : node.querySelector('.actionSheet');
 
                 if (!actionSheet) continue;
                 if (!actionSheet.querySelector('[data-id="aspectratio"]')) continue;

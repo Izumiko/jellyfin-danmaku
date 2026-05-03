@@ -145,10 +145,7 @@ export function limitDensity(comments: RawComment[], limit: DensityLimit, bucket
 /**
  * 格式转换
  */
-export function formatComment(
-    comment: RawComment,
-    style: { fontSize: number; fontFamily: string; fontOptions: string; timeOffset: number },
-): ProcessedComment {
+export function formatComment(comment: RawComment, style: { fontSize: number; fontFamily: string; fontOptions: string; timeOffset: number }): ProcessedComment {
     // DanDanPlay mode ID 转换为引擎 mode
     const modeMap: Record<number, ProcessedComment['mode']> = {
         1: 'rtl',

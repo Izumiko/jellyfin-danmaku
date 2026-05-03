@@ -6,10 +6,7 @@
  * @param options.signal - 外部取消信号
  * @returns Promise<HTMLElement>，超时则 reject
  */
-export function waitForElement(
-    selector: string,
-    options?: { timeout?: number; signal?: AbortSignal },
-): Promise<HTMLElement> {
+export function waitForElement(selector: string, options?: { timeout?: number; signal?: AbortSignal }): Promise<HTMLElement> {
     const timeout = options?.timeout ?? 10000;
     const signal = options?.signal;
 
@@ -70,10 +67,7 @@ export function waitForElement(
  * debounce
  * @returns 带 cancel() 方法的 debounced 函数
  */
-export function debounce<T extends (...args: unknown[]) => void>(
-    fn: T,
-    delay: number,
-): T & { cancel: () => void } {
+export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T & { cancel: () => void } {
     let timeoutId: number | undefined;
 
     const debounced = function (this: unknown, ...args: unknown[]) {

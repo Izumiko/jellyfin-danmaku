@@ -8,10 +8,7 @@ import type { RawComment } from '../../types/index';
  * 需要安装 jellyfin-plugin-danmu 插件
  * https://github.com/cxfksword/jellyfin-plugin-danmu
  */
-export async function getLocalXmlDanmaku(
-    jellyfinItemId: string,
-    options?: { signal?: AbortSignal },
-): Promise<RawComment[]> {
+export async function getLocalXmlDanmaku(jellyfinItemId: string, options?: { signal?: AbortSignal }): Promise<RawComment[]> {
     try {
         const url = `${location.origin}/api/danmu/${jellyfinItemId}/raw`;
         logger.debug('jellyfin', `Fetching local XML danmaku from ${url}`);

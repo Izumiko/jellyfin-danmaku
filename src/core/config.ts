@@ -1,11 +1,5 @@
 import * as v from 'valibot';
-import {
-    ChConvertMode,
-    DensityLimit,
-    type DanmakuConfig,
-    type SourceFilter,
-    type ModeFilter,
-} from '../types/index';
+import { ChConvertMode, DensityLimit, type DanmakuConfig, type SourceFilter, type ModeFilter } from '../types/index';
 
 /** 弹幕显示配置的默认值 */
 export const DEFAULT_CONFIG: DanmakuConfig = {
@@ -95,33 +89,18 @@ export const DanmakuConfigSchema = v.object({
  * 验证并修正配置值
  * 如果值超出范围，自动 clamp 到合法范围
  */
-export function validateConfigValue<K extends keyof DanmakuConfig>(
-    key: K,
-    value: DanmakuConfig[K],
-): DanmakuConfig[K] {
+export function validateConfigValue<K extends keyof DanmakuConfig>(key: K, value: DanmakuConfig[K]): DanmakuConfig[K] {
     if (key === 'opacity') {
-        return Math.max(
-            CONFIG_CONSTRAINTS.opacity.min,
-            Math.min(CONFIG_CONSTRAINTS.opacity.max, value as number),
-        ) as DanmakuConfig[K];
+        return Math.max(CONFIG_CONSTRAINTS.opacity.min, Math.min(CONFIG_CONSTRAINTS.opacity.max, value as number)) as DanmakuConfig[K];
     }
     if (key === 'speed') {
-        return Math.max(
-            CONFIG_CONSTRAINTS.speed.min,
-            Math.min(CONFIG_CONSTRAINTS.speed.max, value as number),
-        ) as DanmakuConfig[K];
+        return Math.max(CONFIG_CONSTRAINTS.speed.min, Math.min(CONFIG_CONSTRAINTS.speed.max, value as number)) as DanmakuConfig[K];
     }
     if (key === 'fontSize') {
-        return Math.max(
-            CONFIG_CONSTRAINTS.fontSize.min,
-            Math.min(CONFIG_CONSTRAINTS.fontSize.max, value as number),
-        ) as DanmakuConfig[K];
+        return Math.max(CONFIG_CONSTRAINTS.fontSize.min, Math.min(CONFIG_CONSTRAINTS.fontSize.max, value as number)) as DanmakuConfig[K];
     }
     if (key === 'heightRatio') {
-        return Math.max(
-            CONFIG_CONSTRAINTS.heightRatio.min,
-            Math.min(CONFIG_CONSTRAINTS.heightRatio.max, value as number),
-        ) as DanmakuConfig[K];
+        return Math.max(CONFIG_CONSTRAINTS.heightRatio.min, Math.min(CONFIG_CONSTRAINTS.heightRatio.max, value as number)) as DanmakuConfig[K];
     }
     return value;
 }

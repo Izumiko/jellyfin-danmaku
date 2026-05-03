@@ -23,11 +23,7 @@ export class CommentFetcher {
      * @param jellyfinItemId Jellyfin 媒体项 ID
      * @param options 选项
      */
-    async fetch(
-        episodeId: number,
-        jellyfinItemId: string,
-        options?: { signal?: AbortSignal },
-    ): Promise<RawComment[]> {
+    async fetch(episodeId: number, jellyfinItemId: string, options?: { signal?: AbortSignal }): Promise<RawComment[]> {
         try {
             // 1. 如果启用本地 XML，先尝试本地
             if (this.deps.useXmlDanmaku) {
@@ -89,12 +85,7 @@ export class CommentFetcher {
             // 4. 获取外部弹幕
             for (const source of filteredSources) {
                 try {
-                    const extComments = await getExtComments(
-                        this.deps.apiPrefix,
-                        source.url,
-                        { chConvert: this.deps.chConvert },
-                        options,
-                    );
+                    const extComments = await getExtComments(this.deps.apiPrefix, source.url, { chConvert: this.deps.chConvert }, options);
 
                     allComments.push(...extComments.map(convertDanDanPlayComment));
                     logger.debug('fetcher', `Loaded ${extComments.length} comments from ${source.url}`);
