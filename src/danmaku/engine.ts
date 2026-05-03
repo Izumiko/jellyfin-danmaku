@@ -69,7 +69,6 @@ export class DanmakuEngine {
         this.instance = new Danmaku({
             container: this.wrapper,
             media: config.media,
-            // @ts-expect-error - danmaku 库的类型定义不完整
             comments: finalComments,
             engine: 'canvas',
             speed: config.speed,
@@ -103,7 +102,6 @@ export class DanmakuEngine {
     }
 
     emit(comment: ProcessedComment): void {
-        // @ts-expect-error - danmaku 库的类型定义不完整
         this.instance?.emit(comment);
     }
 

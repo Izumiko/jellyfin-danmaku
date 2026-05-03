@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { ChConvertMode, DensityLimit, type DanmakuConfig, type SourceFilter, type ModeFilter } from '../types/index';
+import { ChConvertMode, DensityLimit, type DanmakuConfig } from '../types/index';
 
 /** 弹幕显示配置的默认值 */
 export const DEFAULT_CONFIG: DanmakuConfig = {

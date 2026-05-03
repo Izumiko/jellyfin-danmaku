@@ -5,10 +5,10 @@
     import { logger } from '../../core/logger';
     import { eventBus } from '../../core/event-bus';
 
-    let { 
+    let {
         open = $bindable(false),
         onSave = () => {},
-        onCancel = () => {}
+        onCancel = () => {},
     } = $props<{
         open: boolean;
         onSave: () => void;
@@ -60,13 +60,8 @@
         </header>
 
         <div class="tabs-header">
-            {#each tabs as tab}
-                <button
-                    class="tab-btn"
-                    class:active={activeTab === tab.id}
-                    onclick={() => activeTab = tab.id}
-                    type="button"
-                >
+            {#each tabs as tab (tab.id)}
+                <button class="tab-btn" class:active={activeTab === tab.id} onclick={() => (activeTab = tab.id)} type="button">
                     {tab.label}
                 </button>
             {/each}
@@ -76,7 +71,7 @@
             {#if activeTab === 'control'}
                 <div class="setting-section">
                     <h3>控制功能</h3>
-                    
+
                     <div class="setting-item">
                         <label class="switch-label">
                             <span>弹幕显示</span>
@@ -98,35 +93,20 @@
                     </div>
 
                     <div class="setting-item">
-                        <button 
-                            class="action-btn" 
-                            onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}
-                        >
-                            搜索弹幕
-                        </button>
+                        <button class="action-btn" onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}> 搜索弹幕 </button>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             CORS 代理:
-                            <input
-                                type="text"
-                                class="setting-input"
-                                placeholder="留空使用默认"
-                                bind:value={danmakuState.customCorsProxy}
-                            />
+                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customCorsProxy} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             API 地址:
-                            <input
-                                type="text"
-                                class="setting-input"
-                                placeholder="留空使用默认"
-                                bind:value={danmakuState.customApiPrefix}
-                            />
+                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customApiPrefix} />
                         </label>
                     </div>
                 </div>
@@ -139,75 +119,42 @@
                     <div class="setting-item">
                         <label>
                             透明度: {danmakuState.opacity}
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.1"
-                                bind:value={danmakuState.opacity}
-                            />
+                            <input type="range" min="0" max="1" step="0.1" bind:value={danmakuState.opacity} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             弹幕速度: {danmakuState.speed}
-                            <input
-                                type="range"
-                                min="50"
-                                max="600"
-                                step="10"
-                                bind:value={danmakuState.speed}
-                            />
+                            <input type="range" min="50" max="600" step="10" bind:value={danmakuState.speed} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             字体大小: {danmakuState.fontSize}px
-                            <input
-                                type="range"
-                                min="10"
-                                max="60"
-                                step="1"
-                                bind:value={danmakuState.fontSize}
-                            />
+                            <input type="range" min="10" max="60" step="1" bind:value={danmakuState.fontSize} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             显示区域比例: {danmakuState.heightRatio}
-                            <input
-                                type="range"
-                                min="0.1"
-                                max="1"
-                                step="0.05"
-                                bind:value={danmakuState.heightRatio}
-                            />
+                            <input type="range" min="0.1" max="1" step="0.05" bind:value={danmakuState.heightRatio} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             字体:
-                            <input
-                                type="text"
-                                class="setting-input"
-                                bind:value={danmakuState.fontFamily}
-                            />
+                            <input type="text" class="setting-input" bind:value={danmakuState.fontFamily} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             字体选项:
-                            <input
-                                type="text"
-                                class="setting-input"
-                                placeholder="如 bold"
-                                bind:value={danmakuState.fontOptions}
-                            />
+                            <input type="text" class="setting-input" placeholder="如 bold" bind:value={danmakuState.fontOptions} />
                         </label>
                     </div>
                 </div>
@@ -263,12 +210,7 @@
                     <div class="setting-item">
                         <label>
                             弹幕偏移时间 (秒):
-                            <input
-                                type="number"
-                                class="setting-input"
-                                step="0.1"
-                                bind:value={danmakuState.curEpOffset}
-                            />
+                            <input type="number" class="setting-input" step="0.1" bind:value={danmakuState.curEpOffset} />
                         </label>
                     </div>
                 </div>
@@ -333,8 +275,12 @@
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
     }
 
     .sidebar-panel {
@@ -353,8 +299,12 @@
     }
 
     @keyframes slideIn {
-        from { transform: translateX(100%); }
-        to { transform: translateX(0); }
+        from {
+            transform: translateX(100%);
+        }
+        to {
+            transform: translateX(0);
+        }
     }
 
     .sidebar-header {
@@ -459,16 +409,17 @@
         font-size: 14px;
     }
 
-    .setting-item input[type="range"] {
+    .setting-item input[type='range'] {
         width: 100%;
         height: 6px;
         border-radius: 3px;
         background: var(--danmaku-border);
         outline: none;
+        appearance: none;
         -webkit-appearance: none;
     }
 
-    .setting-item input[type="range"]::-webkit-slider-thumb {
+    .setting-item input[type='range']::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: 16px;
         height: 16px;
@@ -535,7 +486,7 @@
 
     .modern-slider:before {
         position: absolute;
-        content: "";
+        content: '';
         height: 18px;
         width: 18px;
         left: 3px;
@@ -566,7 +517,7 @@
         cursor: pointer;
     }
 
-    .checkbox-group input[type="checkbox"] {
+    .checkbox-group input[type='checkbox'] {
         width: 16px;
         height: 16px;
         accent-color: var(--danmaku-primary);

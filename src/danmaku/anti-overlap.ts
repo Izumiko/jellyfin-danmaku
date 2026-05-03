@@ -21,8 +21,8 @@ export function antiOverlapFilter(comments: ProcessedComment[], config: AntiOver
     const bottom = sorted.filter((c) => c.mode === 'bottom');
 
     // 分别过滤
-    const filteredRtl = filterOverlappedScroll(rtl, config, 'rtl');
-    const filteredLtr = filterOverlappedScroll(ltr, config, 'ltr');
+    const filteredRtl = filterOverlappedScroll(rtl, config);
+    const filteredLtr = filterOverlappedScroll(ltr, config);
     const filteredTop = filterOverlappedFixed(top, config);
     const filteredBottom = filterOverlappedFixed(bottom, config);
 
@@ -33,7 +33,7 @@ export function antiOverlapFilter(comments: ProcessedComment[], config: AntiOver
 /**
  * 滚动弹幕防重叠
  */
-export function filterOverlappedScroll(sorted: ProcessedComment[], config: AntiOverlapConfig, direction: 'rtl' | 'ltr'): ProcessedComment[] {
+export function filterOverlappedScroll(sorted: ProcessedComment[], config: AntiOverlapConfig): ProcessedComment[] {
     const { containerWidth, containerHeight, fontSize } = config;
 
     // 计算轨道数量

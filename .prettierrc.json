@@ -8,5 +8,7 @@
   "proseWrap": "preserve",
   "endOfLine": "lf",
   "printWidth": 180,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "plugins": ["prettier-plugin-svelte"],
+  "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }

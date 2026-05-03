@@ -41,10 +41,16 @@
     <div class="debug-overlay">
         <div class="debug-header">
             <span>调试日志</span>
-            <button class="clear-btn" onclick={() => { logger.clear(); refresh(); }}>清空</button>
+            <button
+                class="clear-btn"
+                onclick={() => {
+                    logger.clear();
+                    refresh();
+                }}>清空</button
+            >
         </div>
         <div class="debug-content">
-            {#each entries as entry}
+            {#each entries as entry (entry.timestamp)}
                 <div class="debug-entry">
                     <span class="debug-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                     <span class="debug-level" style="color: {levelColors[entry.level]}">

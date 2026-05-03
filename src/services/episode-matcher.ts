@@ -1,7 +1,7 @@
-import { searchEpisodes, getComments, getRelatedSources, getExtComments } from './dandanplay/client';
+import { searchEpisodes } from './dandanplay/client';
 import { Storage } from '../core/storage';
 import { logger } from '../core/logger';
-import type { EpisodeInfo, JellyfinItem, ChConvertMode, SourceFilter, RawComment } from '../types/index';
+import type { EpisodeInfo, JellyfinItem, ChConvertMode } from '../types/index';
 
 export interface EpisodeMatcherDeps {
     apiPrefix: string;

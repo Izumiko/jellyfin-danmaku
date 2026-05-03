@@ -16,7 +16,7 @@ type EventMap = {
 };
 
 class TypedEventBus {
-    private listeners = new Map<string, Set<Function>>();
+    private listeners = new Map<string, Set<(data: unknown) => void>>();
 
     /**
      * 订阅事件
@@ -28,11 +28,11 @@ class TypedEventBus {
         }
 
         const handlers = this.listeners.get(event)!;
-        handlers.add(handler);
+        handlers.add(handler as (data: unknown) => void);
 
         // 返回取消订阅函数
         return () => {
-            handlers.delete(handler);
+            handlers.delete(handler as (data: unknown) => void);
             if (handlers.size === 0) {
                 this.listeners.delete(event);
             }

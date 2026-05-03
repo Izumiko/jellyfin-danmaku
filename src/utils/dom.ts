@@ -24,31 +24,14 @@ export function waitForElement(selector: string, options?: { timeout?: number; s
             return;
         }
 
-        let timeoutId: number | undefined;
-        let observer: MutationObserver | undefined;
-
-        const cleanup = () => {
-            if (timeoutId !== undefined) clearTimeout(timeoutId);
-            observer?.disconnect();
-            signal?.removeEventListener('abort', onAbort);
-        };
-
-        const onAbort = () => {
-            cleanup();
-            reject(new Error('Aborted'));
-        };
-
         // 超时处理
-        timeoutId = window.setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
             cleanup();
             reject(new Error(`Timeout waiting for element: ${selector}`));
         }, timeout);
 
-        // 外部取消信号
-        signal?.addEventListener('abort', onAbort);
-
         // MutationObserver 监听 DOM 变化
-        observer = new MutationObserver(() => {
+        const observer = new MutationObserver(() => {
             const element = document.querySelector(selector);
             if (element instanceof HTMLElement) {
                 cleanup();
@@ -60,6 +43,20 @@ export function waitForElement(selector: string, options?: { timeout?: number; s
             childList: true,
             subtree: true,
         });
+
+        // 外部取消信号
+        signal?.addEventListener('abort', onAbort);
+
+        function cleanup() {
+            clearTimeout(timeoutId);
+            observer.disconnect();
+            signal?.removeEventListener('abort', onAbort);
+        }
+
+        function onAbort() {
+            cleanup();
+            reject(new Error('Aborted'));
+        }
     });
 }
 

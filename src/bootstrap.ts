@@ -21,11 +21,11 @@ let pluginActive = false;
 let playerDisposables: DisposableStore | null = null;
 let menuInjectionCleanup: (() => void) | null = null;
 let sidebarOpen = false;
-let sidebarApp: any = null;
+let sidebarApp: ReturnType<typeof mount> | null = null;
 let sidebarContainer: HTMLDivElement | null = null;
-let toggleApp: any = null;
+let toggleApp: ReturnType<typeof mount> | null = null;
 let toggleContainer: HTMLDivElement | null = null;
-let debugApp: any = null;
+let debugApp: ReturnType<typeof mount> | null = null;
 let debugContainer: HTMLDivElement | null = null;
 
 /**
@@ -197,7 +197,9 @@ function cleanupPlayer() {
     if (toggleApp) {
         try {
             unmount(toggleApp);
-        } catch (e) {}
+        } catch {
+            // ignore cleanup errors
+        }
         toggleApp = null;
     }
     if (toggleContainer) {
@@ -208,7 +210,9 @@ function cleanupPlayer() {
     if (debugApp) {
         try {
             unmount(debugApp);
-        } catch (e) {}
+        } catch {
+            // ignore cleanup errors
+        }
         debugApp = null;
     }
     if (debugContainer) {
@@ -220,7 +224,9 @@ function cleanupPlayer() {
     if (sidebarApp) {
         try {
             unmount(sidebarApp);
-        } catch (e) {}
+        } catch {
+            // ignore cleanup errors
+        }
         sidebarApp = null;
     }
     if (sidebarContainer) {
