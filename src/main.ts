@@ -5,7 +5,7 @@ import { logger } from './core/logger';
  * 主入口
  * 检查是否在 Jellyfin 页面，然后启动
  */
-(async function main() {
+(function main() {
     'use strict';
 
     // 守卫：检查是否在 Jellyfin 页面
@@ -16,10 +16,11 @@ import { logger } from './core/logger';
 
     logger.info('main', 'Jellyfin Danmaku Plugin starting...');
 
-    try {
-        await bootstrap();
-        logger.info('main', 'Plugin initialized successfully');
-    } catch (error) {
-        logger.error('main', 'Failed to initialize plugin', error);
-    }
+    bootstrap()
+        .then(() => {
+            logger.info('main', 'Plugin initialized successfully');
+        })
+        .catch((error) => {
+            logger.error('main', 'Failed to initialize plugin', error);
+        });
 })();
