@@ -1,6 +1,9 @@
 <script lang="ts">
     import '../styles/variables.css';
     import '../styles/base.css';
+    import { danmakuState } from '../../core/state.svelte';
+    import { logger } from '../../core/logger';
+    import { eventBus } from '../../core/event-bus';
 
     let { 
         open = $bindable(false),
@@ -12,6 +15,8 @@
         onCancel: () => void;
     }>();
 
+    let activeTab = $state('control');
+
     function handleBackdropClick() {
         onCancel();
     }
@@ -21,6 +26,19 @@
             onCancel();
         }
     }
+
+    function handleSave() {
+        // 同步 logger 状态
+        logger.setEnabled(danmakuState.logSwitch);
+        onSave();
+    }
+
+    const tabs = [
+        { id: 'control', label: '控制功能' },
+        { id: 'style', label: '显示样式' },
+        { id: 'display', label: '显示设置' },
+        { id: 'filter', label: '过滤设置' },
+    ];
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -36,16 +54,249 @@
         <header class="sidebar-header">
             <h2>弹幕设置</h2>
             <div class="header-actions">
-                <button class="btn-save" onclick={onSave}>保存</button>
+                <button class="btn-save" onclick={handleSave}>保存</button>
                 <button class="btn-cancel" onclick={onCancel}>取消</button>
             </div>
         </header>
 
+        <div class="tabs-header">
+            {#each tabs as tab}
+                <button
+                    class="tab-btn"
+                    class:active={activeTab === tab.id}
+                    onclick={() => activeTab = tab.id}
+                    type="button"
+                >
+                    {tab.label}
+                </button>
+            {/each}
+        </div>
+
         <div class="sidebar-content">
-            <div class="setting-section">
-                <h3>显示设置</h3>
-                <p>设置功能正在开发中...</p>
-            </div>
+            {#if activeTab === 'control'}
+                <div class="setting-section">
+                    <h3>控制功能</h3>
+                    
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <span>弹幕显示</span>
+                            <label class="modern-switch">
+                                <input type="checkbox" bind:checked={danmakuState.danmakuSwitch} />
+                                <span class="modern-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <span>日志显示</span>
+                            <label class="modern-switch">
+                                <input type="checkbox" bind:checked={danmakuState.logSwitch} />
+                                <span class="modern-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <button 
+                            class="action-btn" 
+                            onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}
+                        >
+                            搜索弹幕
+                        </button>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>CORS 代理:</label>
+                        <input 
+                            type="text" 
+                            class="setting-input"
+                            placeholder="留空使用默认"
+                            bind:value={danmakuState.customCorsProxy}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>API 地址:</label>
+                        <input 
+                            type="text" 
+                            class="setting-input"
+                            placeholder="留空使用默认"
+                            bind:value={danmakuState.customApiPrefix}
+                        />
+                    </div>
+                </div>
+            {/if}
+
+            {#if activeTab === 'style'}
+                <div class="setting-section">
+                    <h3>显示样式</h3>
+
+                    <div class="setting-item">
+                        <label>透明度: {danmakuState.opacity}</label>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="1" 
+                            step="0.1" 
+                            bind:value={danmakuState.opacity}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>弹幕速度: {danmakuState.speed}</label>
+                        <input 
+                            type="range" 
+                            min="50" 
+                            max="600" 
+                            step="10" 
+                            bind:value={danmakuState.speed}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>字体大小: {danmakuState.fontSize}px</label>
+                        <input 
+                            type="range" 
+                            min="10" 
+                            max="60" 
+                            step="1" 
+                            bind:value={danmakuState.fontSize}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>显示区域比例: {danmakuState.heightRatio}</label>
+                        <input 
+                            type="range" 
+                            min="0.1" 
+                            max="1" 
+                            step="0.05" 
+                            bind:value={danmakuState.heightRatio}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>字体:</label>
+                        <input 
+                            type="text" 
+                            class="setting-input"
+                            bind:value={danmakuState.fontFamily}
+                        />
+                    </div>
+
+                    <div class="setting-item">
+                        <label>字体选项:</label>
+                        <input 
+                            type="text" 
+                            class="setting-input"
+                            placeholder="如 bold"
+                            bind:value={danmakuState.fontOptions}
+                        />
+                    </div>
+                </div>
+            {/if}
+
+            {#if activeTab === 'display'}
+                <div class="setting-section">
+                    <h3>显示设置</h3>
+
+                    <div class="setting-item">
+                        <label>弹幕密度限制:</label>
+                        <select bind:value={danmakuState.densityLimit}>
+                            <option value={0}>无限制</option>
+                            <option value={1}>低</option>
+                            <option value={2}>中</option>
+                            <option value={3}>高</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <span>弹幕防重叠</span>
+                            <label class="modern-switch">
+                                <input type="checkbox" bind:checked={danmakuState.useAntiOverlap} />
+                                <span class="modern-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>简繁转换:</label>
+                        <select bind:value={danmakuState.chConvert}>
+                            <option value={0}>不转换</option>
+                            <option value={1}>简体</option>
+                            <option value={2}>繁体</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <span>使用本地 XML 弹幕</span>
+                            <label class="modern-switch">
+                                <input type="checkbox" bind:checked={danmakuState.useXmlDanmaku} />
+                                <span class="modern-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>弹幕偏移时间 (秒):</label>
+                        <input 
+                            type="number" 
+                            class="setting-input"
+                            step="0.1"
+                            bind:value={danmakuState.curEpOffset}
+                        />
+                    </div>
+                </div>
+            {/if}
+
+            {#if activeTab === 'filter'}
+                <div class="setting-section">
+                    <h3>过滤设置</h3>
+
+                    <div class="setting-item">
+                        <label>来源过滤:</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.bilibili} />
+                                Bilibili
+                            </label>
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.gamer} />
+                                巴哈姆特
+                            </label>
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.dandanplay} />
+                                弹弹Play
+                            </label>
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.other} />
+                                其他
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>模式过滤:</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.modeFilter.scroll} />
+                                滚动
+                            </label>
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.modeFilter.top} />
+                                顶部
+                            </label>
+                            <label>
+                                <input type="checkbox" bind:checked={danmakuState.modeFilter.bottom} />
+                                底部
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            {/if}
         </div>
     </div>
 {/if}
@@ -131,6 +382,33 @@
         background: var(--danmaku-hover);
     }
 
+    .tabs-header {
+        display: flex;
+        border-bottom: 1px solid var(--danmaku-border);
+        padding: 0 20px;
+    }
+
+    .tab-btn {
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--danmaku-text);
+        cursor: pointer;
+        font-size: 14px;
+        opacity: 0.7;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        opacity: 1;
+    }
+
+    .tab-btn.active {
+        opacity: 1;
+        border-bottom-color: var(--danmaku-primary);
+    }
+
     .sidebar-content {
         flex: 1;
         overflow-y: auto;
@@ -142,9 +420,148 @@
     }
 
     .setting-section h3 {
-        margin: 0 0 12px 0;
+        margin: 0 0 16px 0;
         font-size: 16px;
         font-weight: 500;
         color: var(--danmaku-primary);
+    }
+
+    .setting-item {
+        margin-bottom: 16px;
+    }
+
+    .setting-item label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .setting-item input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--danmaku-border);
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    .setting-item input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--danmaku-primary);
+        cursor: pointer;
+    }
+
+    .setting-input {
+        width: 100%;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--danmaku-border);
+        border-radius: 4px;
+        color: var(--danmaku-text);
+        font-size: 14px;
+    }
+
+    .setting-input:focus {
+        outline: none;
+        border-color: var(--danmaku-primary);
+    }
+
+    select {
+        width: 100%;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--danmaku-border);
+        border-radius: 4px;
+        color: var(--danmaku-text);
+        font-size: 14px;
+    }
+
+    .switch-label {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modern-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+    .modern-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .modern-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.2);
+        transition: 0.3s;
+        border-radius: 24px;
+    }
+
+    .modern-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    .modern-switch input:checked + .modern-slider {
+        background-color: var(--danmaku-primary);
+    }
+
+    .modern-switch input:checked + .modern-slider:before {
+        transform: translateX(20px);
+    }
+
+    .checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--danmaku-primary);
+    }
+
+    .action-btn {
+        width: 100%;
+        padding: 10px;
+        background: var(--danmaku-primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+        background: #0090c0;
     }
 </style>

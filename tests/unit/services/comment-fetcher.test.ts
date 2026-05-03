@@ -1,0 +1,145 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CommentFetcher } from '@/services/comment-fetcher';
+import type { RawComment, SourceFilter, ChConvertMode } from '@/types/index';
+
+// Mock dandanplay client
+vi.mock('@/services/dandanplay/client', () => ({
+    getComments: vi.fn(),
+    getRelatedSources: vi.fn(),
+    getExtComments: vi.fn(),
+    convertDanDanPlayComment: vi.fn((c) => ({
+        time: parseFloat(c.p.split(',')[0]),
+        modeId: parseInt(c.p.split(',')[1]),
+        color: parseInt(c.p.split(',')[3]),
+        text: c.m,
+        user: c.p.split(',')[6] ? `[DanDanPlay]${c.p.split(',')[6]}` : undefined,
+    })),
+}));
+
+// Mock jellyfin danmaku
+vi.mock('@/services/jellyfin/danmaku', () => ({
+    getLocalXmlDanmaku: vi.fn(),
+}));
+
+import { getComments, getRelatedSources, getExtComments } from '@/services/dandanplay/client';
+import { getLocalXmlDanmaku } from '@/services/jellyfin/danmaku';
+
+describe('CommentFetcher', () => {
+    let fetcher: CommentFetcher;
+
+    const defaultDeps = {
+        apiPrefix: 'https://api.example.com',
+        chConvert: 0 as ChConvertMode,
+        sourceFilter: {
+            bilibili: true,
+            gamer: true,
+            dandanplay: true,
+            other: true,
+        } as SourceFilter,
+        useXmlDanmaku: false,
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        fetcher = new CommentFetcher(defaultDeps);
+    });
+
+    const createDanDanPlayComment = (time: number, text: string) => ({
+        cid: 1,
+        p: `${time},1,25,16777215,0,0,user1,12345`,
+        m: text,
+    });
+
+    describe('fetch', () => {
+        it('should fetch online comments by default', async () => {
+            vi.mocked(getComments).mockResolvedValue([
+                createDanDanPlayComment(1.0, 'hello'),
+                createDanDanPlayComment(2.0, 'world'),
+            ]);
+            vi.mocked(getRelatedSources).mockResolvedValue([]);
+
+            const result = await fetcher.fetch(123, 'item-456');
+
+            expect(result).toHaveLength(2);
+            expect(getLocalXmlDanmaku).not.toHaveBeenCalled();
+        });
+
+        it('should use local XML when enabled and available', async () => {
+            const localComments: RawComment[] = [
+                { time: 1.0, modeId: 1, color: 16777215, text: 'local' },
+            ];
+
+            vi.mocked(getLocalXmlDanmaku).mockResolvedValue(localComments);
+
+            const xmlFetcher = new CommentFetcher({ ...defaultDeps, useXmlDanmaku: true });
+            const result = await xmlFetcher.fetch(123, 'item-456');
+
+            expect(result).toEqual(localComments);
+            expect(getComments).not.toHaveBeenCalled();
+        });
+
+        it('should fallback to online when local XML fails', async () => {
+            vi.mocked(getLocalXmlDanmaku).mockRejectedValue(new Error('No XML'));
+            vi.mocked(getComments).mockResolvedValue([
+                createDanDanPlayComment(1.0, 'fallback'),
+            ]);
+            vi.mocked(getRelatedSources).mockResolvedValue([]);
+
+            const xmlFetcher = new CommentFetcher({ ...defaultDeps, useXmlDanmaku: true });
+            const result = await xmlFetcher.fetch(123, 'item-456');
+
+            expect(result.length).toBeGreaterThan(0);
+            expect(getComments).toHaveBeenCalled();
+        });
+
+        it('should fetch related sources', async () => {
+            vi.mocked(getComments).mockResolvedValue([
+                createDanDanPlayComment(1.0, 'main'),
+            ]);
+            vi.mocked(getRelatedSources).mockResolvedValue([
+                { url: 'https://bilibili.com/video/test', shift: 0 },
+            ]);
+            vi.mocked(getExtComments).mockResolvedValue([
+                createDanDanPlayComment(2.0, 'related'),
+            ]);
+
+            const result = await fetcher.fetch(123, 'item-456');
+
+            expect(result.length).toBeGreaterThanOrEqual(2);
+            expect(getExtComments).toHaveBeenCalled();
+        });
+
+        it('should filter related sources by url', async () => {
+            vi.mocked(getComments).mockResolvedValue([]);
+            vi.mocked(getRelatedSources).mockResolvedValue([
+                { url: 'https://bilibili.com/video/test', shift: 0 },
+                { url: 'https://gamer.com.tw/test', shift: 0 },
+                { url: 'https://other.com/test', shift: 0 },
+            ]);
+            vi.mocked(getExtComments).mockResolvedValue([]);
+
+            // Fetcher with bilibili disabled
+            const filteredFetcher = new CommentFetcher({
+                ...defaultDeps,
+                sourceFilter: { bilibili: false, gamer: true, dandanplay: true, other: true },
+            });
+
+            await filteredFetcher.fetch(123, 'item-456');
+
+            // Should not fetch bilibili source
+            expect(getExtComments).not.toHaveBeenCalledWith(
+                expect.anything(),
+                'https://bilibili.com/video/test',
+                expect.anything(),
+            );
+        });
+
+        it('should return empty array on total failure', async () => {
+            vi.mocked(getComments).mockRejectedValue(new Error('Network error'));
+
+            const result = await fetcher.fetch(123, 'item-456');
+
+            expect(result).toEqual([]);
+        });
+    });
+});

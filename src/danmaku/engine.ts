@@ -2,6 +2,7 @@ import Danmaku from 'danmaku';
 import { debounce } from '../utils/dom';
 import { eventBus } from '../core/event-bus';
 import { logger } from '../core/logger';
+import { danmakuState } from '../core/state.svelte';
 import { preProcessDanmaku } from './processor';
 import { antiOverlapFilter } from './anti-overlap';
 import { textMeasurer } from './text-measure';
@@ -33,22 +34,32 @@ export class DanmakuEngine {
             speed: config.speed,
         });
 
-        // 1. 预处理弹幕
+        // 1. 预处理弹幕 - 使用 danmakuState 中的用户配置
         const processed = preProcessDanmaku(rawComments, {
-            sourceFilter: { bilibili: true, gamer: true, dandanplay: true, other: true },
-            modeFilter: { scroll: true, top: true, bottom: true },
-            densityLimit: 0,
-            fontSize: 18,
-            fontFamily: 'sans-serif',
-            fontOptions: '',
+            sourceFilter: danmakuState.sourceFilter,
+            modeFilter: danmakuState.modeFilter,
+            densityLimit: danmakuState.densityLimit,
+            fontSize: danmakuState.fontSize,
+            fontFamily: danmakuState.fontFamily,
+            fontOptions: danmakuState.fontOptions,
             speed: config.speed,
-            timeOffset: 0,
+            timeOffset: danmakuState.curEpOffset || 0,
             containerWidth: config.container.clientWidth,
             containerHeight: config.container.clientHeight,
         });
 
         // 2. 防重叠过滤（如果启用）
-        const finalComments = processed;
+        let finalComments = processed;
+        if (danmakuState.useAntiOverlap) {
+            finalComments = antiOverlapFilter(processed, {
+                containerWidth: config.container.clientWidth,
+                containerHeight: config.container.clientHeight,
+                fontSize: danmakuState.fontSize,
+                speed: config.speed,
+                fontFamily: danmakuState.fontFamily,
+                fontOptions: danmakuState.fontOptions,
+            });
+        }
 
         // 3. 创建容器
         this.wrapper = this.createWrapper(config);

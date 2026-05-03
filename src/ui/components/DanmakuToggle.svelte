@@ -1,13 +1,20 @@
 <script lang="ts">
-    // 简化的弹幕开关按钮组件
-    let { visible = $bindable(true) } = $props<{ visible: boolean }>();
+    import { danmakuState } from '../../core/state.svelte';
+    import { danmakuEngine } from '../../danmaku/engine';
+
+    const icon = $derived(danmakuState.danmakuSwitch ? 'comment' : 'comments_disabled');
+    const title = $derived(danmakuState.danmakuSwitch ? '关闭弹幕' : '开启弹幕');
 
     function toggle() {
-        visible = !visible;
-    }
+        danmakuState.danmakuSwitch = !danmakuState.danmakuSwitch;
+        danmakuState.persist();
 
-    const icon = $derived(visible ? 'comment' : 'comments_disabled');
-    const title = $derived(visible ? '关闭弹幕' : '开启弹幕');
+        if (danmakuState.danmakuSwitch) {
+            danmakuEngine.show();
+        } else {
+            danmakuEngine.hide();
+        }
+    }
 </script>
 
 <button class="danmaku-toggle" onclick={toggle} {title} type="button">

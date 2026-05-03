@@ -23,6 +23,7 @@ class DanmakuState {
     densityLimit = $state(DEFAULT_CONFIG.densityLimit);
     useAntiOverlap = $state(DEFAULT_CONFIG.useAntiOverlap);
     useXmlDanmaku = $state(DEFAULT_CONFIG.useXmlDanmaku);
+    curEpOffset = $state(DEFAULT_CONFIG.curEpOffset);
     customCorsProxy = $state(DEFAULT_CONFIG.customCorsProxy);
     customApiPrefix = $state(DEFAULT_CONFIG.customApiPrefix);
 
@@ -55,6 +56,7 @@ class DanmakuState {
         this.densityLimit = saved.densityLimit;
         this.useAntiOverlap = saved.useAntiOverlap;
         this.useXmlDanmaku = saved.useXmlDanmaku;
+        this.curEpOffset = saved.curEpOffset;
         this.customCorsProxy = saved.customCorsProxy;
         this.customApiPrefix = saved.customApiPrefix;
     }
@@ -85,23 +87,24 @@ class DanmakuState {
             densityLimit: this.densityLimit,
             useAntiOverlap: this.useAntiOverlap,
             useXmlDanmaku: this.useXmlDanmaku,
+            curEpOffset: this.curEpOffset,
             customCorsProxy: this.customCorsProxy,
             customApiPrefix: this.customApiPrefix,
         };
     }
 
     /**
-     * 获取有效的 API 前缀
+     * 获取有效的 CORS 代理前缀
      */
-    get effectiveApiPrefix(): string {
-        return this.customApiPrefix || 'https://api.dandanplay.net';
+    get effectiveCorsProxy(): string {
+        return this.customCorsProxy.length > 7 ? this.customCorsProxy : 'https://ddplay-api.930524.xyz/cors/';
     }
 
     /**
-     * 获取有效的 CORS 代理
+     * 获取完整的 API 前缀（包含 CORS 代理）
      */
-    get effectiveCorsProxy(): string {
-        return this.customCorsProxy || 'https://ddplay-api.930524.xyz/cors/';
+    get effectiveApiPrefix(): string {
+        return this.customApiPrefix.length > 7 ? this.customApiPrefix : this.effectiveCorsProxy + 'https://api.dandanplay.net';
     }
 }
 

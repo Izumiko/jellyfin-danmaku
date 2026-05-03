@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG: DanmakuConfig = {
     densityLimit: DensityLimit.Unlimited,
     useAntiOverlap: false,
     useXmlDanmaku: false,
+    curEpOffset: 0,
     customCorsProxy: '',
     customApiPrefix: '',
 };
@@ -85,6 +86,7 @@ export const DanmakuConfigSchema = v.object({
     densityLimit: v.pipe(v.number(), v.minValue(0), v.maxValue(3)),
     useAntiOverlap: v.boolean(),
     useXmlDanmaku: v.boolean(),
+    curEpOffset: v.number(),
     customCorsProxy: v.string(),
     customApiPrefix: v.string(),
 });

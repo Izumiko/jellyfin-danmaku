@@ -1,37 +1,135 @@
 <script lang="ts">
+    import { onMount, onDestroy } from 'svelte';
     import { logger } from '../../core/logger';
+    import { danmakuState } from '../../core/state.svelte';
+    import type { LogEntry, LogLevel } from '../../types/index';
 
-    let { logs = [] } = $props<{ logs: Array<{ timestamp: number; message: string }> }>();
+    let entries = $state<LogEntry[]>([]);
+    let intervalId: number | undefined;
+
+    const levelLabels: Record<LogLevel, string> = {
+        0: 'DEBUG',
+        1: 'INFO',
+        2: 'WARN',
+        3: 'ERROR',
+    };
+
+    const levelColors: Record<LogLevel, string> = {
+        0: '#888',
+        1: '#0f0',
+        2: '#ff0',
+        3: '#f44',
+    };
+
+    function refresh() {
+        entries = logger.getRecent(50);
+    }
+
+    onMount(() => {
+        refresh();
+        intervalId = window.setInterval(refresh, 500);
+    });
+
+    onDestroy(() => {
+        if (intervalId !== undefined) {
+            clearInterval(intervalId);
+        }
+    });
 </script>
 
-<div class="debug-overlay">
-    {#each logs.slice(-10) as log (log.timestamp)}
-        <div class="log-entry">
-            {new Date(log.timestamp).toLocaleTimeString()}: {log.message}
+{#if danmakuState.logSwitch}
+    <div class="debug-overlay">
+        <div class="debug-header">
+            <span>调试日志</span>
+            <button class="clear-btn" onclick={() => { logger.clear(); refresh(); }}>清空</button>
         </div>
-    {/each}
-</div>
+        <div class="debug-content">
+            {#each entries as entry}
+                <div class="debug-entry">
+                    <span class="debug-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                    <span class="debug-level" style="color: {levelColors[entry.level]}">
+                        {levelLabels[entry.level]}
+                    </span>
+                    <span class="debug-module">[{entry.module}]</span>
+                    <span class="debug-message">{entry.message}</span>
+                </div>
+            {/each}
+        </div>
+    </div>
+{/if}
 
 <style>
     .debug-overlay {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: #0f0;
+        background: rgba(28, 28, 28, 0.9);
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        max-height: 300px;
+        width: 350px;
+        display: flex;
+        flex-direction: column;
         font-family: monospace;
         font-size: 12px;
-        padding: 8px;
-        border-radius: 4px;
-        max-width: 400px;
-        pointer-events: none;
-        z-index: 9999;
+        backdrop-filter: blur(4px);
     }
 
-    .log-entry {
-        margin: 2px 0;
+    .debug-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 8px;
+    }
+
+    .clear-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    .clear-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .debug-content {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .debug-entry {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+        line-height: 1.4;
+    }
+
+    .debug-time {
+        color: #888;
+        font-size: 11px;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    }
+
+    .debug-level {
+        font-size: 10px;
+        font-weight: bold;
+        white-space: nowrap;
+        min-width: 40px;
+    }
+
+    .debug-module {
+        color: #aaa;
+        white-space: nowrap;
+    }
+
+    .debug-message {
+        color: #fff;
+        word-break: break-word;
     }
 </style>

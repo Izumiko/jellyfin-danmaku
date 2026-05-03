@@ -70,6 +70,7 @@ export interface DanmakuConfig {
     densityLimit: DensityLimit;
     useAntiOverlap: boolean;
     useXmlDanmaku: boolean;
+    curEpOffset: number;
     customCorsProxy: string;
     customApiPrefix: string;
 }
