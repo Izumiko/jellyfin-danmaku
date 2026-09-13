@@ -122,6 +122,7 @@ export interface JellyfinItem {
     Id: string;
     Name: string;
     SeriesName?: string;
+    SeriesId?: string;
     SeasonId?: string;
     IndexNumber?: number; // 集数
     ParentIndexNumber?: number; // 季数
@@ -149,6 +150,14 @@ export interface AnimeInfo {
 export interface EpisodeItem {
     episodeId: number;
     episodeTitle: string;
+    episodeNumber?: number;
+}
+
+/** /api/v2/bangumi/{animeId} 响应 */
+export interface BangumiResponse {
+    bangumi: AnimeInfo;
+    errorCode: number;
+    errorMessage: string;
 }
 
 /** 关联弹幕源 */

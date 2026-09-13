@@ -165,6 +165,7 @@ export class DanmakuRuntime {
             if (this.destroyed || signal.aborted) return;
             if (!item) {
                 logger.warn('runtime', 'No current item');
+                this.clearPlayback();
                 return;
             }
 
@@ -178,6 +179,7 @@ export class DanmakuRuntime {
             if (this.destroyed || signal.aborted) return;
             if (!episode) {
                 logger.warn('runtime', 'No episode matched');
+                this.clearPlayback();
                 return;
             }
             showMatchTitle(episode);
@@ -244,6 +246,14 @@ export class DanmakuRuntime {
     private logout(): void {
         this.hooks.auth.logout();
         this.syncAuthState();
+    }
+
+    private clearPlayback(): void {
+        hideMatchTitle();
+        this.hooks.engine.destroy();
+        this.lastEpisodeId = null;
+        this.rawComments = [];
+        danmakuState.episodeInfo = null;
     }
 
     private syncAuthState(): void {

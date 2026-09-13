@@ -245,6 +245,17 @@ describe('DanmakuRuntime', () => {
         expect(hooks.engine.init).not.toHaveBeenCalled();
     });
 
+    it('clears previous match when auto match fails', async () => {
+        await runtime.start();
+        vi.mocked(hooks.matcher.match).mockResolvedValue(null);
+        vi.mocked(hooks.engine.destroy).mockClear();
+
+        await runtime.load('refresh');
+
+        expect(hooks.engine.destroy).toHaveBeenCalled();
+        expect(document.getElementById('danmakuInfoTitle')).toBeNull();
+    });
+
     it('shows match title after load and removes it on destroy', async () => {
         await runtime.start();
         const el = document.getElementById('danmakuInfoTitle');

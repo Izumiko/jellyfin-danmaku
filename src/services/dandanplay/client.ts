@@ -1,6 +1,6 @@
 import { get, post } from '../http';
 import { logger } from '../../core/logger';
-import type { SearchResponse, DanDanPlayComment, RelatedSource, RawComment, ChConvertMode } from '../../types/index';
+import type { SearchResponse, BangumiResponse, AnimeInfo, DanDanPlayComment, RelatedSource, RawComment, ChConvertMode } from '../../types/index';
 
 /**
  * 搜索剧集
@@ -17,6 +17,30 @@ export async function searchEpisodes(apiPrefix: string, animeName: string, optio
 
     logger.info('dandanplay', `Found ${response.animes?.length || 0} anime results for "${animeName}"`);
     return response;
+}
+
+/**
+ * 通过 animeId 获取动画剧集列表
+ * 避免用完整标题搜索时 DanDanPlay 返回空结果
+ */
+export async function getAnimeById(apiPrefix: string, animeId: number, options?: { signal?: AbortSignal }): Promise<AnimeInfo | null> {
+    const url = `${apiPrefix}/api/v2/bangumi/${animeId}`;
+    logger.debug('dandanplay', `Fetching anime by id: ${animeId}`);
+
+    const response = await get<BangumiResponse>(url, {
+        timeout: 10000,
+        retries: 2,
+        signal: options?.signal,
+    });
+
+    const anime = response.bangumi;
+    if (!anime?.episodes?.length) {
+        logger.warn('dandanplay', `No episodes for anime ${animeId}`);
+        return null;
+    }
+
+    logger.info('dandanplay', `Found ${anime.episodes.length} episodes for anime ${animeId}`);
+    return anime;
 }
 
 /**

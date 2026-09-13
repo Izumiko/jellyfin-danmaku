@@ -138,6 +138,25 @@ describe('Storage', () => {
         });
     });
 
+    describe('season anime', () => {
+        it('stores and retrieves season anime mapping', async () => {
+            await Storage.setSeasonAnime('season-1', { animeId: 88, animeTitle: '弹弹正确名' });
+            await expect(Storage.getSeasonAnime('season-1')).resolves.toEqual({
+                animeId: 88,
+                animeTitle: '弹弹正确名',
+            });
+        });
+
+        it('stores and retrieves the episode index offset', async () => {
+            await Storage.setSeasonAnime('season-3', { animeId: 88, animeTitle: '弹弹正确名', episodeIndexOffset: 12 });
+            await expect(Storage.getSeasonAnime('season-3')).resolves.toEqual({
+                animeId: 88,
+                animeTitle: '弹弹正确名',
+                episodeIndexOffset: 12,
+            });
+        });
+    });
+
     describe('DanDanPlay status', () => {
         it('migrates legacy ddplayStatus key', () => {
             localStorage.setItem(

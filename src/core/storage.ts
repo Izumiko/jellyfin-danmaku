@@ -1,7 +1,9 @@
 import * as v from 'valibot';
 import { DanmakuConfigSchema, DEFAULT_CONFIG, mergeConfig } from './config';
-import { EPISODE_CACHE_STORE, EPISODE_OFFSET_STORE, idbClear, idbDelete, idbGet, idbGetAll, idbPut } from './idb';
+import { EPISODE_CACHE_STORE, EPISODE_OFFSET_STORE, SEASON_ANIME_STORE, idbClear, idbDelete, idbGet, idbGetAll, idbPut } from './idb';
 import type { DanmakuConfig, CachedEpisode, DanDanPlayStatus, JellyfinItem } from '../types/index';
+
+export type SeasonAnime = { animeId: number; animeTitle: string; episodeIndexOffset?: number };
 
 const STORAGE_PREFIX = 'jellyfin_danmaku_';
 const EPISODE_KEY_PREFIX = `${STORAGE_PREFIX}episode_`;
@@ -11,9 +13,9 @@ function episodeCacheId(seasonId: string, episodeIndex: number): string {
     return `${seasonId}:${episodeIndex}`;
 }
 
-export function episodeScope(item: Pick<JellyfinItem, 'Id' | 'SeasonId' | 'IndexNumber'>): { seasonId: string; episodeIndex: number } {
+export function episodeScope(item: Pick<JellyfinItem, 'Id' | 'SeasonId' | 'SeriesId' | 'SeriesName' | 'IndexNumber'>): { seasonId: string; episodeIndex: number } {
     const episodeIndex = item.IndexNumber && item.IndexNumber > 0 ? Math.floor(item.IndexNumber) : 1;
-    return { seasonId: item.SeasonId || item.Id, episodeIndex };
+    return { seasonId: item.SeasonId || item.SeriesId || item.SeriesName || item.Id, episodeIndex };
 }
 
 function toCachedEpisode(record: CachedEpisode & { id?: string }): CachedEpisode {
@@ -141,6 +143,27 @@ export class Storage {
         }
     }
 
+    static async getSeasonAnime(seasonId: string): Promise<SeasonAnime | null> {
+        try {
+            const record = await idbGet<SeasonAnime & { id: string }>(SEASON_ANIME_STORE, seasonId);
+            if (!record || typeof record.animeId !== 'number' || !record.animeTitle) return null;
+            const result: SeasonAnime = { animeId: record.animeId, animeTitle: record.animeTitle };
+            if (typeof record.episodeIndexOffset === 'number') result.episodeIndexOffset = record.episodeIndexOffset;
+            return result;
+        } catch (error) {
+            console.error('[Storage] Failed to get season anime:', error);
+            return null;
+        }
+    }
+
+    static async setSeasonAnime(seasonId: string, data: SeasonAnime): Promise<void> {
+        try {
+            await idbPut(SEASON_ANIME_STORE, { id: seasonId, ...data });
+        } catch (error) {
+            console.error('[Storage] Failed to set season anime:', error);
+        }
+    }
+
     static async setEpisodeOffset(seasonId: string, episodeIndex: number, offset: number): Promise<void> {
         try {
             await idbPut(EPISODE_OFFSET_STORE, { id: episodeCacheId(seasonId, episodeIndex), offset });
@@ -231,6 +254,7 @@ export class Storage {
         try {
             await idbClear(EPISODE_CACHE_STORE);
             await idbClear(EPISODE_OFFSET_STORE);
+            await idbClear(SEASON_ANIME_STORE);
         } catch (error) {
             console.warn('[Storage] Failed to clear episode cache:', error);
         }
