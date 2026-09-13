@@ -8,6 +8,7 @@ export default defineConfig({
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
+        conditions: process.env.VITEST ? ['browser'] : undefined,
     },
     test: {
         environment: 'jsdom',
