@@ -4,6 +4,7 @@
     import { danmakuState } from '../../core/state.svelte';
     import { logger } from '../../core/logger';
     import { eventBus } from '../../core/event-bus';
+    import { showInputDialog } from '../dialogs';
 
     let {
         open = $bindable(false),
@@ -16,6 +17,18 @@
     }>();
 
     let activeTab = $state('control');
+    let account = $state('');
+    let password = $state('');
+
+    function stopHotkeys(e: KeyboardEvent) {
+        e.stopPropagation();
+    }
+
+    async function handleAddSource() {
+        const url = await showInputDialog('增加弹幕源', '弹幕源 URL', '');
+        if (!url) return;
+        eventBus.emit('danmaku:add-source', { url });
+    }
 
     function handleBackdropClick() {
         onCancel();
@@ -97,16 +110,37 @@
                     </div>
 
                     <div class="setting-item">
+                        <button class="action-btn" type="button" onclick={handleAddSource}>增加弹幕源</button>
+                    </div>
+
+                    <div class="setting-item">
+                        {#if danmakuState.ddplayLoggedIn}
+                            <span>已登录：{danmakuState.ddplayUserName}</span>
+                            <button class="action-btn" type="button" onclick={() => eventBus.emit('auth:logout', undefined)}>登出</button>
+                        {:else}
+                            <label>
+                                账号:
+                                <input class="setting-input" bind:value={account} onkeydown={stopHotkeys} />
+                            </label>
+                            <label>
+                                密码:
+                                <input class="setting-input" type="password" bind:value={password} onkeydown={stopHotkeys} />
+                            </label>
+                            <button class="action-btn" type="button" onclick={() => eventBus.emit('auth:login', { account, password })}>登录</button>
+                        {/if}
+                    </div>
+
+                    <div class="setting-item">
                         <label>
                             CORS 代理:
-                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customCorsProxy} />
+                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customCorsProxy} onkeydown={stopHotkeys} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             API 地址:
-                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customApiPrefix} />
+                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customApiPrefix} onkeydown={stopHotkeys} />
                         </label>
                     </div>
                 </div>
