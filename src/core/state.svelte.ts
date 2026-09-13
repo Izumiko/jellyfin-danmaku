@@ -32,6 +32,8 @@ class DanmakuState {
     loading = $state(false);
     isNewJellyfin = $state(false);
     itemId = $state('');
+    ddplayLoggedIn = $state(false);
+    ddplayUserName = $state('');
 
     constructor() {
         this.hydrate();

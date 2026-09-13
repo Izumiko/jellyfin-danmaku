@@ -46,6 +46,14 @@ describe('EventBus', () => {
         unsub2();
     });
 
+    it('emits danmaku:add-source and auth events', () => {
+        const sources: string[] = [];
+        const unsub = eventBus.on('danmaku:add-source', (data) => sources.push(data.url));
+        eventBus.emit('danmaku:add-source', { url: 'https://example.com' });
+        expect(sources).toEqual(['https://example.com']);
+        unsub();
+    });
+
     it('should clear all events', () => {
         let callCount = 0;
 

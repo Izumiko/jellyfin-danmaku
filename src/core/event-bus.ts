@@ -13,6 +13,12 @@ type EventMap = {
     'settings:open': undefined;
     /** 设置已保存 */
     'settings:saved': undefined;
+    /** 增加弹幕源 */
+    'danmaku:add-source': { url: string };
+    /** 弹弹play 登录 */
+    'auth:login': { account: string; password: string };
+    /** 弹弹play 登出 */
+    'auth:logout': undefined;
 };
 
 class TypedEventBus {
