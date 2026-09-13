@@ -1,4 +1,4 @@
-import { post } from '../http';
+import { get, post } from '../http';
 import { Storage } from '../../core/storage';
 import { logger } from '../../core/logger';
 import type { DanDanPlayStatus } from '../../types/index';
@@ -31,15 +31,21 @@ export class DanDanPlayAuth {
             logger.debug('auth', `Logging in as ${account}`);
 
             const response = await post<{
+                errorCode: number;
                 token: string;
-                tokenExpireAt: string;
+                tokenExpireTime: string;
                 userName: string;
             }>(url, {
                 userName: account,
                 password,
             });
 
-            const tokenExpire = new Date(response.tokenExpireAt).getTime();
+            if (response.errorCode !== 0) {
+                logger.error('auth', 'Login failed', response);
+                return false;
+            }
+
+            const tokenExpire = new Date(response.tokenExpireTime).getTime();
 
             this.status = {
                 isLogin: true,
@@ -75,20 +81,16 @@ export class DanDanPlayAuth {
             const url = `${this.apiPrefix}/api/v2/login/renew`;
             logger.debug('auth', 'Refreshing token');
 
-            const response = await post<{
+            const response = await get<{
                 token: string;
-                tokenExpireAt: string;
-            }>(
-                url,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${this.status.token}`,
-                    },
+                tokenExpireTime: string;
+            }>(url, {
+                headers: {
+                    Authorization: `Bearer ${this.status.token}`,
                 },
-            );
+            });
 
-            const tokenExpire = new Date(response.tokenExpireAt).getTime();
+            const tokenExpire = new Date(response.tokenExpireTime).getTime();
 
             this.status.token = response.token;
             this.status.tokenExpire = tokenExpire;

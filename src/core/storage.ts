@@ -93,9 +93,36 @@ export class Storage {
      */
     static loadDanDanPlayStatus(): DanDanPlayStatus | null {
         try {
-            const raw = localStorage.getItem(`${STORAGE_PREFIX}ddplay_status`);
+            const newKey = `${STORAGE_PREFIX}ddplay_status`;
+            let raw = localStorage.getItem(newKey);
+            const fromLegacy = !raw;
+            if (!raw) {
+                raw = localStorage.getItem('ddplayStatus');
+            }
             if (!raw) return null;
-            return JSON.parse(raw) as DanDanPlayStatus;
+
+            const parsed = JSON.parse(raw) as {
+                isLogin: boolean;
+                token: string;
+                tokenExpire: number | string;
+                userName?: string;
+            };
+            const tokenExpire =
+                typeof parsed.tokenExpire === 'number'
+                    ? parsed.tokenExpire
+                    : new Date(parsed.tokenExpire).getTime();
+            const status: DanDanPlayStatus = {
+                isLogin: parsed.isLogin,
+                token: parsed.token,
+                tokenExpire,
+                userName: parsed.userName,
+            };
+
+            if (fromLegacy) {
+                Storage.saveDanDanPlayStatus(status);
+            }
+
+            return status;
         } catch (error) {
             console.error('[Storage] Failed to load DanDanPlay status:', error);
             return null;

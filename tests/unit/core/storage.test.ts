@@ -97,4 +97,24 @@ describe('Storage', () => {
             expect(retrieved).toBeNull();
         });
     });
+
+    describe('DanDanPlay status', () => {
+        it('migrates legacy ddplayStatus key', () => {
+            localStorage.setItem(
+                'ddplayStatus',
+                JSON.stringify({
+                    isLogin: true,
+                    token: 'tok',
+                    tokenExpire: '2099-01-01T00:00:00Z',
+                    userName: 'alice',
+                }),
+            );
+            const status = Storage.loadDanDanPlayStatus();
+            expect(status?.isLogin).toBe(true);
+            expect(status?.token).toBe('tok');
+            expect(status?.userName).toBe('alice');
+            expect(status?.tokenExpire).toBeGreaterThan(Date.now());
+            expect(localStorage.getItem('jellyfin_danmaku_ddplay_status')).toBeTruthy();
+        });
+    });
 });
