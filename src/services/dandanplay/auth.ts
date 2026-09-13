@@ -22,6 +22,10 @@ export class DanDanPlayAuth {
         return this.status.token;
     }
 
+    get userName(): string {
+        return this.status.userName ?? '';
+    }
+
     /**
      * 登录
      */
