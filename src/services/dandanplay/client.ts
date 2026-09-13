@@ -102,8 +102,10 @@ export async function postComment(
     await post(
         url,
         {
-            ...comment,
-            episodeId,
+            time: comment.time,
+            mode: comment.mode,
+            color: comment.color,
+            comment: comment.text,
         },
         {
             headers: {
@@ -128,7 +130,7 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
 
     await post(
         apiUrl,
-        { url },
+        { episodeId, url, shift: 0 },
         {
             headers: {
                 Authorization: `Bearer ${token}`,
