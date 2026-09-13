@@ -20,12 +20,17 @@ import { searchEpisodes } from '@/services/dandanplay/client';
 
 describe('EpisodeMatcher', () => {
     let matcher: EpisodeMatcher;
+    const dialogs = {
+        showInputDialog: vi.fn(async () => null as string | null),
+        showSelectDialog: vi.fn(async () => null as number | null),
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
         matcher = new EpisodeMatcher({
             apiPrefix: 'https://api.example.com',
             chConvert: 0,
+            ...dialogs,
         });
     });
 
@@ -136,6 +141,63 @@ describe('EpisodeMatcher', () => {
                     animeTitle: 'Anime 1',
                 }),
             );
+        });
+
+        it('skips cache in manual mode and uses dialogs', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockReturnValue({
+                episodeId: 999,
+                animeTitle: 'Cached',
+                episodeTitle: 'Cached Ep',
+                timestamp: Date.now(),
+            });
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(2));
+            dialogs.showInputDialog.mockResolvedValue('Query Name');
+            dialogs.showSelectDialog
+                .mockResolvedValueOnce(1) // anime
+                .mockResolvedValueOnce(2); // episode index
+
+            const result = await matcher.match(createJellyfinItem(), 'manual');
+            expect(Storage.getEpisodeCache).not.toHaveBeenCalled();
+            expect(searchEpisodes).toHaveBeenCalledWith('https://api.example.com', 'Query Name');
+            expect(result?.animeTitle).toBe('Anime 2');
+            expect(result?.episodeId).toBe(3);
+        });
+
+        it('returns null when input dialog cancelled', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            dialogs.showInputDialog.mockResolvedValue(null);
+            const result = await matcher.match(createJellyfinItem(), 'manual');
+            expect(result).toBeNull();
+            expect(searchEpisodes).not.toHaveBeenCalled();
+        });
+
+        it('appends season number when ParentIndexNumber > 1', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));
+            await matcher.match(createJellyfinItem({ ParentIndexNumber: 2 }));
+            expect(searchEpisodes).toHaveBeenCalledWith('https://api.example.com', 'Test Anime Series2');
+        });
+
+        it('uses 第N话 offset for auto episode index', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(searchEpisodes).mockResolvedValue({
+                hasMore: false,
+                animes: [
+                    {
+                        animeId: 1,
+                        animeTitle: 'Anime 1',
+                        type: 'tvseries',
+                        episodes: [
+                            { episodeId: 10, episodeTitle: '第3话 开始' },
+                            { episodeId: 11, episodeTitle: '第4话 继续' },
+                        ],
+                    },
+                ],
+                errorCode: 0,
+                errorMessage: '',
+            });
+            const result = await matcher.match(createJellyfinItem({ IndexNumber: 4 }));
+            expect(result?.episodeId).toBe(11);
         });
     });
 });

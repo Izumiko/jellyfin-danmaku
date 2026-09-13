@@ -6,7 +6,8 @@ import type { EpisodeInfo, JellyfinItem, ChConvertMode } from '../types/index';
 export interface EpisodeMatcherDeps {
     apiPrefix: string;
     chConvert: ChConvertMode;
-    showSelectDialog?: (title: string, options: string[], defaultIndex?: number) => Promise<number | null>;
+    showInputDialog: (title: string, placeholder: string, defaultValue?: string) => Promise<string | null>;
+    showSelectDialog: (title: string, options: string[], defaultIndex?: number) => Promise<number | null>;
 }
 
 /**
@@ -23,8 +24,7 @@ export class EpisodeMatcher {
      */
     async match(item: JellyfinItem, mode: 'auto' | 'manual' = 'auto'): Promise<EpisodeInfo | null> {
         try {
-            // 1. 检查缓存
-            if (item.SeasonId && item.IndexNumber !== undefined) {
+            if (mode === 'auto' && item.SeasonId && item.IndexNumber !== undefined) {
                 const cached = Storage.getEpisodeCache(item.SeasonId, item.IndexNumber);
                 if (cached) {
                     logger.info('matcher', `Using cached episode: ${cached.animeTitle} - ${cached.episodeTitle}`);
@@ -36,13 +36,23 @@ export class EpisodeMatcher {
                 }
             }
 
-            // 2. 搜索动画
-            const animeName = item.SeriesName || item.Name;
+            let animeName = item.SeriesName || item.Name;
+            if ((item.ParentIndexNumber ?? 1) > 1) {
+                animeName += String(item.ParentIndexNumber);
+            }
+
+            if (mode === 'manual') {
+                const input = await this.deps.showInputDialog('确认动画名', '请输入动画名称', animeName);
+                if (input === null) {
+                    return null;
+                }
+                animeName = input;
+            }
+
             logger.info('matcher', `Searching for: ${animeName}`);
 
             let searchResult = await searchEpisodes(this.deps.apiPrefix, animeName);
 
-            // 如果没有结果，尝试使用 OriginalTitle
             if ((!searchResult.animes || searchResult.animes.length === 0) && item.OriginalTitle) {
                 logger.info('matcher', `Retrying with OriginalTitle: ${item.OriginalTitle}`);
                 searchResult = await searchEpisodes(this.deps.apiPrefix, item.OriginalTitle);
@@ -53,30 +63,47 @@ export class EpisodeMatcher {
                 return null;
             }
 
-            // 3. 选择动画
             let selectedAnime = searchResult.animes[0];
+            let selectedEpisodeIndex: number;
 
-            if (mode === 'manual' && this.deps.showSelectDialog && searchResult.animes.length > 1) {
-                const options = searchResult.animes.map((a) => `${a.animeTitle} (${a.type})`);
-                const selectedIndex = await this.deps.showSelectDialog('选择动画', options, 0);
-
-                if (selectedIndex === null || selectedIndex < 0) {
+            if (mode === 'manual') {
+                const animeIndex = await this.deps.showSelectDialog(
+                    '选择节目',
+                    searchResult.animes.map((a) => `${a.animeTitle} 类型:${a.type}`),
+                    0,
+                );
+                if (animeIndex === null) {
                     return null;
                 }
+                selectedAnime = searchResult.animes[animeIndex];
 
-                selectedAnime = searchResult.animes[selectedIndex];
+                const episodeIndex = await this.deps.showSelectDialog(
+                    '选择剧集',
+                    selectedAnime.episodes.map((e) => e.episodeTitle),
+                    (item.IndexNumber || 1) - 1,
+                );
+                if (episodeIndex === null) {
+                    return null;
+                }
+                selectedEpisodeIndex = episodeIndex;
+            } else {
+                const firstTitle = selectedAnime.episodes[0]?.episodeTitle ?? '';
+                const huaMatch = firstTitle.match(/第(\d+)话/);
+                const jiMatch = firstTitle.match(/第(\d+)集/);
+                let initialEp = 1;
+                if (huaMatch) {
+                    initialEp = parseInt(huaMatch[1], 10);
+                } else if (jiMatch) {
+                    initialEp = parseInt(jiMatch[1], 10);
+                }
+                const numeric = item.IndexNumber || 1;
+                const episode = numeric < initialEp ? numeric : numeric - initialEp + 1;
+                selectedEpisodeIndex = episode - 1;
             }
 
-            // 4. 匹配剧集
-            const episodeIndex = item.IndexNumber || 1;
-            const episode =
-                selectedAnime.episodes.find((ep) => {
-                    const match = ep.episodeTitle.match(/第(\d+)集/);
-                    return match && parseInt(match[1]) === episodeIndex;
-                }) || selectedAnime.episodes[episodeIndex - 1];
-
+            const episode = selectedAnime.episodes[selectedEpisodeIndex];
             if (!episode) {
-                logger.warn('matcher', `Episode ${episodeIndex} not found`);
+                logger.warn('matcher', `Episode ${item.IndexNumber || 1} not found`);
                 return null;
             }
 
@@ -86,7 +113,6 @@ export class EpisodeMatcher {
                 episodeTitle: episode.episodeTitle,
             };
 
-            // 5. 缓存结果
             if (item.SeasonId && item.IndexNumber !== undefined) {
                 Storage.setEpisodeCache(item.SeasonId, item.IndexNumber, {
                     ...result,
