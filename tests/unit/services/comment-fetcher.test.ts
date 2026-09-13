@@ -131,8 +131,15 @@ describe('CommentFetcher', () => {
             );
         });
 
-        it('should return empty array on total failure', async () => {
+        it('rethrows on total failure', async () => {
             vi.mocked(getComments).mockRejectedValue(new Error('Network error'));
+
+            await expect(fetcher.fetch(123, 'item-456')).rejects.toThrow('Network error');
+        });
+
+        it('returns empty array when online fetch succeeds with no comments', async () => {
+            vi.mocked(getComments).mockResolvedValue([]);
+            vi.mocked(getRelatedSources).mockResolvedValue([]);
 
             const result = await fetcher.fetch(123, 'item-456');
 

@@ -42,7 +42,7 @@ export class CommentFetcher {
             return await this.fetchOnline(episodeId, options);
         } catch (error) {
             logger.error('fetcher', 'Fetch failed', error);
-            return [];
+            throw error;
         }
     }
 

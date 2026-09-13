@@ -77,6 +77,20 @@ describe('DanmakuRuntime', () => {
         expect(hooks.fetcher.fetch).not.toHaveBeenCalled();
     });
 
+    it('retries fetch on refresh after first fetch rejects', async () => {
+        vi.mocked(hooks.fetcher.fetch).mockRejectedValueOnce(new Error('Network error'));
+
+        await runtime.start();
+        expect(hooks.engine.init).not.toHaveBeenCalled();
+        expect(hooks.fetcher.fetch).toHaveBeenCalledTimes(1);
+
+        vi.mocked(hooks.fetcher.fetch).mockResolvedValue(comments);
+        await runtime.load('refresh');
+
+        expect(hooks.fetcher.fetch).toHaveBeenCalledTimes(2);
+        expect(hooks.engine.init).toHaveBeenCalled();
+    });
+
     it('load search uses manual and fetches even if same id', async () => {
         await runtime.start();
         vi.mocked(hooks.fetcher.fetch).mockClear();
