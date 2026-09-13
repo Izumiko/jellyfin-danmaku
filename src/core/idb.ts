@@ -1,4 +1,5 @@
 export const EPISODE_CACHE_STORE = 'episode-cache';
+export const EPISODE_OFFSET_STORE = 'episode-offset';
 
 const DB_NAME = 'jellyfin-danmaku';
 const DB_VERSION = 1;
@@ -25,6 +26,9 @@ export function openDanmakuDb(): Promise<IDBDatabase> {
                 if (!db.objectStoreNames.contains(EPISODE_CACHE_STORE)) {
                     const store = db.createObjectStore(EPISODE_CACHE_STORE, { keyPath: 'id' });
                     store.createIndex('timestamp', 'timestamp');
+                }
+                if (!db.objectStoreNames.contains(EPISODE_OFFSET_STORE)) {
+                    db.createObjectStore(EPISODE_OFFSET_STORE, { keyPath: 'id' });
                 }
             };
             request.onsuccess = () => {

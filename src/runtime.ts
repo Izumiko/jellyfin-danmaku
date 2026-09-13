@@ -2,7 +2,8 @@ import { eventBus } from './core/event-bus';
 import { danmakuState } from './core/state.svelte';
 import { logger } from './core/logger';
 import { SELECTORS } from './core/config';
-import { Storage } from './core/storage';
+import { Storage, episodeScope } from './core/storage';
+import { hideMatchTitle, showMatchTitle } from './ui/match-title';
 import { EpisodeMatcher } from './services/episode-matcher';
 import { CommentFetcher } from './services/comment-fetcher';
 import { DanDanPlayAuth } from './services/dandanplay/auth';
@@ -134,6 +135,7 @@ export class DanmakuRuntime {
         this.controller?.abort();
         this.unsubscribers.forEach((unsub) => unsub());
         this.unsubscribers = [];
+        hideMatchTitle();
         this.hooks.engine.destroy();
     }
 
@@ -161,12 +163,19 @@ export class DanmakuRuntime {
                 return;
             }
 
+            const { seasonId, episodeIndex } = episodeScope(item);
+            if (reason === 'settings-changed') {
+                await Storage.setEpisodeOffset(seasonId, episodeIndex, danmakuState.curEpOffset);
+            }
+            danmakuState.curEpOffset = await Storage.getEpisodeOffset(seasonId, episodeIndex);
+
             const episode = await this.hooks.matcher.match(item, reason === 'search' ? 'manual' : 'auto');
             if (this.destroyed || signal.aborted) return;
             if (!episode) {
                 logger.warn('runtime', 'No episode matched');
                 return;
             }
+            showMatchTitle(episode);
 
             if (episode.episodeId === this.lastEpisodeId && reason !== 'search' && reason !== 'settings-changed') {
                 return;

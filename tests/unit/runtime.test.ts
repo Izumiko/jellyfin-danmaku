@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DanmakuRuntime } from '@/runtime';
 import { eventBus } from '@/core/event-bus';
 import { danmakuState } from '@/core/state.svelte';
+import { Storage } from '@/core/storage';
 import type { DanmakuRuntimeHooks } from '@/runtime';
 import type { RawComment } from '@/types/index';
 
@@ -44,6 +45,10 @@ describe('DanmakuRuntime', () => {
         danmakuState.itemId = '';
         danmakuState.loading = false;
         danmakuState.episodeInfo = null;
+        danmakuState.curEpOffset = 0;
+        const header = document.createElement('div');
+        header.className = 'skinHeader';
+        document.body.appendChild(header);
         ({ hooks } = createHooks());
         runtime = new DanmakuRuntime(hooks);
     });
@@ -51,6 +56,7 @@ describe('DanmakuRuntime', () => {
     afterEach(() => {
         runtime.destroy();
         eventBus.clear();
+        document.body.innerHTML = '';
     });
 
     it('start matches auto then fetches and inits engine', async () => {
@@ -230,5 +236,27 @@ describe('DanmakuRuntime', () => {
         await adding;
 
         expect(hooks.engine.init).not.toHaveBeenCalled();
+    });
+
+    it('shows match title after load and removes it on destroy', async () => {
+        await runtime.start();
+        const el = document.getElementById('danmakuInfoTitle');
+        expect(el?.textContent).toBe('弹幕匹配信息：A - E1');
+        runtime.destroy();
+        expect(document.getElementById('danmakuInfoTitle')).toBeNull();
+    });
+
+    it('applies inherited episode offset before engine init', async () => {
+        await Storage.setEpisodeOffset('s', 1, 2.5);
+        vi.mocked(hooks.getCurrentItem).mockResolvedValue({ ...item, IndexNumber: 3 });
+        await runtime.start();
+        expect(danmakuState.curEpOffset).toBe(2.5);
+    });
+
+    it('persists current offset on settings-changed', async () => {
+        await runtime.start();
+        danmakuState.curEpOffset = 4;
+        await runtime.load('settings-changed');
+        await expect(Storage.getEpisodeOffset('s', 1)).resolves.toBe(4);
     });
 });

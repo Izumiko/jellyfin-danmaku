@@ -114,6 +114,30 @@ describe('Storage', () => {
         });
     });
 
+    describe('episode offset', () => {
+        it('returns 0 when no offset is stored', async () => {
+            await expect(Storage.getEpisodeOffset('season-a', 3)).resolves.toBe(0);
+        });
+
+        it('returns the episode own offset when set', async () => {
+            await Storage.setEpisodeOffset('season-a', 3, 1.5);
+            await expect(Storage.getEpisodeOffset('season-a', 3)).resolves.toBe(1.5);
+        });
+
+        it('inherits previous episode offset when current is unset', async () => {
+            await Storage.setEpisodeOffset('season-a', 1, 2.5);
+            await expect(Storage.getEpisodeOffset('season-a', 3)).resolves.toBe(2.5);
+            await expect(Storage.getEpisodeOffset('season-a', 2)).resolves.toBe(2.5);
+        });
+
+        it('does not inherit after current episode is set', async () => {
+            await Storage.setEpisodeOffset('season-a', 1, 2.5);
+            await Storage.setEpisodeOffset('season-a', 3, 0.5);
+            await expect(Storage.getEpisodeOffset('season-a', 3)).resolves.toBe(0.5);
+            await expect(Storage.getEpisodeOffset('season-a', 2)).resolves.toBe(2.5);
+        });
+    });
+
     describe('DanDanPlay status', () => {
         it('migrates legacy ddplayStatus key', () => {
             localStorage.setItem(

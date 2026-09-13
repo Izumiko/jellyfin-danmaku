@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import { DanmakuConfigSchema, DEFAULT_CONFIG, mergeConfig } from './config';
-import { EPISODE_CACHE_STORE, idbClear, idbDelete, idbGet, idbGetAll, idbPut } from './idb';
-import type { DanmakuConfig, CachedEpisode, DanDanPlayStatus } from '../types/index';
+import { EPISODE_CACHE_STORE, EPISODE_OFFSET_STORE, idbClear, idbDelete, idbGet, idbGetAll, idbPut } from './idb';
+import type { DanmakuConfig, CachedEpisode, DanDanPlayStatus, JellyfinItem } from '../types/index';
 
 const STORAGE_PREFIX = 'jellyfin_danmaku_';
 const EPISODE_KEY_PREFIX = `${STORAGE_PREFIX}episode_`;
@@ -9,6 +9,11 @@ const EPISODE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function episodeCacheId(seasonId: string, episodeIndex: number): string {
     return `${seasonId}:${episodeIndex}`;
+}
+
+export function episodeScope(item: Pick<JellyfinItem, 'Id' | 'SeasonId' | 'IndexNumber'>): { seasonId: string; episodeIndex: number } {
+    const episodeIndex = item.IndexNumber && item.IndexNumber > 0 ? Math.floor(item.IndexNumber) : 1;
+    return { seasonId: item.SeasonId || item.Id, episodeIndex };
 }
 
 function toCachedEpisode(record: CachedEpisode & { id?: string }): CachedEpisode {
@@ -134,6 +139,30 @@ export class Storage {
         }
     }
 
+    static async setEpisodeOffset(seasonId: string, episodeIndex: number, offset: number): Promise<void> {
+        try {
+            await idbPut(EPISODE_OFFSET_STORE, { id: episodeCacheId(seasonId, episodeIndex), offset });
+        } catch (error) {
+            console.error('[Storage] Failed to set episode offset:', error);
+        }
+    }
+
+    static async getEpisodeOffset(seasonId: string, episodeIndex: number): Promise<number> {
+        try {
+            const start = Number.isFinite(episodeIndex) && episodeIndex > 0 ? Math.floor(episodeIndex) : 1;
+            for (let index = start; index >= 1; index--) {
+                const record = await idbGet<{ id: string; offset: number }>(EPISODE_OFFSET_STORE, episodeCacheId(seasonId, index));
+                if (record && typeof record.offset === 'number' && Number.isFinite(record.offset)) {
+                    return record.offset;
+                }
+            }
+            return 0;
+        } catch (error) {
+            console.error('[Storage] Failed to get episode offset:', error);
+            return 0;
+        }
+    }
+
     /**
      * 加载 DanDanPlay 登录状态
      */
@@ -202,6 +231,7 @@ export class Storage {
         });
         try {
             await idbClear(EPISODE_CACHE_STORE);
+            await idbClear(EPISODE_OFFSET_STORE);
         } catch (error) {
             console.warn('[Storage] Failed to clear episode cache:', error);
         }
