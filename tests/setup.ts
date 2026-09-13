@@ -1,5 +1,8 @@
 // Vitest 全局 setup
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach } from 'vitest';
+import { resetDanmakuDb } from '../src/core/idb';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -26,4 +29,9 @@ Object.defineProperty(global, 'localStorage', {
 // 每个测试前清空 localStorage
 beforeEach(() => {
     localStorage.clear();
+    resetDanmakuDb();
+    Object.defineProperty(globalThis, 'indexedDB', {
+        value: new IDBFactory(),
+        configurable: true,
+    });
 });
