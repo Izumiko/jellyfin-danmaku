@@ -138,5 +138,32 @@ describe('CommentFetcher', () => {
 
             expect(result).toEqual([]);
         });
+
+        it('applies related source shift to comment times', async () => {
+            vi.mocked(getComments).mockResolvedValue([]);
+            vi.mocked(getRelatedSources).mockResolvedValue([
+                { url: 'https://other.com/a', shift: 5 },
+            ]);
+            vi.mocked(getExtComments).mockResolvedValue([
+                { cid: 1, p: '1,1,16777215,u', m: 'shifted' },
+            ]);
+            const result = await fetcher.fetch(123, 'item-456');
+            expect(result[0]?.time).toBe(6);
+        });
+
+        it('keeps main comments when one ext source fails', async () => {
+            vi.mocked(getComments).mockResolvedValue([
+                { cid: 1, p: '1,1,16777215,u', m: 'main' },
+            ]);
+            vi.mocked(getRelatedSources).mockResolvedValue([
+                { url: 'https://other.com/bad', shift: 0 },
+                { url: 'https://other.com/ok', shift: 0 },
+            ]);
+            vi.mocked(getExtComments)
+                .mockRejectedValueOnce(new Error('fail'))
+                .mockResolvedValueOnce([{ cid: 2, p: '2,1,16777215,u', m: 'ok' }]);
+            const result = await fetcher.fetch(123, 'item-456');
+            expect(result.map((c) => c.text).sort()).toEqual(['main', 'ok']);
+        });
     });
 });

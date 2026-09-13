@@ -82,17 +82,25 @@ export class CommentFetcher {
 
             logger.info('fetcher', `Found ${filteredSources.length} related sources`);
 
-            // 4. 获取外部弹幕
-            for (const source of filteredSources) {
-                try {
-                    const extComments = await getExtComments(this.deps.apiPrefix, source.url, { chConvert: this.deps.chConvert }, options);
-
-                    allComments.push(...extComments.map(convertDanDanPlayComment));
-                    logger.debug('fetcher', `Loaded ${extComments.length} comments from ${source.url}`);
-                } catch (error) {
-                    logger.warn('fetcher', `Failed to load from ${source.url}`, error);
-                }
-            }
+            // 4. 并行获取外部弹幕
+            const extResults = await Promise.all(
+                filteredSources.map(async (source) => {
+                    try {
+                        const extComments = await getExtComments(this.deps.apiPrefix, source.url, { chConvert: this.deps.chConvert }, options);
+                        const converted = extComments.map((c) => {
+                            const comment = convertDanDanPlayComment(c);
+                            comment.time += source.shift || 0;
+                            return comment;
+                        });
+                        logger.debug('fetcher', `Loaded ${extComments.length} comments from ${source.url}`);
+                        return converted;
+                    } catch (error) {
+                        logger.warn('fetcher', `Failed to load from ${source.url}`, error);
+                        return [];
+                    }
+                }),
+            );
+            allComments.push(...extResults.flat());
         } catch (error) {
             logger.warn('fetcher', 'Failed to load related sources', error);
         }
