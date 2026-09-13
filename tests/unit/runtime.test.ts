@@ -150,4 +150,41 @@ describe('DanmakuRuntime', () => {
 
         expect(hooks.engine.init).not.toHaveBeenCalled();
     });
+
+    it('load refresh inits engine when media was missing on start', async () => {
+        const video = document.createElement('video');
+        const container = document.createElement('div');
+        vi.mocked(hooks.getMedia).mockReturnValue({ video: null, container: null });
+
+        await runtime.start();
+        expect(hooks.engine.init).not.toHaveBeenCalled();
+
+        vi.mocked(hooks.getMedia).mockReturnValue({ video, container });
+        await runtime.load('refresh');
+
+        expect(hooks.engine.init).toHaveBeenCalled();
+    });
+
+    it('destroy during addSource does not init engine', async () => {
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        vi.mocked(hooks.getExtComments!).mockImplementation(async () => {
+            await gate;
+            return [{ cid: 2, p: '2,1,16777215,u', m: 'ext' }];
+        });
+
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+
+        const adding = runtime.addSource('https://example.com/xml');
+        await vi.waitFor(() => expect(hooks.getExtComments).toHaveBeenCalled());
+
+        runtime.destroy();
+        release();
+        await adding;
+
+        expect(hooks.engine.init).not.toHaveBeenCalled();
+    });
 });

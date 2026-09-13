@@ -168,9 +168,10 @@ export class DanmakuRuntime {
             if (this.destroyed || signal.aborted) return;
 
             this.rawComments = fetched;
-            this.lastEpisodeId = episode.episodeId;
             danmakuState.episodeInfo = episode;
-            this.initEngine(fetched);
+            if (this.initEngine(fetched)) {
+                this.lastEpisodeId = episode.episodeId;
+            }
             eventBus.emit('danmaku:loaded', { count: fetched.length, source: 'online' });
         } catch (error) {
             if (this.isCancelled(error, signal)) return;
@@ -184,17 +185,23 @@ export class DanmakuRuntime {
     }
 
     async addSource(url: string): Promise<void> {
+        if (this.destroyed) return;
         if (this.lastEpisodeId == null) {
             logger.warn('runtime', 'No episode loaded');
             return;
         }
 
-        const ext = await this.hooks.getExtComments(danmakuState.effectiveApiPrefix, url, { chConvert: danmakuState.chConvert });
-        this.rawComments = [...this.rawComments, ...ext.map(convertDanDanPlayComment)];
-        this.initEngine(this.rawComments);
+        try {
+            const ext = await this.hooks.getExtComments(danmakuState.effectiveApiPrefix, url, { chConvert: danmakuState.chConvert });
+            if (this.destroyed) return;
+            this.rawComments = [...this.rawComments, ...ext.map(convertDanDanPlayComment)];
+            this.initEngine(this.rawComments);
 
-        if (this.hooks.auth.isLoggedIn) {
-            await this.hooks.postRelatedSource(danmakuState.effectiveApiPrefix, this.lastEpisodeId, url, this.hooks.auth.token);
+            if (this.hooks.auth.isLoggedIn) {
+                await this.hooks.postRelatedSource(danmakuState.effectiveApiPrefix, this.lastEpisodeId, url, this.hooks.auth.token);
+            }
+        } catch (error) {
+            logger.error('runtime', 'Failed to add source', error);
         }
     }
 
@@ -213,9 +220,9 @@ export class DanmakuRuntime {
         danmakuState.ddplayUserName = this.hooks.auth.userName;
     }
 
-    private initEngine(comments: RawComment[]): void {
+    private initEngine(comments: RawComment[]): boolean {
         const media = this.hooks.getMedia();
-        if (!media.video || !media.container) return;
+        if (!media.video || !media.container) return false;
         this.hooks.engine.init(
             {
                 container: media.container,
@@ -228,6 +235,7 @@ export class DanmakuRuntime {
             },
             comments,
         );
+        return true;
     }
 
     private isCancelled(error: unknown, signal: AbortSignal): boolean {
