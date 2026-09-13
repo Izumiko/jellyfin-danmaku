@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Storage } from '@/core/storage';
 import { DEFAULT_CONFIG } from '@/core/config';
 import type { DanmakuConfig } from '@/types/index';
+import * as idb from '@/core/idb';
 
 describe('Storage', () => {
     beforeEach(() => {
@@ -61,40 +62,55 @@ describe('Storage', () => {
     });
 
     describe('episode cache', () => {
-        it('should store and retrieve episode cache', () => {
-            const cache = {
-                episodeId: 12345,
-                animeTitle: 'Test Anime',
-                episodeTitle: 'Episode 1',
-                timestamp: Date.now(),
-            };
+        const cache = {
+            episodeId: 12345,
+            animeTitle: 'Test Anime',
+            episodeTitle: 'Episode 1',
+            timestamp: Date.now(),
+        };
 
-            Storage.setEpisodeCache('season123', 1, cache);
-            const retrieved = Storage.getEpisodeCache('season123', 1);
+        it('stores and retrieves from IndexedDB not localStorage', async () => {
+            await Storage.setEpisodeCache('season123', 1, cache);
 
-            expect(retrieved).toEqual(cache);
+            expect(localStorage.getItem('jellyfin_danmaku_episode_season123_1')).toBeNull();
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toEqual(cache);
         });
 
-        it('should return null for non-existent cache', () => {
-            const retrieved = Storage.getEpisodeCache('nonexistent', 1);
-            expect(retrieved).toBeNull();
+        it('returns null for missing cache', async () => {
+            await expect(Storage.getEpisodeCache('nonexistent', 1)).resolves.toBeNull();
         });
 
-        it('should expire old cache (30 days)', () => {
-            const oldCache = {
-                episodeId: 12345,
-                animeTitle: 'Test Anime',
-                episodeTitle: 'Episode 1',
-                timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000, // 31 days ago
-            };
+        it('expires cache older than 30 days', async () => {
+            await Storage.setEpisodeCache('season123', 1, {
+                ...cache,
+                timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000,
+            });
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toBeNull();
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toBeNull();
+        });
 
-            localStorage.setItem(
-                'jellyfin_danmaku_episode_season123_1',
-                JSON.stringify(oldCache),
-            );
+        it('migrates jellyfin_danmaku_episode_* keys into IndexedDB', async () => {
+            localStorage.setItem('jellyfin_danmaku_episode_season123_1', JSON.stringify(cache));
+            await Storage.migrateEpisodeCacheFromLocalStorage();
+            expect(localStorage.getItem('jellyfin_danmaku_episode_season123_1')).toBeNull();
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toEqual(cache);
+        });
 
-            const retrieved = Storage.getEpisodeCache('season123', 1);
-            expect(retrieved).toBeNull();
+        it('returns null when IndexedDB get fails', async () => {
+            const spy = vi.spyOn(idb, 'idbGet').mockRejectedValueOnce(new Error('idb down'));
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toBeNull();
+            spy.mockRestore();
+        });
+
+        it('sweepExpiredEpisodeCache removes stale records', async () => {
+            await Storage.setEpisodeCache('season123', 1, {
+                ...cache,
+                timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000,
+            });
+            await Storage.setEpisodeCache('season123', 2, cache);
+            await Storage.sweepExpiredEpisodeCache();
+            await expect(Storage.getEpisodeCache('season123', 1)).resolves.toBeNull();
+            await expect(Storage.getEpisodeCache('season123', 2)).resolves.toEqual(cache);
         });
     });
 

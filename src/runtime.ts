@@ -2,6 +2,7 @@ import { eventBus } from './core/event-bus';
 import { danmakuState } from './core/state.svelte';
 import { logger } from './core/logger';
 import { SELECTORS } from './core/config';
+import { Storage } from './core/storage';
 import { EpisodeMatcher } from './services/episode-matcher';
 import { CommentFetcher } from './services/comment-fetcher';
 import { DanDanPlayAuth } from './services/dandanplay/auth';
@@ -114,6 +115,13 @@ export class DanmakuRuntime {
                 await this.load('refresh');
             }),
         );
+
+        try {
+            await Storage.migrateEpisodeCacheFromLocalStorage();
+            await Storage.sweepExpiredEpisodeCache();
+        } catch (error) {
+            logger.warn('runtime', 'Episode cache migrate/sweep failed', error);
+        }
 
         await this.hooks.auth.refreshIfNeeded();
         this.syncAuthState();

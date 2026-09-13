@@ -68,7 +68,7 @@ describe('EpisodeMatcher', () => {
                 episodeTitle: 'Episode 1',
             };
 
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue({
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue({
                 ...cached,
                 timestamp: Date.now(),
             });
@@ -81,7 +81,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('should search and auto-select first anime', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(2));
 
             const item = createJellyfinItem({ IndexNumber: 1 });
@@ -93,7 +93,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('should retry with OriginalTitle when no results', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes)
                 .mockResolvedValueOnce({
                     hasMore: false,
@@ -112,7 +112,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('should return null when no anime found', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue({
                 hasMore: false,
                 animes: [],
@@ -127,7 +127,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('should cache successful match', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));
 
             const item = createJellyfinItem({ SeasonId: 'season-1', IndexNumber: 1 });
@@ -144,7 +144,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('skips cache in manual mode and uses dialogs', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue({
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue({
                 episodeId: 999,
                 animeTitle: 'Cached',
                 episodeTitle: 'Cached Ep',
@@ -164,7 +164,7 @@ describe('EpisodeMatcher', () => {
         });
 
         it('returns null when input dialog cancelled', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             dialogs.showInputDialog.mockResolvedValue(null);
             const result = await matcher.match(createJellyfinItem(), 'manual');
             expect(result).toBeNull();
@@ -172,14 +172,14 @@ describe('EpisodeMatcher', () => {
         });
 
         it('appends season number when ParentIndexNumber > 1', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));
             await matcher.match(createJellyfinItem({ ParentIndexNumber: 2 }));
             expect(searchEpisodes).toHaveBeenCalledWith('https://api.example.com', 'Test Anime Series2');
         });
 
         it('uses 第N话 offset for auto episode index', async () => {
-            vi.mocked(Storage.getEpisodeCache).mockReturnValue(null);
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue({
                 hasMore: false,
                 animes: [

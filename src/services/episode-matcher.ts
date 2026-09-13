@@ -25,7 +25,7 @@ export class EpisodeMatcher {
     async match(item: JellyfinItem, mode: 'auto' | 'manual' = 'auto'): Promise<EpisodeInfo | null> {
         try {
             if (mode === 'auto' && item.SeasonId && item.IndexNumber !== undefined) {
-                const cached = Storage.getEpisodeCache(item.SeasonId, item.IndexNumber);
+                const cached = await Storage.getEpisodeCache(item.SeasonId, item.IndexNumber);
                 if (cached) {
                     logger.info('matcher', `Using cached episode: ${cached.animeTitle} - ${cached.episodeTitle}`);
                     return {
@@ -114,7 +114,7 @@ export class EpisodeMatcher {
             };
 
             if (item.SeasonId && item.IndexNumber !== undefined) {
-                Storage.setEpisodeCache(item.SeasonId, item.IndexNumber, {
+                await Storage.setEpisodeCache(item.SeasonId, item.IndexNumber, {
                     ...result,
                     timestamp: Date.now(),
                 });
