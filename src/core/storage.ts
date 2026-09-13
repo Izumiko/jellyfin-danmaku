@@ -17,8 +17,12 @@ export function episodeScope(item: Pick<JellyfinItem, 'Id' | 'SeasonId' | 'Index
 }
 
 function toCachedEpisode(record: CachedEpisode & { id?: string }): CachedEpisode {
-    const { id: _id, ...rest } = record;
-    return rest;
+    return {
+        episodeId: record.episodeId,
+        animeTitle: record.animeTitle,
+        episodeTitle: record.episodeTitle,
+        timestamp: record.timestamp,
+    };
 }
 
 export class Storage {
@@ -131,9 +135,7 @@ export class Storage {
         try {
             const records = await idbGetAll<CachedEpisode & { id: string }>(EPISODE_CACHE_STORE);
             const now = Date.now();
-            await Promise.all(
-                records.filter((record) => now - record.timestamp > maxAgeMs).map((record) => idbDelete(EPISODE_CACHE_STORE, record.id)),
-            );
+            await Promise.all(records.filter((record) => now - record.timestamp > maxAgeMs).map((record) => idbDelete(EPISODE_CACHE_STORE, record.id)));
         } catch (error) {
             console.warn('[Storage] Failed to sweep episode cache:', error);
         }
@@ -182,10 +184,7 @@ export class Storage {
                 tokenExpire: number | string;
                 userName?: string;
             };
-            const tokenExpire =
-                typeof parsed.tokenExpire === 'number'
-                    ? parsed.tokenExpire
-                    : new Date(parsed.tokenExpire).getTime();
+            const tokenExpire = typeof parsed.tokenExpire === 'number' ? parsed.tokenExpire : new Date(parsed.tokenExpire).getTime();
             const status: DanDanPlayStatus = {
                 isLogin: parsed.isLogin,
                 token: parsed.token,

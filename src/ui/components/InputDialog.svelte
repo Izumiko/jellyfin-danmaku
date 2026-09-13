@@ -48,14 +48,7 @@
     <div class="dialog-panel">
         <h3>{title}</h3>
         <!-- svelte-ignore a11y_autofocus -->
-        <input
-            bind:this={inputEl}
-            type="text"
-            {placeholder}
-            value={defaultValue}
-            autofocus
-            onkeydown={handleInputKeydown}
-        />
+        <input bind:this={inputEl} type="text" {placeholder} value={defaultValue} autofocus onkeydown={handleInputKeydown} />
         <div class="dialog-actions">
             <button type="button" data-action="confirm" onclick={handleConfirm}>确定</button>
             <button type="button" data-action="cancel" onclick={onCancel}>取消</button>

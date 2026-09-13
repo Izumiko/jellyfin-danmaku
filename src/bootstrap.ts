@@ -278,7 +278,11 @@ function injectSettingsMenuItem(actionSheet: Element) {
 
 function closeSidebar() {
     if (sidebarApp) {
-        try { unmount(sidebarApp); } catch { /* ignore */ }
+        try {
+            unmount(sidebarApp);
+        } catch {
+            /* ignore */
+        }
         sidebarApp = null;
     }
     sidebarContainer?.remove();

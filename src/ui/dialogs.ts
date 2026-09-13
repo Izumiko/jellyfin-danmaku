@@ -2,7 +2,7 @@ import { mount, unmount, type Component } from 'svelte';
 import InputDialog from './components/InputDialog.svelte';
 import SelectDialog from './components/SelectDialog.svelte';
 
-function mountDialog<T>(component: Component<any>, props: Record<string, unknown>): Promise<T | null> {
+function mountDialog<T>(component: Component, props: Record<string, unknown>): Promise<T | null> {
     return new Promise((resolve) => {
         const target = document.createElement('div');
         document.body.appendChild(target);

@@ -31,14 +31,7 @@
         <div class="option-list">
             {#each options as option, index (index)}
                 <!-- svelte-ignore a11y_autofocus -->
-                <button
-                    type="button"
-                    class="option"
-                    class:active={index === defaultIndex}
-                    data-action="option"
-                    autofocus={index === 0}
-                    onclick={() => onConfirm(index)}
-                >
+                <button type="button" class="option" class:active={index === defaultIndex} data-action="option" autofocus={index === 0} onclick={() => onConfirm(index)}>
                     {option}
                 </button>
             {/each}
