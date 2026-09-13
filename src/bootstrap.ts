@@ -5,7 +5,7 @@ import { danmakuState } from './core/state.svelte';
 import { eventBus } from './core/event-bus';
 import { logger } from './core/logger';
 import { DisposableStore } from './utils/disposable';
-import { waitForElement } from './utils/dom';
+import { insertBeforeRef, waitForElement } from './utils/dom';
 import { SELECTORS } from './core/config';
 import { DanmakuRuntime } from './runtime';
 import DanmakuToggle from './ui/components/DanmakuToggle.svelte';
@@ -39,11 +39,16 @@ export async function bootstrap() {
         // 2. 检测 Jellyfin 版本
         const { isNewJellyfin } = detectJellyfinVersion();
         danmakuState.isNewJellyfin = isNewJellyfin;
+        logger.setEnabled(danmakuState.logSwitch);
 
         // 3. 安装 XHR 拦截器
         const cleanupInterceptor = interceptPlaybackInfo((id) => {
+            const previous = danmakuState.itemId;
             danmakuState.itemId = id;
             logger.debug('bootstrap', `Item ID captured: ${id}`);
+            if (pluginActive && previous !== id) {
+                eventBus.emit('danmaku:reload', { reason: previous ? 'refresh' : 'init' });
+            }
         });
         disposables.add(cleanupInterceptor);
 
@@ -124,32 +129,31 @@ async function initPlayer() {
 
     try {
         // 等待控制栏
-        const controlBar = await waitForElement(SELECTORS.pauseButton, { timeout: 10000 });
+        const osdPage = await waitForElement(SELECTORS.mediaContainer, { timeout: 10000 });
         logger.info('lifecycle', 'Control bar detected');
+        const pauseButton = osdPage?.querySelector(SELECTORS.pauseButton);
+        const controlBar = pauseButton?.parentNode;
 
         // 挂载弹幕开关
         toggleContainer = document.createElement('div');
-        toggleContainer.style.display = 'inline-flex';
-        controlBar.parentElement?.insertBefore(toggleContainer, controlBar.nextSibling);
+        toggleContainer.style.display = 'contents';
+        controlBar?.appendChild(toggleContainer);
 
         toggleApp = mount(DanmakuToggle, {
             target: toggleContainer,
         });
 
-        // 挂载调试浮层
-        const videoContainer = document.querySelector(SELECTORS.mediaContainer);
-        if (videoContainer instanceof HTMLElement) {
-            debugContainer = document.createElement('div');
-            debugContainer.style.position = 'absolute';
-            debugContainer.style.zIndex = '99';
-            debugContainer.style.right = '50px';
-            debugContainer.style.top = '50px';
-            videoContainer.appendChild(debugContainer);
+        debugContainer = document.createElement('div');
+        debugContainer.style.position = 'fixed';
+        debugContainer.style.zIndex = '2';
+        debugContainer.style.right = '16px';
+        debugContainer.style.top = '72px';
+        debugContainer.style.pointerEvents = 'none';
+        document.body.appendChild(debugContainer);
 
-            debugApp = mount(DebugOverlay, {
-                target: debugContainer,
-            });
-        }
+        debugApp = mount(DebugOverlay, {
+            target: debugContainer,
+        });
 
         runtime = new DanmakuRuntime();
         await runtime.start();
@@ -251,7 +255,6 @@ function injectSettingsMenuItem(actionSheet: Element) {
     menuItem.setAttribute('type', 'button');
     menuItem.className = 'btnDanmakuSettings listItem listItem-button actionSheetMenuItem emby-button';
     menuItem.innerHTML = `
-        <span class="actionsheetMenuItemIcon listItemIcon listItemIcon-transparent material-icons">comment</span>
         <div class="listItemBody actionsheetListItemBody">
             <div class="listItemBodyText actionSheetItemText">弹幕设置</div>
         </div>
@@ -263,17 +266,9 @@ function injectSettingsMenuItem(actionSheet: Element) {
         openSidebar();
     });
 
-    // 尝试插入到循环模式之前
     const repeatModeItem = actionSheet.querySelector('[data-id="repeatmode"]');
     const statsItem = actionSheet.querySelector('[data-id="stats"]');
-
-    if (repeatModeItem) {
-        actionSheet.insertBefore(menuItem, repeatModeItem);
-    } else if (statsItem) {
-        actionSheet.insertBefore(menuItem, statsItem);
-    } else {
-        actionSheet.appendChild(menuItem);
-    }
+    insertBeforeRef(actionSheet, menuItem, repeatModeItem ?? statsItem);
 }
 
 function closeSidebar() {

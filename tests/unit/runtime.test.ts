@@ -59,6 +59,13 @@ describe('DanmakuRuntime', () => {
         document.body.innerHTML = '';
     });
 
+    it('retries getCurrentItem when first lookup is empty', async () => {
+        vi.mocked(hooks.getCurrentItem).mockResolvedValueOnce(null).mockResolvedValue(item);
+        await runtime.start();
+        expect(hooks.matcher.match).toHaveBeenCalled();
+        expect(hooks.engine.init).toHaveBeenCalled();
+    });
+
     it('start matches auto then fetches and inits engine', async () => {
         await runtime.start();
 
@@ -241,7 +248,7 @@ describe('DanmakuRuntime', () => {
     it('shows match title after load and removes it on destroy', async () => {
         await runtime.start();
         const el = document.getElementById('danmakuInfoTitle');
-        expect(el?.textContent).toBe('弹幕匹配信息：A - E1');
+        expect(el?.textContent).toBe('弹幕匹配：A - E1');
         runtime.destroy();
         expect(document.getElementById('danmakuInfoTitle')).toBeNull();
     });

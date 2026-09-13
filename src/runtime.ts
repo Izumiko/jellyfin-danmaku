@@ -156,7 +156,12 @@ export class DanmakuRuntime {
                 }
             }
 
-            const item = await this.hooks.getCurrentItem(danmakuState.isNewJellyfin, danmakuState.itemId);
+            let item = await this.hooks.getCurrentItem(danmakuState.isNewJellyfin, danmakuState.itemId);
+            for (let i = 0; !item && i < 15; i++) {
+                await this.hooks.waitMs(200);
+                if (this.destroyed || signal.aborted) return;
+                item = await this.hooks.getCurrentItem(danmakuState.isNewJellyfin, danmakuState.itemId);
+            }
             if (this.destroyed || signal.aborted) return;
             if (!item) {
                 logger.warn('runtime', 'No current item');
@@ -186,7 +191,14 @@ export class DanmakuRuntime {
 
             this.rawComments = fetched;
             danmakuState.episodeInfo = episode;
-            if (this.initEngine(fetched)) {
+
+            let inited = this.initEngine(fetched);
+            for (let i = 0; !inited && i < 10; i++) {
+                await this.hooks.waitMs(200);
+                if (this.destroyed || signal.aborted) return;
+                inited = this.initEngine(fetched);
+            }
+            if (inited) {
                 this.lastEpisodeId = episode.episodeId;
             }
             eventBus.emit('danmaku:loaded', { count: fetched.length, source: 'online' });

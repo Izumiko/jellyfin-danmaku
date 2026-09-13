@@ -116,3 +116,13 @@ export function parseFloatOfRange(str: string, min: number, max: number): number
     if (isNaN(value)) return min;
     return clamp(value, min, max);
 }
+
+/** Insert `node` before `reference`, even if `reference` is nested under `container`. */
+export function insertBeforeRef(container: Element, node: Node, reference: Element | null): void {
+    if (reference?.parentNode) {
+        reference.parentNode.insertBefore(node, reference);
+        return;
+    }
+    const scroller = container.querySelector('.actionSheetScroller');
+    (scroller ?? container).appendChild(node);
+}

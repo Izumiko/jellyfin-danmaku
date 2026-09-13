@@ -42,7 +42,7 @@ export const API_DEFAULTS = {
 export const SELECTORS = {
     videoPlayer: '.htmlvideoplayer',
     videoContainer: '.videoPlayerContainer',
-    mediaContainer: "div[data-type='video-osd']",
+    mediaContainer: ".page[data-type='video-osd']:not(.hide)",
     pauseButton: '.btnPause',
     actionSheet: '.actionSheet',
     skinHeader: 'div.skinHeader',

@@ -24,6 +24,10 @@
         e.stopPropagation();
     }
 
+    function stopPlayerGestures(e: Event) {
+        e.stopPropagation();
+    }
+
     async function handleAddSource() {
         const url = await showInputDialog('增加弹幕源', '弹幕源 URL', '');
         if (!url) return;
@@ -64,7 +68,19 @@
     <div class="sidebar-backdrop" onclick={handleBackdropClick}></div>
 
     <!-- 侧边栏面板 -->
-    <div class="sidebar-panel">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        class="sidebar-panel"
+        onpointerdown={stopPlayerGestures}
+        onpointermove={stopPlayerGestures}
+        onpointerup={stopPlayerGestures}
+        onmousedown={stopPlayerGestures}
+        onmousemove={stopPlayerGestures}
+        onmouseup={stopPlayerGestures}
+        ontouchstart={stopPlayerGestures}
+        ontouchmove={stopPlayerGestures}
+        onwheel={stopPlayerGestures}
+    >
         <header class="sidebar-header">
             <h2>弹幕设置</h2>
             <div class="header-actions">
@@ -87,23 +103,23 @@
                     <h3>控制功能</h3>
 
                     <div class="setting-item">
-                        <label class="switch-label">
+                        <div class="switch-label">
                             <span>弹幕显示</span>
                             <label class="modern-switch">
                                 <input type="checkbox" bind:checked={danmakuState.danmakuSwitch} />
                                 <span class="modern-slider"></span>
                             </label>
-                        </label>
+                        </div>
                     </div>
 
                     <div class="setting-item">
-                        <label class="switch-label">
+                        <div class="switch-label">
                             <span>日志显示</span>
                             <label class="modern-switch">
                                 <input type="checkbox" bind:checked={danmakuState.logSwitch} />
                                 <span class="modern-slider"></span>
                             </label>
-                        </label>
+                        </div>
                     </div>
 
                     <div class="setting-item">
@@ -154,28 +170,28 @@
                     <div class="setting-item">
                         <label>
                             透明度: {danmakuState.opacity}
-                            <input type="range" min="0" max="1" step="0.1" bind:value={danmakuState.opacity} />
+                            <input type="range" min="0" max="1" step="0.1" bind:value={danmakuState.opacity} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             弹幕速度: {danmakuState.speed}
-                            <input type="range" min="50" max="600" step="10" bind:value={danmakuState.speed} />
+                            <input type="range" min="50" max="600" step="10" bind:value={danmakuState.speed} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             字体大小: {danmakuState.fontSize}px
-                            <input type="range" min="10" max="60" step="1" bind:value={danmakuState.fontSize} />
+                            <input type="range" min="10" max="60" step="1" bind:value={danmakuState.fontSize} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             显示区域比例: {danmakuState.heightRatio}
-                            <input type="range" min="0.1" max="1" step="0.05" bind:value={danmakuState.heightRatio} />
+                            <input type="range" min="0.1" max="1" step="0.05" bind:value={danmakuState.heightRatio} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
@@ -212,13 +228,13 @@
                     </div>
 
                     <div class="setting-item">
-                        <label class="switch-label">
+                        <div class="switch-label">
                             <span>弹幕防重叠</span>
                             <label class="modern-switch">
                                 <input type="checkbox" bind:checked={danmakuState.useAntiOverlap} />
                                 <span class="modern-slider"></span>
                             </label>
-                        </label>
+                        </div>
                     </div>
 
                     <div class="setting-item">
@@ -233,13 +249,13 @@
                     </div>
 
                     <div class="setting-item">
-                        <label class="switch-label">
+                        <div class="switch-label">
                             <span>使用本地 XML 弹幕</span>
                             <label class="modern-switch">
                                 <input type="checkbox" bind:checked={danmakuState.useXmlDanmaku} />
                                 <span class="modern-slider"></span>
                             </label>
-                        </label>
+                        </div>
                     </div>
 
                     <div class="setting-item">
@@ -502,9 +518,14 @@
     }
 
     .modern-switch input {
+        position: absolute;
+        z-index: 2;
         opacity: 0;
-        width: 0;
-        height: 0;
+        inset: 0;
+        margin: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
     }
 
     .modern-slider {

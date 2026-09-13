@@ -6,6 +6,8 @@
 
     let entries = $state<LogEntry[]>([]);
     let intervalId: number | undefined;
+    let overlayEl = $state<HTMLDivElement | undefined>();
+    let contentEl = $state<HTMLDivElement | undefined>();
 
     const levelLabels: Record<LogLevel, string> = {
         0: 'DEBUG',
@@ -25,22 +27,43 @@
         entries = logger.getRecent(50);
     }
 
+    $effect(() => {
+        if (danmakuState.logSwitch) {
+            refresh();
+        }
+    });
+
+    function stopVolumeWheel(e: WheelEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+
+    function onWindowWheelCapture(e: WheelEvent) {
+        if (!overlayEl?.contains(e.target as Node)) return;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        if (contentEl) contentEl.scrollTop += e.deltaY;
+    }
+
     onMount(() => {
         refresh();
         intervalId = window.setInterval(refresh, 500);
+        window.addEventListener('wheel', onWindowWheelCapture, { capture: true, passive: false });
     });
 
     onDestroy(() => {
         if (intervalId !== undefined) {
             clearInterval(intervalId);
         }
+        window.removeEventListener('wheel', onWindowWheelCapture, { capture: true });
     });
 </script>
 
 {#if danmakuState.logSwitch}
-    <div class="debug-overlay">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="debug-overlay" bind:this={overlayEl} onwheel={stopVolumeWheel}>
         <div class="debug-header">
-            <span>调试日志</span>
+            <span>调试日志 ({entries.length})</span>
             <button
                 class="clear-btn"
                 onclick={() => {
@@ -49,17 +72,21 @@
                 }}>清空</button
             >
         </div>
-        <div class="debug-content">
-            {#each entries as entry (entry.timestamp)}
-                <div class="debug-entry">
-                    <span class="debug-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
-                    <span class="debug-level" style="color: {levelColors[entry.level]}">
-                        {levelLabels[entry.level]}
-                    </span>
-                    <span class="debug-module">[{entry.module}]</span>
-                    <span class="debug-message">{entry.message}</span>
-                </div>
-            {/each}
+        <div class="debug-content" bind:this={contentEl}>
+            {#if entries.length === 0}
+                <div class="debug-empty">暂无日志</div>
+            {:else}
+                {#each entries as entry, index (`${entry.timestamp}-${index}`)}
+                    <div class="debug-entry">
+                        <span class="debug-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                        <span class="debug-level" style="color: {levelColors[entry.level]}">
+                            {levelLabels[entry.level]}
+                        </span>
+                        <span class="debug-module">[{entry.module}]</span>
+                        <span class="debug-message">{entry.message}</span>
+                    </div>
+                {/each}
+            {/if}
         </div>
     </div>
 {/if}
@@ -77,6 +104,7 @@
         font-family: monospace;
         font-size: 12px;
         backdrop-filter: blur(4px);
+        pointer-events: auto;
     }
 
     .debug-header {
@@ -103,10 +131,17 @@
     }
 
     .debug-content {
+        flex: 1;
+        min-height: 80px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 2px;
+    }
+
+    .debug-empty {
+        color: #aaa;
+        padding: 8px 0;
     }
 
     .debug-entry {

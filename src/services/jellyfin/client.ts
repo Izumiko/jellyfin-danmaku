@@ -42,17 +42,16 @@ export async function getCurrentItem(isNewJellyfin: boolean, itemId: string): Pr
 
     try {
         if (isNewJellyfin && itemId) {
-            // Jellyfin >= 10.10.0: 使用 itemId
             const userId = client.getCurrentUserId();
             logger.debug('jellyfin', `Getting item ${itemId} for user ${userId}`);
-            return await client.getItem(userId, itemId);
-        } else {
-            // Jellyfin < 10.10.0: 使用 session API
-            const deviceId = client.deviceId();
-            logger.debug('jellyfin', `Getting current item from session (device: ${deviceId})`);
-            const sessions = await client.getSessions({ deviceId });
-            return sessions?.[0]?.NowPlayingItem ?? null;
+            const item = await client.getItem(userId, itemId);
+            if (item) return item;
         }
+
+        const deviceId = client.deviceId();
+        logger.debug('jellyfin', `Getting current item from session (device: ${deviceId})`);
+        const sessions = await client.getSessions({ deviceId });
+        return sessions?.[0]?.NowPlayingItem ?? null;
     } catch (error) {
         logger.error('jellyfin', 'Failed to get current item', error);
         return null;

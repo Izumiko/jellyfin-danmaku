@@ -1,10 +1,15 @@
 import { logger } from '../../core/logger';
 
+export function itemIdFromPlaybackInfoUrl(url: string): string | null {
+    const match = url.match(/\/Items\/([^/?]+)\/PlaybackInfo/i);
+    return match?.[1] ?? null;
+}
+
 /**
  * 安装 PlaybackInfo XHR 拦截器
  *
- * 拦截 XMLHttpRequest 对 PlaybackInfo 端点的响应，
- * 从中提取当前媒体项的 Id。
+ * 拦截 XMLHttpRequest 对 PlaybackInfo 端点的请求 URL（Item Id），
+ * 响应里的 MediaSources[0].Id 是 MediaSource Id，不能当 Item Id。
  *
  * @returns 清理函数（恢复原始 XHR.open）
  */
@@ -13,20 +18,12 @@ export function interceptPlaybackInfo(onItemId: (id: string) => void): () => voi
 
     XMLHttpRequest.prototype.open = function (method: string, url: string | URL, ...args: unknown[]) {
         const urlStr = url.toString();
+        const itemId = itemIdFromPlaybackInfoUrl(urlStr);
 
-        if (urlStr.includes('PlaybackInfo')) {
-            this.addEventListener('load', function () {
-                try {
-                    const data = JSON.parse(this.responseText);
-                    const id = data?.MediaSources?.[0]?.Id;
-
-                    if (typeof id === 'string' && id.length > 0) {
-                        logger.debug('interceptor', `Captured itemId from PlaybackInfo: ${id}`);
-                        onItemId(id);
-                    }
-                } catch (error) {
-                    logger.warn('interceptor', 'Failed to parse PlaybackInfo response', error);
-                }
+        if (itemId) {
+            this.addEventListener('load', () => {
+                logger.debug('interceptor', `Captured itemId from PlaybackInfo URL: ${itemId}`);
+                onItemId(itemId);
             });
         }
 
