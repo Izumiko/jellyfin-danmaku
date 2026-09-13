@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import monkey from 'vite-plugin-monkey';
-import path from 'path';
+import path from 'node:path';
+
+const rootDir = import.meta.dirname;
 
 export default defineConfig({
     plugins: [
         svelte(),
         monkey({
-            entry: path.resolve(__dirname, '../src/main.ts'),
+            entry: path.resolve(rootDir, '../src/main.ts'),
             userscript: {
                 name: 'Jellyfin Danmaku',
                 namespace: 'jellyfin-danmaku',
@@ -22,10 +24,11 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, '../src'),
+            '@': path.resolve(rootDir, '../src'),
         },
     },
     build: {
-        outDir: './dist',
+        outDir: path.resolve(rootDir, '../dist'),
+        emptyOutDir: false,
     },
 });

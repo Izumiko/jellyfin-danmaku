@@ -1,27 +1,25 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import path from 'path';
+import path from 'node:path';
+
+const rootDir = import.meta.dirname;
 
 export default defineConfig({
     plugins: [svelte()],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, '../src'),
+            '@': path.resolve(rootDir, '../src'),
         },
     },
     build: {
-        outDir: './dist',
+        outDir: path.resolve(rootDir, '../dist'),
+        emptyOutDir: true,
         lib: {
-            entry: path.resolve(__dirname, '../src/main.ts'),
+            entry: path.resolve(rootDir, '../src/main.ts'),
             name: 'JellyfinDanmaku',
             fileName: 'ede.min',
             formats: ['iife'],
         },
-        rollupOptions: {
-            output: {
-                inlineDynamicImports: true,
-            },
-        },
-        minify: 'esbuild',
+        minify: 'oxc',
     },
 });

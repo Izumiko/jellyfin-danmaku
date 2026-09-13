@@ -1,12 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import path from 'path';
+import path from 'node:path';
 
 export default defineConfig({
     plugins: [svelte()],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src'),
+            '@': path.resolve(import.meta.dirname, './src'),
         },
         conditions: process.env.VITEST ? ['browser'] : undefined,
     },
