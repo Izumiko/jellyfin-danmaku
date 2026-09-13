@@ -146,14 +146,12 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
  * 转换 DanDanPlay 评论格式为内部格式
  */
 export function convertDanDanPlayComment(comment: DanDanPlayComment): RawComment {
-    // p 格式: "time,mode,fontSize,color,timestamp,pool,userId,rowId"
     const parts = comment.p.split(',');
-
     return {
-        time: parseFloat(parts[0]),
-        modeId: parseInt(parts[1], 10),
-        color: parseInt(parts[3], 10),
+        time: parseFloat(parts[0] ?? '0'),
+        modeId: parseInt(parts[1] ?? '1', 10),
+        color: parseInt(parts[2] ?? '16777215', 10),
         text: comment.m,
-        user: parts[6] ? `[DanDanPlay]${parts[6]}` : undefined,
+        user: parts[3] || undefined,
     };
 }

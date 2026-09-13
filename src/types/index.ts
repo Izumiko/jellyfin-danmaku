@@ -169,7 +169,7 @@ export interface LogEntry {
 /** DanDanPlay 评论响应 */
 export interface DanDanPlayComment {
     cid: number;
-    p: string; // "time,mode,fontSize,color,timestamp,pool,userId,rowId"
+    p: string; // "time,mode,color,user"
     m: string; // 弹幕文本
 }
 

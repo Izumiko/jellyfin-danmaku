@@ -3,18 +3,15 @@ import { CommentFetcher } from '@/services/comment-fetcher';
 import type { RawComment, SourceFilter, ChConvertMode } from '@/types/index';
 
 // Mock dandanplay client
-vi.mock('@/services/dandanplay/client', () => ({
-    getComments: vi.fn(),
-    getRelatedSources: vi.fn(),
-    getExtComments: vi.fn(),
-    convertDanDanPlayComment: vi.fn((c) => ({
-        time: parseFloat(c.p.split(',')[0]),
-        modeId: parseInt(c.p.split(',')[1]),
-        color: parseInt(c.p.split(',')[3]),
-        text: c.m,
-        user: c.p.split(',')[6] ? `[DanDanPlay]${c.p.split(',')[6]}` : undefined,
-    })),
-}));
+vi.mock('@/services/dandanplay/client', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/services/dandanplay/client')>();
+    return {
+        ...actual,
+        getComments: vi.fn(),
+        getRelatedSources: vi.fn(),
+        getExtComments: vi.fn(),
+    };
+});
 
 // Mock jellyfin danmaku
 vi.mock('@/services/jellyfin/danmaku', () => ({
@@ -46,7 +43,7 @@ describe('CommentFetcher', () => {
 
     const createDanDanPlayComment = (time: number, text: string) => ({
         cid: 1,
-        p: `${time},1,25,16777215,0,0,user1,12345`,
+        p: `${time},1,16777215,user1`,
         m: text,
     });
 
