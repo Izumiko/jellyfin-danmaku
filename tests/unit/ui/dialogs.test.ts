@@ -18,6 +18,14 @@ describe('dialogs', () => {
         await expect(pending).resolves.toBeNull();
     });
 
+    it('resolves null when Escape is pressed on focused input', async () => {
+        const pending = showInputDialog('标题', '', '默认');
+        const input = document.querySelector('input') as HTMLInputElement;
+        input.focus();
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await expect(pending).resolves.toBeNull();
+    });
+
     it('resolves selected index', async () => {
         const pending = showSelectDialog('选', ['A', 'B'], 1);
         const options = document.querySelectorAll('[data-action="option"]');

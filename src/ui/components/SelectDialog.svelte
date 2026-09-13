@@ -24,7 +24,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="dialog-backdrop">
+<div class="dialog-backdrop" role="dialog" aria-modal="true">
     <div class="dialog-panel">
         <h3>{title}</h3>
         <div class="option-list">

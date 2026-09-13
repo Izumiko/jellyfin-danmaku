@@ -25,6 +25,14 @@
 
     function handleInputKeydown(e: KeyboardEvent) {
         e.stopPropagation();
+        if (e.key === 'Escape') {
+            onCancel();
+            return;
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            onConfirm(inputEl?.value ?? defaultValue);
+        }
     }
 
     function handleConfirm() {
@@ -34,7 +42,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="dialog-backdrop" data-dialog="input">
+<div class="dialog-backdrop" data-dialog="input" role="dialog" aria-modal="true">
     <div class="dialog-panel">
         <h3>{title}</h3>
         <input
