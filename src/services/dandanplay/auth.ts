@@ -82,6 +82,7 @@ export class DanDanPlayAuth {
             logger.debug('auth', 'Refreshing token');
 
             const response = await get<{
+                errorCode: number;
                 token: string;
                 tokenExpireTime: string;
             }>(url, {
@@ -89,6 +90,11 @@ export class DanDanPlayAuth {
                     Authorization: `Bearer ${this.status.token}`,
                 },
             });
+
+            if (response.errorCode !== 0) {
+                this.logout();
+                return;
+            }
 
             const tokenExpire = new Date(response.tokenExpireTime).getTime();
 

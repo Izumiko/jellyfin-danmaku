@@ -58,4 +58,20 @@ describe('DanDanPlayAuth', () => {
         expect(post).not.toHaveBeenCalled();
         expect(auth.token).toBe('new');
     });
+
+    it('logs out when renew returns errorCode not 0', async () => {
+        localStorage.setItem(
+            'jellyfin_danmaku_ddplay_status',
+            JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }),
+        );
+        vi.mocked(get).mockResolvedValue({
+            errorCode: 1,
+            errorMessage: 'nope',
+        });
+        const auth = new DanDanPlayAuth('https://api.example.com');
+        await auth.refreshIfNeeded();
+        expect(get).toHaveBeenCalled();
+        expect(auth.isLoggedIn).toBe(false);
+        expect(auth.token).toBe('');
+    });
 });
