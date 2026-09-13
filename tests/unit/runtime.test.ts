@@ -179,6 +179,36 @@ describe('DanmakuRuntime', () => {
         expect(hooks.engine.init).toHaveBeenCalled();
     });
 
+    it('addSource does not merge comments after episode switch', async () => {
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        vi.mocked(hooks.getExtComments!).mockImplementation(async () => {
+            await gate;
+            return [{ cid: 2, p: '2,1,16777215,u', m: 'ext' }];
+        });
+        const episode99 = { episodeId: 99, animeTitle: 'B', episodeTitle: 'E2' };
+        const comments99: RawComment[] = [{ time: 2, modeId: 1, color: 16777215, text: 'ep99' }];
+        vi.mocked(hooks.matcher.match).mockResolvedValueOnce(episode).mockResolvedValueOnce(episode99);
+        vi.mocked(hooks.fetcher.fetch).mockResolvedValueOnce(comments).mockResolvedValueOnce(comments99);
+
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+
+        const adding = runtime.addSource('https://example.com/xml');
+        await vi.waitFor(() => expect(hooks.getExtComments).toHaveBeenCalled());
+
+        await runtime.load('refresh');
+        release();
+        await adding;
+
+        expect(hooks.engine.init).not.toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining([expect.objectContaining({ text: 'ext' })]),
+        );
+    });
+
     it('destroy during addSource does not init engine', async () => {
         let release!: () => void;
         const gate = new Promise<void>((resolve) => {

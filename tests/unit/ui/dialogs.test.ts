@@ -26,6 +26,40 @@ describe('dialogs', () => {
         await expect(pending).resolves.toBeNull();
     });
 
+    it('input dialog input has autofocus', async () => {
+        const pending = showInputDialog('标题', '', '');
+        const input = document.querySelector('[data-dialog="input"] input') as HTMLInputElement;
+        expect(input.hasAttribute('autofocus')).toBe(true);
+        (document.querySelector('[data-action="cancel"]') as HTMLButtonElement).click();
+        await pending;
+    });
+
+    it('Escape on input dialog stops immediate propagation', async () => {
+        const pending = showInputDialog('标题', '', '');
+        let laterHeard = false;
+        const later = () => {
+            laterHeard = true;
+        };
+        window.addEventListener('keydown', later);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        window.removeEventListener('keydown', later);
+        await expect(pending).resolves.toBeNull();
+        expect(laterHeard).toBe(false);
+    });
+
+    it('Escape on select dialog stops immediate propagation', async () => {
+        const pending = showSelectDialog('选', ['A', 'B'], 0);
+        let laterHeard = false;
+        const later = () => {
+            laterHeard = true;
+        };
+        window.addEventListener('keydown', later);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        window.removeEventListener('keydown', later);
+        await expect(pending).resolves.toBeNull();
+        expect(laterHeard).toBe(false);
+    });
+
     it('resolves selected index', async () => {
         const pending = showSelectDialog('选', ['A', 'B'], 1);
         const options = document.querySelectorAll('[data-action="option"]');

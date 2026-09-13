@@ -19,6 +19,7 @@
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
+            e.stopImmediatePropagation();
             onCancel();
         }
     }
@@ -26,6 +27,7 @@
     function handleInputKeydown(e: KeyboardEvent) {
         e.stopPropagation();
         if (e.key === 'Escape') {
+            e.stopImmediatePropagation();
             onCancel();
             return;
         }
@@ -45,11 +47,13 @@
 <div class="dialog-backdrop" data-dialog="input" role="dialog" aria-modal="true">
     <div class="dialog-panel">
         <h3>{title}</h3>
+        <!-- svelte-ignore a11y_autofocus -->
         <input
             bind:this={inputEl}
             type="text"
             {placeholder}
             value={defaultValue}
+            autofocus
             onkeydown={handleInputKeydown}
         />
         <div class="dialog-actions">

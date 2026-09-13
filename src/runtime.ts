@@ -191,9 +191,11 @@ export class DanmakuRuntime {
             return;
         }
 
+        const episodeId = this.lastEpisodeId;
+
         try {
             const ext = await this.hooks.getExtComments(danmakuState.effectiveApiPrefix, url, { chConvert: danmakuState.chConvert });
-            if (this.destroyed) return;
+            if (this.destroyed || this.lastEpisodeId !== episodeId) return;
             this.rawComments = [...this.rawComments, ...ext.map(convertDanDanPlayComment)];
             this.initEngine(this.rawComments);
 

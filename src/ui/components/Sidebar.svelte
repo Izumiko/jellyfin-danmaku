@@ -36,6 +36,7 @@
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
+            if (document.querySelector('[role="dialog"]')) return;
             onCancel();
         }
     }

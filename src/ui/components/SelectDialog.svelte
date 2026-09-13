@@ -17,6 +17,7 @@
 
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
+            e.stopImmediatePropagation();
             onCancel();
         }
     }
@@ -24,16 +25,18 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="dialog-backdrop" role="dialog" aria-modal="true">
+<div class="dialog-backdrop" role="dialog" aria-modal="true" tabindex="-1">
     <div class="dialog-panel">
         <h3>{title}</h3>
         <div class="option-list">
             {#each options as option, index (index)}
+                <!-- svelte-ignore a11y_autofocus -->
                 <button
                     type="button"
                     class="option"
                     class:active={index === defaultIndex}
                     data-action="option"
+                    autofocus={index === 0}
                     onclick={() => onConfirm(index)}
                 >
                     {option}
