@@ -14,11 +14,11 @@
 
 ### 新设置界面截图
 
-![新设置界面](./Newsetting.png)
+![新设置界面](./docs/Newsetting.png)
 
 ---
 
-![简洁的播放界面](./Simple.png)
+![简洁的播放界面](./docs/Simple.png)
 
 ## 界面说明
 
