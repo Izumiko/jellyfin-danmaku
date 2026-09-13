@@ -2,6 +2,11 @@ import { get } from '../http';
 import { logger } from '../../core/logger';
 import type { RawComment } from '../../types/index';
 
+export function buildLocalDanmakuUrl(origin: string, pathname: string, jellyfinItemId: string): string {
+    const path = pathname.replace(/\/web\/(index\.html)?/, '/api/danmu/');
+    return `${origin}${path}${jellyfinItemId}/raw`;
+}
+
 /**
  * 从 Jellyfin 弹幕插件获取本地 XML 弹幕
  *
@@ -10,7 +15,7 @@ import type { RawComment } from '../../types/index';
  */
 export async function getLocalXmlDanmaku(jellyfinItemId: string, options?: { signal?: AbortSignal }): Promise<RawComment[]> {
     try {
-        const url = `${location.origin}/api/danmu/${jellyfinItemId}/raw`;
+        const url = buildLocalDanmakuUrl(location.origin, location.pathname, jellyfinItemId);
         logger.debug('jellyfin', `Fetching local XML danmaku from ${url}`);
 
         const xml = await get<string>(url, {
@@ -32,7 +37,7 @@ export async function getLocalXmlDanmaku(jellyfinItemId: string, options?: { sig
  * XML 格式：
  * <d p="time,mode,fontSize,color,timestamp,pool,sender,dbid">弹幕内容</d>
  */
-function parseXmlDanmaku(xml: string): RawComment[] {
+export function parseXmlDanmaku(xml: string): RawComment[] {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, 'text/xml');
 
@@ -54,9 +59,9 @@ function parseXmlDanmaku(xml: string): RawComment[] {
         const parts = p.split(',');
         if (parts.length < 4) return;
 
-        const time = parseFloat(parts[0]);
-        const modeId = parseInt(parts[1], 10);
-        const color = parseInt(parts[3], 10);
+        const time = parseFloat(parts[0] ?? '');
+        const modeId = parseInt(parts[1] ?? '', 10);
+        const color = parseInt(parts[3] ?? '', 10);
 
         if (isNaN(time) || isNaN(modeId) || isNaN(color)) return;
 
@@ -65,6 +70,7 @@ function parseXmlDanmaku(xml: string): RawComment[] {
             modeId,
             color,
             text: text.trim(),
+            user: parts[6] || undefined,
         });
     });
 
