@@ -1,5 +1,5 @@
 import { mount, unmount } from 'svelte';
-import { detectJellyfinVersion, getCurrentItem, waitForApiClient } from './services/jellyfin/client';
+import { detectJellyfinVersion, waitForApiClient } from './services/jellyfin/client';
 import { interceptPlaybackInfo } from './services/jellyfin/interceptor';
 import { danmakuState } from './core/state.svelte';
 import { eventBus } from './core/event-bus';
@@ -7,9 +7,7 @@ import { logger } from './core/logger';
 import { DisposableStore } from './utils/disposable';
 import { waitForElement } from './utils/dom';
 import { SELECTORS } from './core/config';
-import { EpisodeMatcher } from './services/episode-matcher';
-import { CommentFetcher } from './services/comment-fetcher';
-import { danmakuEngine } from './danmaku/engine';
+import { DanmakuRuntime } from './runtime';
 import DanmakuToggle from './ui/components/DanmakuToggle.svelte';
 import Sidebar from './ui/components/Sidebar.svelte';
 import DebugOverlay from './ui/components/DebugOverlay.svelte';
@@ -18,7 +16,7 @@ import DebugOverlay from './ui/components/DebugOverlay.svelte';
  * 全局插件状态
  */
 let pluginActive = false;
-let playerDisposables: DisposableStore | null = null;
+let runtime: DanmakuRuntime | null = null;
 let menuInjectionCleanup: (() => void) | null = null;
 let sidebarOpen = false;
 let sidebarApp: ReturnType<typeof mount> | null = null;
@@ -55,24 +53,6 @@ export async function bootstrap() {
 
         // 5. 注入 Jellyfin 菜单（全局只需一次）
         menuInjectionCleanup = setupMenuInjection();
-
-        // 6. 监听弹幕重载事件
-        const unsubReload = eventBus.on('danmaku:reload', async (data) => {
-            if (pluginActive) {
-                await loadDanmaku(data.reason);
-            }
-        });
-        disposables.add(unsubReload);
-
-        // 7. 监听视频源变更（切集）
-        const unsubSourceChange = eventBus.on('media:source-changed', async () => {
-            if (pluginActive) {
-                logger.info('bootstrap', 'Media source changed, reloading danmaku in 2s');
-                await new Promise((resolve) => setTimeout(resolve, 2000));
-                await loadDanmaku('refresh');
-            }
-        });
-        disposables.add(unsubSourceChange);
 
         logger.info('bootstrap', 'Bootstrap completed, watching for video player');
     } catch (error) {
@@ -141,7 +121,6 @@ async function initPlayer() {
     }
 
     pluginActive = true;
-    playerDisposables = new DisposableStore();
 
     try {
         // 等待控制栏
@@ -172,8 +151,8 @@ async function initPlayer() {
             });
         }
 
-        // 初始加载弹幕
-        await loadDanmaku('init');
+        runtime = new DanmakuRuntime();
+        await runtime.start();
 
         logger.info('lifecycle', 'Player initialization completed');
     } catch (error) {
@@ -190,8 +169,8 @@ function cleanupPlayer() {
 
     logger.info('lifecycle', 'Cleaning up player resources');
 
-    // 销毁引擎
-    danmakuEngine.destroy();
+    runtime?.destroy();
+    runtime = null;
 
     // 清理 UI
     if (toggleApp) {
@@ -220,103 +199,13 @@ function cleanupPlayer() {
         debugContainer = null;
     }
 
-    // 关闭侧边栏
-    if (sidebarApp) {
-        try {
-            unmount(sidebarApp);
-        } catch {
-            // ignore cleanup errors
-        }
-        sidebarApp = null;
-    }
-    if (sidebarContainer) {
-        sidebarContainer.remove();
-        sidebarContainer = null;
-    }
-    sidebarOpen = false;
-
-    // 清理 disposables
-    playerDisposables?.dispose();
-    playerDisposables = null;
+    closeSidebar();
 
     // 重置状态
     danmakuState.loading = false;
     danmakuState.episodeInfo = null;
 
     pluginActive = false;
-}
-
-/**
- * 加载弹幕
- */
-async function loadDanmaku(reason: string) {
-    if (danmakuState.loading) {
-        logger.debug('loadDanmaku', 'Already loading, skipping');
-        return;
-    }
-
-    danmakuState.loading = true;
-
-    try {
-        logger.info('loadDanmaku', `Loading danmaku (reason: ${reason})`);
-
-        // 获取当前媒体项
-        const item = await getCurrentItem(danmakuState.isNewJellyfin, danmakuState.itemId);
-        if (!item) {
-            logger.warn('loadDanmaku', 'No current item');
-            return;
-        }
-
-        // 匹配剧集
-        const matcher = new EpisodeMatcher({
-            apiPrefix: danmakuState.effectiveApiPrefix,
-            chConvert: danmakuState.chConvert,
-        });
-
-        const episodeInfo = await matcher.match(item, reason === 'search' ? 'manual' : 'auto');
-        if (!episodeInfo) {
-            logger.warn('loadDanmaku', 'No episode matched');
-            return;
-        }
-
-        danmakuState.episodeInfo = episodeInfo;
-
-        // 获取弹幕
-        const fetcher = new CommentFetcher({
-            apiPrefix: danmakuState.effectiveApiPrefix,
-            chConvert: danmakuState.chConvert,
-            sourceFilter: danmakuState.sourceFilter,
-            useXmlDanmaku: danmakuState.useXmlDanmaku,
-        });
-
-        const comments = await fetcher.fetch(episodeInfo.episodeId, item.Id);
-
-        // 初始化弹幕引擎
-        const video = document.querySelector('video');
-        const container = document.querySelector(SELECTORS.mediaContainer);
-
-        if (video && container) {
-            danmakuEngine.init(
-                {
-                    container: container as HTMLElement,
-                    media: video,
-                    comments: [],
-                    speed: danmakuState.speed,
-                    opacity: danmakuState.opacity,
-                    heightRatio: danmakuState.heightRatio,
-                    visible: danmakuState.danmakuSwitch,
-                },
-                comments,
-            );
-
-            eventBus.emit('danmaku:loaded', { count: comments.length, source: 'online' });
-        }
-    } catch (error) {
-        logger.error('loadDanmaku', 'Failed to load danmaku', error);
-        eventBus.emit('danmaku:error', { error: error as Error, source: 'loadDanmaku' });
-    } finally {
-        danmakuState.loading = false;
-    }
 }
 
 /**
@@ -387,6 +276,16 @@ function injectSettingsMenuItem(actionSheet: Element) {
     }
 }
 
+function closeSidebar() {
+    if (sidebarApp) {
+        try { unmount(sidebarApp); } catch { /* ignore */ }
+        sidebarApp = null;
+    }
+    sidebarContainer?.remove();
+    sidebarContainer = null;
+    sidebarOpen = false;
+}
+
 /**
  * 打开设置侧边栏
  */
@@ -402,18 +301,12 @@ function openSidebar() {
             open: true,
             onSave: () => {
                 danmakuState.persist();
-                sidebarOpen = false;
-                sidebarApp = null;
-                sidebarContainer?.remove();
-                sidebarContainer = null;
+                closeSidebar();
                 eventBus.emit('danmaku:reload', { reason: 'settings-changed' });
             },
             onCancel: () => {
                 danmakuState.hydrate();
-                sidebarOpen = false;
-                sidebarApp = null;
-                sidebarContainer?.remove();
-                sidebarContainer = null;
+                closeSidebar();
             },
         },
     });
