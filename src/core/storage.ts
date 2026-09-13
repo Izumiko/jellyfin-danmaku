@@ -1,8 +1,20 @@
 import * as v from 'valibot';
 import { DanmakuConfigSchema, DEFAULT_CONFIG, mergeConfig } from './config';
+import { EPISODE_CACHE_STORE, idbClear, idbDelete, idbGet, idbGetAll, idbPut } from './idb';
 import type { DanmakuConfig, CachedEpisode, DanDanPlayStatus } from '../types/index';
 
 const STORAGE_PREFIX = 'jellyfin_danmaku_';
+const EPISODE_KEY_PREFIX = `${STORAGE_PREFIX}episode_`;
+const EPISODE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function episodeCacheId(seasonId: string, episodeIndex: number): string {
+    return `${seasonId}:${episodeIndex}`;
+}
+
+function toCachedEpisode(record: CachedEpisode & { id?: string }): CachedEpisode {
+    const { id: _id, ...rest } = record;
+    return rest;
+}
 
 export class Storage {
     /**
@@ -55,21 +67,16 @@ export class Storage {
     /**
      * 获取剧集匹配缓存
      */
-    static getEpisodeCache(seasonId: string, episodeIndex?: number): CachedEpisode | null {
+    static async getEpisodeCache(seasonId: string, episodeIndex: number): Promise<CachedEpisode | null> {
+        const id = episodeCacheId(seasonId, episodeIndex);
         try {
-            const key = episodeIndex !== undefined ? `${STORAGE_PREFIX}episode_${seasonId}_${episodeIndex}` : `${STORAGE_PREFIX}episode_${seasonId}`;
-
-            const raw = localStorage.getItem(key);
-            if (!raw) return null;
-
-            const cached = JSON.parse(raw) as CachedEpisode;
-            // 缓存 30 天过期
-            if (Date.now() - cached.timestamp > 30 * 24 * 60 * 60 * 1000) {
-                localStorage.removeItem(key);
+            const record = await idbGet<CachedEpisode & { id: string }>(EPISODE_CACHE_STORE, id);
+            if (!record) return null;
+            if (Date.now() - record.timestamp > EPISODE_CACHE_MAX_AGE_MS) {
+                await idbDelete(EPISODE_CACHE_STORE, id);
                 return null;
             }
-
-            return cached;
+            return toCachedEpisode(record);
         } catch (error) {
             console.error('[Storage] Failed to get episode cache:', error);
             return null;
@@ -79,12 +86,51 @@ export class Storage {
     /**
      * 设置剧集匹配缓存
      */
-    static setEpisodeCache(seasonId: string, episodeIndex: number, data: CachedEpisode): void {
+    static async setEpisodeCache(seasonId: string, episodeIndex: number, data: CachedEpisode): Promise<void> {
         try {
-            const key = `${STORAGE_PREFIX}episode_${seasonId}_${episodeIndex}`;
-            localStorage.setItem(key, JSON.stringify(data));
+            await idbPut(EPISODE_CACHE_STORE, { id: episodeCacheId(seasonId, episodeIndex), ...data });
         } catch (error) {
             console.error('[Storage] Failed to set episode cache:', error);
+        }
+    }
+
+    static async migrateEpisodeCacheFromLocalStorage(): Promise<void> {
+        try {
+            const keys: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith(EPISODE_KEY_PREFIX)) keys.push(key);
+            }
+            for (const key of keys) {
+                const rest = key.slice(EPISODE_KEY_PREFIX.length);
+                const sep = rest.lastIndexOf('_');
+                const raw = localStorage.getItem(key);
+                localStorage.removeItem(key);
+                if (sep < 0 || !raw) continue;
+                try {
+                    const parsed = JSON.parse(raw) as CachedEpisode;
+                    const seasonId = rest.slice(0, sep);
+                    const episodeIndex = Number(rest.slice(sep + 1));
+                    if (!Number.isFinite(episodeIndex) || typeof parsed.episodeId !== 'number') continue;
+                    await Storage.setEpisodeCache(seasonId, episodeIndex, parsed);
+                } catch {
+                    /* drop corrupt key */
+                }
+            }
+        } catch (error) {
+            console.warn('[Storage] Failed to migrate episode cache:', error);
+        }
+    }
+
+    static async sweepExpiredEpisodeCache(maxAgeMs = EPISODE_CACHE_MAX_AGE_MS): Promise<void> {
+        try {
+            const records = await idbGetAll<CachedEpisode & { id: string }>(EPISODE_CACHE_STORE);
+            const now = Date.now();
+            await Promise.all(
+                records.filter((record) => now - record.timestamp > maxAgeMs).map((record) => idbDelete(EPISODE_CACHE_STORE, record.id)),
+            );
+        } catch (error) {
+            console.warn('[Storage] Failed to sweep episode cache:', error);
         }
     }
 
@@ -143,13 +189,22 @@ export class Storage {
     /**
      * 清除所有存储数据
      */
-    static clear(): void {
-        const keys = Object.keys(localStorage);
+    static async clear(): Promise<void> {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key) keys.push(key);
+        }
         keys.forEach((key) => {
             if (key.startsWith(STORAGE_PREFIX)) {
                 localStorage.removeItem(key);
             }
         });
+        try {
+            await idbClear(EPISODE_CACHE_STORE);
+        } catch (error) {
+            console.warn('[Storage] Failed to clear episode cache:', error);
+        }
     }
 }
 
