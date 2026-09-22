@@ -136,14 +136,23 @@ describe('processor', () => {
             expect(result.length).toBeLessThan(20);
         });
 
+        it('should make higher density-limit levels stricter', () => {
+            const comments = Array.from({ length: 30 }, (_, i) =>
+                createComment({ time: i * 0.01, modeId: 1, text: `c${i}` }),
+            );
+
+            const low = limitDensity(comments, DensityLimit.Low, 1, 2);
+            const high = limitDensity(comments, DensityLimit.High, 1, 2);
+            expect(high.length).toBeLessThan(low.length);
+        });
+
         it('should limit scroll and fixed comments separately', () => {
             const comments = [
                 ...Array.from({ length: 10 }, (_, i) => createComment({ time: i * 0.1, modeId: 1 })),
                 ...Array.from({ length: 10 }, (_, i) => createComment({ time: i * 0.1, modeId: 5 })),
             ];
 
-            const result = limitDensity(comments, DensityLimit.Low, 1);
-            // Low limit = 3 per bucket per type
+            const result = limitDensity(comments, DensityLimit.High, 1, 2);
             expect(result.length).toBeLessThan(20);
         });
     });
