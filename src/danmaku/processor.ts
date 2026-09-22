@@ -25,8 +25,9 @@ export function preProcessDanmaku(comments: RawComment[], config: ProcessingConf
 
     // 4. 密度限制
     if (config.densityLimit > 0) {
-        const bucketSize = Math.ceil(config.containerWidth / config.speed);
-        processed = limitDensity(processed, config.densityLimit, bucketSize);
+        const duration = Math.ceil(config.containerWidth / config.speed);
+        const lines = Math.max(1, Math.floor((config.containerHeight - 18) / config.fontSize) - 1);
+        processed = limitDensity(processed, config.densityLimit, duration, lines);
     }
 
     // 5. 格式转换
@@ -97,49 +98,57 @@ export function filterByMode(comments: RawComment[], filter: ModeFilter): RawCom
 /**
  * 密度限制
  */
-export function limitDensity(comments: RawComment[], limit: DensityLimit, bucketSize: number): RawComment[] {
-    // 密度限制配置
-    const limits = {
-        [DensityLimit.Unlimited]: Infinity,
-        [DensityLimit.Low]: 3,
-        [DensityLimit.Medium]: 5,
-        [DensityLimit.High]: 8,
-    };
+export function limitDensity(
+    comments: RawComment[],
+    limit: DensityLimit,
+    bucketSize: number,
+    lines = 1,
+): RawComment[] {
+    if (limit === DensityLimit.Unlimited) return comments;
 
-    const maxPerBucket = limits[limit];
-    if (maxPerBucket === Infinity) return comments;
+    // 与 ede.js 保持一致：等级越高限制越严格。
+    // 滚动弹幕每个 duration 时间桶最多 (9 - level * 2) * lines 条；
+    // 顶部/底部弹幕分别最多 lines - 1 条（至少 1 条）。
+    const scrollLimit = Math.max(1, (9 - limit * 2) * Math.max(1, lines));
+    const fixedLimit = Math.max(1, lines - 1);
 
-    // 按时间排序
     const sorted = [...comments].sort((a, b) => a.time - b.time);
-
-    // 时间桶
-    const buckets = new Map<number, RawComment[]>();
+    const scrollBuckets = new Map<number, number>();
+    const topBuckets = new Map<number, number>();
+    const bottomBuckets = new Map<number, number>();
+    const result: RawComment[] = [];
 
     for (const comment of sorted) {
-        const bucketIndex = Math.floor(comment.time / bucketSize);
-        const bucket = buckets.get(bucketIndex) ?? [];
+        const bucketIndex = Math.floor(comment.time / Math.max(bucketSize, Number.EPSILON));
 
-        // 分别限制滚动弹幕和固定弹幕
-        const isScroll = comment.modeId === 1 || comment.modeId === 6;
-        const scrollCount = bucket.filter((c) => c.modeId === 1 || c.modeId === 6).length;
-        const fixedCount = bucket.filter((c) => c.modeId === 4 || c.modeId === 5).length;
-
-        if (isScroll && scrollCount < maxPerBucket) {
-            bucket.push(comment);
-            buckets.set(bucketIndex, bucket);
-        } else if (!isScroll && fixedCount < maxPerBucket) {
-            bucket.push(comment);
-            buckets.set(bucketIndex, bucket);
+        if (comment.modeId === 1 || comment.modeId === 6) {
+            const count = scrollBuckets.get(bucketIndex) ?? 0;
+            if (count >= scrollLimit) continue;
+            scrollBuckets.set(bucketIndex, count + 1);
+            result.push(comment);
+            continue;
         }
+
+        if (comment.modeId === 5) {
+            const count = topBuckets.get(bucketIndex) ?? 0;
+            if (count >= fixedLimit) continue;
+            topBuckets.set(bucketIndex, count + 1);
+            result.push(comment);
+            continue;
+        }
+
+        if (comment.modeId === 4) {
+            const count = bottomBuckets.get(bucketIndex) ?? 0;
+            if (count >= fixedLimit) continue;
+            bottomBuckets.set(bucketIndex, count + 1);
+            result.push(comment);
+            continue;
+        }
+
+        result.push(comment);
     }
 
-    // 合并所有桶
-    const result: RawComment[] = [];
-    for (const bucket of buckets.values()) {
-        result.push(...bucket);
-    }
-
-    return result.sort((a, b) => a.time - b.time);
+    return result;
 }
 
 /**
