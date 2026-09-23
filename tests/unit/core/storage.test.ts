@@ -96,6 +96,36 @@ describe('Storage', () => {
             await expect(Storage.getEpisodeCache('season123', 1)).resolves.toEqual(cache);
         });
 
+        it('migrates ede.js anime, episode and offset keys', async () => {
+            localStorage.setItem('_anime_id_rel_season-old', '88');
+            localStorage.setItem('_anime_name_rel_season-old', 'Legacy Anime');
+            localStorage.setItem(
+                '_episode_id_rel_season-old_2',
+                JSON.stringify({
+                    episodeId: 88002,
+                    animeTitle: 'Legacy Anime',
+                    episodeTitle: '第2话',
+                }),
+            );
+            localStorage.setItem('_episode_id_rel_season-old_2_offset', '1.5');
+
+            await Storage.migrateEpisodeCacheFromLocalStorage();
+
+            await expect(Storage.getSeasonAnime('season-old')).resolves.toEqual({
+                animeId: 88,
+                animeTitle: 'Legacy Anime',
+            });
+            await expect(Storage.getEpisodeCache('season-old', 2)).resolves.toMatchObject({
+                episodeId: 88002,
+                animeTitle: 'Legacy Anime',
+                episodeTitle: '第2话',
+            });
+            await expect(Storage.getEpisodeOffset('season-old', 2)).resolves.toBe(1.5);
+            expect(localStorage.getItem('_anime_id_rel_season-old')).toBeNull();
+            expect(localStorage.getItem('_episode_id_rel_season-old_2')).toBeNull();
+            expect(localStorage.getItem('_episode_id_rel_season-old_2_offset')).toBeNull();
+        });
+
         it('returns null when IndexedDB get fails', async () => {
             const spy = vi.spyOn(idb, 'idbGet').mockRejectedValueOnce(new Error('idb down'));
             await expect(Storage.getEpisodeCache('season123', 1)).resolves.toBeNull();
