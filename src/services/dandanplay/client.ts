@@ -123,7 +123,7 @@ export async function postComment(
 
     logger.debug('dandanplay', `Posting comment to episode ${episodeId}`);
 
-    await post(
+    const response = await post<{ errorCode?: number; errorMessage?: string }>(
         url,
         {
             time: comment.time,
@@ -141,6 +141,10 @@ export async function postComment(
         },
     );
 
+    if (typeof response?.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay comment API error: ${response.errorCode}`);
+    }
+
     logger.info('dandanplay', 'Comment posted successfully');
 }
 
@@ -152,7 +156,7 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
 
     logger.debug('dandanplay', `Posting related source: ${url}`);
 
-    await post(
+    const response = await post<{ errorCode?: number; errorMessage?: string }>(
         apiUrl,
         { episodeId, url, shift: 0 },
         {
@@ -164,6 +168,10 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
             signal: options?.signal,
         },
     );
+
+    if (typeof response?.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay related-source API error: ${response.errorCode}`);
+    }
 
     logger.info('dandanplay', 'Related source posted successfully');
 }
