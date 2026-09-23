@@ -25,9 +25,9 @@ export const DEFAULT_CONFIG: DanmakuConfig = {
 /** 配置值合法范围 */
 export const CONFIG_CONSTRAINTS = {
     opacity: { min: 0, max: 1 },
-    speed: { min: 50, max: 600 },
-    fontSize: { min: 10, max: 60 },
-    heightRatio: { min: 0.1, max: 1.0 },
+    speed: { min: 20, max: 600 },
+    fontSize: { min: 8, max: 80 },
+    heightRatio: { min: 0, max: 1.0 },
 } as const;
 
 /** API 默认配置 */
@@ -67,9 +67,9 @@ const ModeFilterSchema = v.object({
 /** Valibot schema - DanmakuConfig */
 export const DanmakuConfigSchema = v.object({
     opacity: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-    speed: v.pipe(v.number(), v.minValue(50), v.maxValue(600)),
-    fontSize: v.pipe(v.number(), v.minValue(10), v.maxValue(60)),
-    heightRatio: v.pipe(v.number(), v.minValue(0.1), v.maxValue(1.0)),
+    speed: v.pipe(v.number(), v.minValue(20), v.maxValue(600)),
+    fontSize: v.pipe(v.number(), v.minValue(8), v.maxValue(80)),
+    heightRatio: v.pipe(v.number(), v.minValue(0), v.maxValue(1.0)),
     fontFamily: v.string(),
     fontOptions: v.string(),
     danmakuSwitch: v.boolean(),
