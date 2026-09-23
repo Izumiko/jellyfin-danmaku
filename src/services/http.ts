@@ -29,12 +29,14 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
         try {
             logger.debug('http', `Request ${method} ${url} (attempt ${attempt + 1}/${retries + 1})`);
 
+            const requestHeaders: Record<string, string> = { ...headers };
+            if (body !== undefined && !Object.keys(requestHeaders).some((key) => key.toLowerCase() === 'content-type')) {
+                requestHeaders['Content-Type'] = 'application/json';
+            }
+
             const response = await fetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...headers,
-                },
+                headers: requestHeaders,
                 body,
                 signal: combinedSignal,
             });
