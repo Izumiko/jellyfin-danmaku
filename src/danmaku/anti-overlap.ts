@@ -34,44 +34,29 @@ export function antiOverlapFilter(comments: ProcessedComment[], config: AntiOver
  * 滚动弹幕防重叠
  */
 export function filterOverlappedScroll(sorted: ProcessedComment[], config: AntiOverlapConfig): ProcessedComment[] {
-    const { containerWidth, containerHeight, fontSize } = config;
+    const { containerWidth, containerHeight, fontSize, speed } = config;
 
-    // 计算轨道数量
-    const trackCount = Math.floor(containerHeight / (fontSize * 1.5));
-    if (trackCount === 0) return [];
+    if (!sorted.length) return [];
 
-    // 每个轨道的释放时间
+    const trackCount = Math.floor((containerHeight - 18) / fontSize) - 1;
+    if (trackCount <= 0) return [];
+
+    const duration = Math.ceil(containerWidth / speed);
     const trackReleaseTimes = new Array(trackCount).fill(0);
-
     const result: ProcessedComment[] = [];
 
     for (const comment of sorted) {
-        // 测量弹幕宽度
         const width = textMeasurer.measure(comment.text, comment.style.font);
+        const actualSpeed = (containerWidth + width) / duration;
+        const timeToEnter = width / actualSpeed;
 
-        // 计算弹幕完全通过屏幕所需时间
-        const totalDistance = containerWidth + width;
-        const duration = totalDistance / config.speed;
-
-        // 计算弹幕进入屏幕的时间
-        const entryTime = comment.time;
-
-        // 查找可用轨道
-        let trackIndex = -1;
-        for (let i = 0; i < trackCount; i++) {
-            if (entryTime >= trackReleaseTimes[i]) {
-                trackIndex = i;
+        for (let i = 0; i < trackReleaseTimes.length; i++) {
+            if (comment.time >= trackReleaseTimes[i]) {
+                result.push(comment);
+                trackReleaseTimes[i] = comment.time + timeToEnter;
                 break;
             }
         }
-
-        // 如果没有可用轨道，跳过这条弹幕
-        if (trackIndex === -1) continue;
-
-        // 更新轨道释放时间
-        trackReleaseTimes[trackIndex] = entryTime + duration;
-
-        result.push(comment);
     }
 
     return result;
@@ -81,39 +66,23 @@ export function filterOverlappedScroll(sorted: ProcessedComment[], config: AntiO
  * 固定弹幕防重叠
  */
 export function filterOverlappedFixed(sorted: ProcessedComment[], config: AntiOverlapConfig): ProcessedComment[] {
-    const { containerHeight, fontSize } = config;
+    const { containerWidth, containerHeight, fontSize, speed } = config;
 
-    // 计算轨道数量
-    const trackCount = Math.floor(containerHeight / (fontSize * 1.5));
-    if (trackCount === 0) return [];
+    const trackCount = Math.floor((containerHeight - 18) / fontSize) - 1;
+    if (!sorted.length || trackCount <= 0) return [];
 
-    // 每个轨道的释放时间
+    const duration = Math.ceil(containerWidth / speed);
     const trackReleaseTimes = new Array(trackCount).fill(0);
-
-    // 固定弹幕显示时长（秒）
-    const displayDuration = 4;
-
     const result: ProcessedComment[] = [];
 
     for (const comment of sorted) {
-        const entryTime = comment.time;
-
-        // 查找可用轨道
-        let trackIndex = -1;
-        for (let i = 0; i < trackCount; i++) {
-            if (entryTime >= trackReleaseTimes[i]) {
-                trackIndex = i;
+        for (let i = 0; i < trackReleaseTimes.length; i++) {
+            if (comment.time >= trackReleaseTimes[i]) {
+                result.push(comment);
+                trackReleaseTimes[i] = comment.time + duration;
                 break;
             }
         }
-
-        // 如果没有可用轨道，跳过这条弹幕
-        if (trackIndex === -1) continue;
-
-        // 更新轨道释放时间
-        trackReleaseTimes[trackIndex] = entryTime + displayDuration;
-
-        result.push(comment);
     }
 
     return result;
