@@ -28,6 +28,7 @@ let sendApp: ReturnType<typeof mount> | null = null;
 let sendContainer: HTMLDivElement | null = null;
 let debugApp: ReturnType<typeof mount> | null = null;
 let debugContainer: HTMLDivElement | null = null;
+let playerInitGeneration = 0;
 
 /**
  * 主入口 - 监听播放器生命周期
@@ -81,39 +82,44 @@ export async function bootstrap() {
  */
 function observePlayerLifecycle(): () => void {
     const observer = new MutationObserver((mutations) => {
+        let playerRemoved = false;
+        let playerAdded = false;
+
         for (const mutation of mutations) {
-            // 检测移除
             for (const node of mutation.removedNodes) {
-                if (node instanceof HTMLElement && node.classList?.contains('videoPlayerContainer')) {
-                    logger.info('lifecycle', 'Video player removed');
-                    cleanupPlayer();
-                    eventBus.emit('media:removed', undefined);
-                    return;
+                if (!(node instanceof HTMLElement)) continue;
+                if (node.classList.contains('videoPlayerContainer') || node.querySelector('.videoPlayerContainer')) {
+                    playerRemoved = true;
                 }
             }
 
-            // 检测添加
             for (const node of mutation.addedNodes) {
-                if (node instanceof HTMLElement) {
-                    const isVideoContainer = node.classList?.contains('videoPlayerContainer');
-                    const hasVideoContainer = node.querySelector?.('.videoPlayerContainer');
-
-                    if (isVideoContainer || hasVideoContainer) {
-                        logger.info('lifecycle', 'Video player added');
-                        initPlayer();
-                        return;
-                    }
+                if (!(node instanceof HTMLElement)) continue;
+                if (node.classList.contains('videoPlayerContainer') || node.querySelector('.videoPlayerContainer')) {
+                    playerAdded = true;
                 }
             }
+        }
+
+        // 同一次 DOM 更新可能同时移除旧播放器并加入新播放器。
+        // 先清理旧实例，再初始化新实例，避免因为 return 提前漏掉其中一侧。
+        if (playerRemoved) {
+            logger.info('lifecycle', 'Video player removed');
+            cleanupPlayer();
+            eventBus.emit('media:removed', undefined);
+        }
+
+        if (playerAdded) {
+            logger.info('lifecycle', 'Video player added');
+            void initPlayer();
         }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // 检查当前是否已经有播放器
     if (document.querySelector('.videoPlayerContainer')) {
         logger.info('lifecycle', 'Video player already exists');
-        initPlayer();
+        void initPlayer();
     }
 
     return () => observer.disconnect();
@@ -128,19 +134,27 @@ async function initPlayer() {
         return;
     }
 
+    const generation = ++playerInitGeneration;
     pluginActive = true;
 
     try {
         // 等待控制栏
         const osdPage = await waitForElement(SELECTORS.mediaContainer, { timeout: 10000 });
+        if (generation !== playerInitGeneration || !document.querySelector('.videoPlayerContainer')) {
+            return;
+        }
+
         logger.info('lifecycle', 'Control bar detected');
-        const pauseButton = osdPage?.querySelector(SELECTORS.pauseButton);
-        const controlBar = pauseButton?.parentNode;
+        const pauseButton = osdPage.querySelector(SELECTORS.pauseButton);
+        const controlBar = pauseButton?.parentElement;
+        if (!controlBar) {
+            throw new Error('Player control bar not found');
+        }
 
         // 挂载弹幕开关
         toggleContainer = document.createElement('div');
         toggleContainer.style.display = 'contents';
-        controlBar?.appendChild(toggleContainer);
+        controlBar.appendChild(toggleContainer);
 
         toggleApp = mount(DanmakuToggle, {
             target: toggleContainer,
@@ -148,7 +162,7 @@ async function initPlayer() {
 
         sendContainer = document.createElement('div');
         sendContainer.style.display = 'contents';
-        controlBar?.appendChild(sendContainer);
+        controlBar.appendChild(sendContainer);
 
         sendApp = mount(SendDanmaku, {
             target: sendContainer,
@@ -171,6 +185,7 @@ async function initPlayer() {
 
         logger.info('lifecycle', 'Player initialization completed');
     } catch (error) {
+        if (generation !== playerInitGeneration) return;
         logger.error('lifecycle', 'Failed to initialize player', error);
         cleanupPlayer();
     }
@@ -180,6 +195,8 @@ async function initPlayer() {
  * 清理播放器相关资源
  */
 function cleanupPlayer() {
+    // 使仍在 await waitForElement() 的旧初始化失效。
+    playerInitGeneration++;
     if (!pluginActive) return;
 
     logger.info('lifecycle', 'Cleaning up player resources');
