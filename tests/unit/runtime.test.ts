@@ -37,6 +37,7 @@ function createHooks(overrides: Partial<DanmakuRuntimeHooks> = {}) {
         getExtComments: vi.fn(),
         postRelatedSource: vi.fn(),
         postComment: vi.fn().mockResolvedValue(undefined),
+        getLocalComments: vi.fn().mockResolvedValue([]),
         ...overrides,
     };
     return { hooks, video, container };
@@ -53,6 +54,7 @@ describe('DanmakuRuntime', () => {
         danmakuState.loading = false;
         danmakuState.episodeInfo = null;
         danmakuState.curEpOffset = 0;
+        danmakuState.useXmlDanmaku = false;
         const header = document.createElement('div');
         header.className = 'skinHeader';
         document.body.appendChild(header);
@@ -86,6 +88,36 @@ describe('DanmakuRuntime', () => {
             }),
             comments,
         );
+    });
+
+    it('loads local XML before attempting DanDanPlay matching', async () => {
+        danmakuState.useXmlDanmaku = true;
+        const localComments: RawComment[] = [
+            { time: 3, modeId: 1, color: 0xffffff, text: 'local' },
+        ];
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue(localComments);
+
+        await runtime.start();
+
+        expect(hooks.getLocalComments).toHaveBeenCalledWith(
+            'i1',
+            expect.objectContaining({ signal: expect.any(AbortSignal) }),
+        );
+        expect(hooks.matcher.match).not.toHaveBeenCalled();
+        expect(hooks.fetcher.fetch).not.toHaveBeenCalled();
+        expect(hooks.engine.init).toHaveBeenCalledWith(expect.anything(), localComments);
+        expect(danmakuState.episodeInfo).toBeNull();
+    });
+
+    it('falls back to online matching when local XML is empty', async () => {
+        danmakuState.useXmlDanmaku = true;
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([]);
+
+        await runtime.start();
+
+        expect(hooks.getLocalComments).toHaveBeenCalled();
+        expect(hooks.matcher.match).toHaveBeenCalledWith(item, 'auto');
+        expect(hooks.fetcher.fetch).toHaveBeenCalled();
     });
 
     it('second load refresh with same episodeId does not fetch again', async () => {
