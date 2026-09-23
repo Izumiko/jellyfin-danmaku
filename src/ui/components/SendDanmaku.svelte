@@ -77,6 +77,10 @@
 
     function stopHotkeys(e: KeyboardEvent) {
         e.stopPropagation();
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeDialog();
+        }
     }
 
     function submitLogin(e: SubmitEvent) {
