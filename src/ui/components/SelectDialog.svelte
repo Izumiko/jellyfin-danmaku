@@ -15,6 +15,10 @@
         onCancel: () => void;
     }>();
 
+    function stopPlayerGestures(e: Event) {
+        e.stopPropagation();
+    }
+
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
             e.stopImmediatePropagation();
@@ -26,7 +30,16 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="dialog-backdrop" role="dialog" aria-modal="true" tabindex="-1">
-    <div class="dialog-panel">
+    <div
+        class="dialog-panel"
+        onpointerdown={stopPlayerGestures}
+        onpointerup={stopPlayerGestures}
+        onmousedown={stopPlayerGestures}
+        onmouseup={stopPlayerGestures}
+        ontouchstart={stopPlayerGestures}
+        ontouchmove={stopPlayerGestures}
+        onwheel={stopPlayerGestures}
+    >
         <h3>{title}</h3>
         <div class="option-list">
             {#each options as option, index (index)}
