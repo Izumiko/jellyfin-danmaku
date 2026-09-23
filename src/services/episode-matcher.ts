@@ -8,6 +8,7 @@ export interface EpisodeMatcherDeps {
     chConvert: ChConvertMode;
     showInputDialog: (title: string, placeholder: string, defaultValue?: string) => Promise<string | null>;
     showSelectDialog: (title: string, options: string[], defaultIndex?: number) => Promise<number | null>;
+    getSeriesOriginalTitle?: (item: JellyfinItem) => Promise<string | undefined>;
 }
 
 function jellyfinEpisodeNumber(item: JellyfinItem): number {
@@ -93,9 +94,13 @@ export class EpisodeMatcher {
             logger.info('matcher', `Searching for: ${animeName}`);
 
             let searchResult = await searchEpisodes(this.deps.apiPrefix, animeName);
-            if ((!searchResult.animes || searchResult.animes.length === 0) && item.OriginalTitle) {
-                logger.info('matcher', `Retrying with OriginalTitle: ${item.OriginalTitle}`);
-                searchResult = await searchEpisodes(this.deps.apiPrefix, item.OriginalTitle);
+            if (!searchResult.animes || searchResult.animes.length === 0) {
+                const originalTitle =
+                    (await this.deps.getSeriesOriginalTitle?.(item)) || item.OriginalTitle;
+                if (originalTitle && originalTitle !== animeName) {
+                    logger.info('matcher', `Retrying with series OriginalTitle: ${originalTitle}`);
+                    searchResult = await searchEpisodes(this.deps.apiPrefix, originalTitle);
+                }
             }
 
             if (!searchResult.animes || searchResult.animes.length === 0) {
