@@ -52,6 +52,11 @@ export class Storage {
                 }
             } catch (error) {
                 console.error('[Storage] Failed to load config:', error);
+                const migrated = migrateLegacyConfig();
+                if (migrated) {
+                    Storage.saveConfig(migrated);
+                    return migrated;
+                }
                 return { ...DEFAULT_CONFIG };
             }
         }
@@ -300,15 +305,32 @@ export class Storage {
                 tokenExpire: number | string;
                 userName?: string;
             };
-            const tokenExpire = typeof parsed.tokenExpire === 'number' ? parsed.tokenExpire : new Date(parsed.tokenExpire).getTime();
-            const status: DanDanPlayStatus = {
-                isLogin: parsed.isLogin,
-                token: parsed.token,
-                tokenExpire,
-                userName: parsed.userName,
-            };
+            const tokenExpire =
+                typeof parsed.tokenExpire === 'number'
+                    ? parsed.tokenExpire
+                    : new Date(parsed.tokenExpire).getTime();
 
-            if (fromLegacy) {
+            const validSession =
+                parsed.isLogin === true &&
+                typeof parsed.token === 'string' &&
+                parsed.token.length > 0 &&
+                Number.isFinite(tokenExpire) &&
+                tokenExpire > 0;
+
+            const status: DanDanPlayStatus = validSession
+                ? {
+                      isLogin: true,
+                      token: parsed.token,
+                      tokenExpire,
+                      userName: typeof parsed.userName === 'string' ? parsed.userName : undefined,
+                  }
+                : {
+                      isLogin: false,
+                      token: '',
+                      tokenExpire: 0,
+                  };
+
+            if (fromLegacy || !validSession) {
                 Storage.saveDanDanPlayStatus(status);
             }
 
