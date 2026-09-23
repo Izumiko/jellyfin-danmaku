@@ -201,11 +201,20 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
  */
 export function convertDanDanPlayComment(comment: DanDanPlayComment): RawComment {
     const parts = comment.p.split(',');
+    const parsedTime = Number.parseFloat(parts[0] ?? '');
+    const parsedMode = Number.parseInt(parts[1] ?? '', 10);
+    const parsedColor = Number.parseInt(parts[2] ?? '', 10);
+
+    const modeId = [1, 4, 5, 6].includes(parsedMode) ? parsedMode : 1;
+    const color = Number.isFinite(parsedColor)
+        ? Math.max(0, Math.min(0xffffff, parsedColor))
+        : 0xffffff;
+
     return {
-        time: parseFloat(parts[0] ?? '0'),
-        modeId: parseInt(parts[1] ?? '1', 10),
-        color: parseInt(parts[2] ?? '16777215', 10),
-        text: comment.m,
-        user: parts[3] || undefined,
+        time: Number.isFinite(parsedTime) ? Math.max(0, parsedTime) : 0,
+        modeId,
+        color,
+        text: typeof comment.m === 'string' ? comment.m : String(comment.m ?? ''),
+        user: parts.slice(3).join(',') || undefined,
     };
 }
