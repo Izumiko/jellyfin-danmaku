@@ -9,6 +9,7 @@ import { CommentFetcher } from './services/comment-fetcher';
 import { DanDanPlayAuth } from './services/dandanplay/auth';
 import { getExtComments, convertDanDanPlayComment, postComment, postRelatedSource } from './services/dandanplay/client';
 import { getCurrentItem, getSeriesOriginalTitle } from './services/jellyfin/client';
+import { getLocalXmlDanmaku } from './services/jellyfin/danmaku';
 import { danmakuEngine } from './danmaku/engine';
 import { formatComment } from './danmaku/processor';
 import { showInputDialog, showSelectDialog } from './ui/dialogs';
@@ -47,6 +48,7 @@ export type DanmakuRuntimeHooks = {
     getExtComments?: typeof getExtComments;
     postRelatedSource?: typeof postRelatedSource;
     postComment?: typeof postComment;
+    getLocalComments?: typeof getLocalXmlDanmaku;
 };
 
 function defaultGetMedia(): RuntimeMedia {
@@ -80,7 +82,8 @@ function defaultFetcher(): DanmakuRuntimeHooks['fetcher'] {
                 apiPrefix: danmakuState.effectiveApiPrefix,
                 chConvert: danmakuState.chConvert,
                 sourceFilter: danmakuState.sourceFilter,
-                useXmlDanmaku: danmakuState.useXmlDanmaku,
+                // Runtime 先按 ede.js 顺序尝试本地 XML；在线 fetcher 不再重复请求本地。
+                useXmlDanmaku: false,
             }).fetch(episodeId, jellyfinItemId, options),
     };
 }
@@ -105,6 +108,7 @@ export class DanmakuRuntime {
             getExtComments: hooks.getExtComments ?? getExtComments,
             postRelatedSource: hooks.postRelatedSource ?? postRelatedSource,
             postComment: hooks.postComment ?? postComment,
+            getLocalComments: hooks.getLocalComments ?? getLocalXmlDanmaku,
         };
     }
 
@@ -195,6 +199,42 @@ export class DanmakuRuntime {
                 await Storage.setEpisodeOffset(seasonId, episodeIndex, danmakuState.curEpOffset);
             }
             danmakuState.curEpOffset = await Storage.getEpisodeOffset(seasonId, episodeIndex);
+
+            // ede.js 的本地 XML 路径不依赖 DanDanPlay 匹配：
+            // 先用 Jellyfin ItemId 直接取本地弹幕，只有无数据/失败才回退在线匹配。
+            if (danmakuState.useXmlDanmaku && reason !== 'search') {
+                try {
+                    const localComments = await this.hooks.getLocalComments(item.Id, { signal });
+                    if (this.destroyed || signal.aborted) return;
+
+                    if (localComments.length > 0) {
+                        this.rawComments = localComments;
+                        this.lastEpisodeId = null;
+                        danmakuState.episodeInfo = null;
+                        hideMatchTitle();
+
+                        let inited = this.initEngine(localComments);
+                        for (let i = 0; !inited && i < 10; i++) {
+                            await this.hooks.waitMs(200);
+                            if (this.destroyed || signal.aborted) return;
+                            inited = this.initEngine(localComments);
+                        }
+
+                        if (inited) {
+                            eventBus.emit('danmaku:loaded', {
+                                count: localComments.length,
+                                source: 'local',
+                            });
+                        }
+                        return;
+                    }
+
+                    logger.info('runtime', 'Local XML returned no comments; falling back to online');
+                } catch (error) {
+                    if (this.isCancelled(error, signal)) return;
+                    logger.warn('runtime', 'Local XML unavailable; falling back to online', error);
+                }
+            }
 
             const episode = await this.hooks.matcher.match(item, reason === 'search' ? 'manual' : 'auto');
             if (this.destroyed || signal.aborted) return;
