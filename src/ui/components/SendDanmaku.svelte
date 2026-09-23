@@ -54,6 +54,10 @@
         };
     });
 
+    function stopPlayerGestures(e: Event) {
+        e.stopPropagation();
+    }
+
     function openDialog() {
         if (disabled) return;
         errorMessage = '';
@@ -126,7 +130,17 @@
 
 {#if open}
     <div class="dialog-backdrop" role="dialog" aria-modal="true">
-        <div class="dialog-panel" onkeydown={stopHotkeys}>
+        <div
+            class="dialog-panel"
+            onkeydown={stopHotkeys}
+            onpointerdown={stopPlayerGestures}
+            onpointerup={stopPlayerGestures}
+            onmousedown={stopPlayerGestures}
+            onmouseup={stopPlayerGestures}
+            ontouchstart={stopPlayerGestures}
+            ontouchmove={stopPlayerGestures}
+            onwheel={stopPlayerGestures}
+        >
             {#if danmakuState.ddplayLoggedIn}
                 <form onsubmit={submitDanmaku} autocomplete="off">
                     <h3>发送弹幕</h3>
