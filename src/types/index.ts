@@ -174,6 +174,8 @@ export interface LogEntry {
     module: string;
     message: string;
     data?: unknown;
+    /** 连续相同日志的累计次数 */
+    repeat?: number;
 }
 
 /** DanDanPlay 评论响应 */
