@@ -17,18 +17,41 @@ class Logger {
      * 同时输出到 console 和内部存储（供 DebugOverlay 显示）
      */
     log(level: LogLevel, module: string, message: string, data?: unknown): void {
-        const entry: LogEntry = {
-            timestamp: Date.now(),
-            level,
-            module,
-            message,
-            data,
-        };
+        const now = Date.now();
+        const last = this.entries[this.entries.length - 1];
+        const sameData = (() => {
+            if (last?.data === data) return true;
+            if (last?.data === undefined || data === undefined) return false;
+            try {
+                return JSON.stringify(last.data) === JSON.stringify(data);
+            } catch {
+                return false;
+            }
+        })();
 
-        // 添加到内部存储
-        this.entries.push(entry);
-        if (this.entries.length > this.maxEntries) {
-            this.entries.shift();
+        if (
+            last &&
+            last.level === level &&
+            last.module === module &&
+            last.message === message &&
+            sameData
+        ) {
+            // 与 ede.js 的 DebugInfo 行为一致：连续重复日志合并为 X2 / X3...
+            last.repeat = (last.repeat ?? 1) + 1;
+            last.timestamp = now;
+        } else {
+            const entry: LogEntry = {
+                timestamp: now,
+                level,
+                module,
+                message,
+                data,
+                repeat: 1,
+            };
+            this.entries.push(entry);
+            if (this.entries.length > this.maxEntries) {
+                this.entries.shift();
+            }
         }
 
         // 输出到 console
