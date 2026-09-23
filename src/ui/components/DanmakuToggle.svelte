@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { danmakuState } from '../../core/state.svelte';
-    import { danmakuEngine } from '../../danmaku/engine';
+    import { eventBus } from '../../core/event-bus';
 
     let useFontAwesome = $state(false);
 
@@ -24,11 +24,7 @@
         danmakuState.danmakuSwitch = !danmakuState.danmakuSwitch;
         danmakuState.persist();
 
-        if (danmakuState.danmakuSwitch) {
-            danmakuEngine.show();
-        } else {
-            danmakuEngine.hide();
-        }
+        eventBus.emit('danmaku:visibility', { visible: danmakuState.danmakuSwitch });
     }
 </script>
 
