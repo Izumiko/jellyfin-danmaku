@@ -135,7 +135,7 @@ export class DanmakuEngine {
             position: 'fixed',
             top: '18px',
             width: '100%',
-            height: `calc(${config.heightRatio * 100}% - 18px)`,
+            height: `max(0px, calc(${config.heightRatio * 100}% - 18px))`,
             opacity: String(config.opacity),
             pointerEvents: 'none',
             zIndex: '1',
