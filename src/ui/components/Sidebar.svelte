@@ -55,6 +55,10 @@
 
     function stopHotkeys(e: KeyboardEvent) {
         e.stopPropagation();
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+        }
     }
 
     function stopPlayerGestures(e: Event) {
@@ -113,6 +117,7 @@
         ontouchstart={stopPlayerGestures}
         ontouchmove={stopPlayerGestures}
         onwheel={stopPlayerGestures}
+        onkeydown={stopHotkeys}
     >
         <header class="sidebar-header">
             <h2>弹幕设置</h2>
