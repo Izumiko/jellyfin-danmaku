@@ -7,6 +7,9 @@ export type SeasonAnime = { animeId: number; animeTitle: string; episodeIndexOff
 
 const STORAGE_PREFIX = 'jellyfin_danmaku_';
 const EPISODE_KEY_PREFIX = `${STORAGE_PREFIX}episode_`;
+const LEGACY_ANIME_ID_PREFIX = '_anime_id_rel_';
+const LEGACY_ANIME_NAME_PREFIX = '_anime_name_rel_';
+const LEGACY_EPISODE_PREFIX = '_episode_id_rel_';
 const EPISODE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function episodeCacheId(seasonId: string, episodeIndex: number): string {
@@ -107,25 +110,115 @@ export class Storage {
 
     static async migrateEpisodeCacheFromLocalStorage(): Promise<void> {
         try {
+            // localStorage 在 removeItem 时索引会变化，因此先做快照。
             const keys: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key?.startsWith(EPISODE_KEY_PREFIX)) keys.push(key);
+                if (key) keys.push(key);
             }
-            for (const key of keys) {
+
+            // 1. 迁移早期 TypeScript 版本使用过的 jellyfin_danmaku_episode_* key。
+            for (const key of keys.filter((key) => key.startsWith(EPISODE_KEY_PREFIX))) {
                 const rest = key.slice(EPISODE_KEY_PREFIX.length);
                 const sep = rest.lastIndexOf('_');
                 const raw = localStorage.getItem(key);
-                localStorage.removeItem(key);
                 if (sep < 0 || !raw) continue;
+
                 try {
                     const parsed = JSON.parse(raw) as CachedEpisode;
                     const seasonId = rest.slice(0, sep);
                     const episodeIndex = Number(rest.slice(sep + 1));
-                    if (!Number.isFinite(episodeIndex) || typeof parsed.episodeId !== 'number') continue;
-                    await Storage.setEpisodeCache(seasonId, episodeIndex, parsed);
+                    if (!Number.isFinite(episodeIndex) || !Number.isFinite(Number(parsed.episodeId))) continue;
+
+                    await idbPut(EPISODE_CACHE_STORE, {
+                        id: episodeCacheId(seasonId, episodeIndex),
+                        ...parsed,
+                        episodeId: Number(parsed.episodeId),
+                        timestamp: Number.isFinite(parsed.timestamp) ? parsed.timestamp : Date.now(),
+                    });
+                    localStorage.removeItem(key);
                 } catch {
-                    /* drop corrupt key */
+                    // 保留损坏或暂时无法迁移的 key，避免升级时静默丢数据。
+                }
+            }
+
+            // 2. 迁移 ede.js 的番剧级记忆：
+            //    _anime_id_rel_<seasonId>
+            //    _anime_name_rel_<seasonId>
+            const legacySeasonIds = new Set<string>();
+            for (const key of keys) {
+                if (key.startsWith(LEGACY_ANIME_ID_PREFIX)) {
+                    legacySeasonIds.add(key.slice(LEGACY_ANIME_ID_PREFIX.length));
+                } else if (key.startsWith(LEGACY_ANIME_NAME_PREFIX)) {
+                    legacySeasonIds.add(key.slice(LEGACY_ANIME_NAME_PREFIX.length));
+                }
+            }
+
+            for (const seasonId of legacySeasonIds) {
+                const idKey = `${LEGACY_ANIME_ID_PREFIX}${seasonId}`;
+                const nameKey = `${LEGACY_ANIME_NAME_PREFIX}${seasonId}`;
+                const animeId = Number(localStorage.getItem(idKey));
+                const animeTitle = localStorage.getItem(nameKey) ?? '';
+
+                if (!Number.isFinite(animeId) || animeId < 0 || !animeTitle) continue;
+
+                try {
+                    await idbPut(SEASON_ANIME_STORE, {
+                        id: seasonId,
+                        animeId,
+                        animeTitle,
+                    });
+                    localStorage.removeItem(idKey);
+                    localStorage.removeItem(nameKey);
+                } catch {
+                    // 保留旧数据，下次启动继续尝试。
+                }
+            }
+
+            // 3. 迁移 ede.js 的逐集匹配和逐集时间偏移：
+            //    _episode_id_rel_<seasonId>_<episode>
+            //    _episode_id_rel_<seasonId>_<episode>_offset
+            for (const key of keys.filter(
+                (key) => key.startsWith(LEGACY_EPISODE_PREFIX) && !key.endsWith('_offset'),
+            )) {
+                const rest = key.slice(LEGACY_EPISODE_PREFIX.length);
+                const sep = rest.lastIndexOf('_');
+                const raw = localStorage.getItem(key);
+                if (sep < 0 || !raw) continue;
+
+                const seasonId = rest.slice(0, sep);
+                const episodeIndex = Number(rest.slice(sep + 1));
+                if (!seasonId || !Number.isFinite(episodeIndex)) continue;
+
+                try {
+                    const parsed = JSON.parse(raw) as Partial<CachedEpisode>;
+                    const episodeId = Number(parsed.episodeId);
+                    if (!Number.isFinite(episodeId) || !parsed.animeTitle || !parsed.episodeTitle) continue;
+
+                    await idbPut(EPISODE_CACHE_STORE, {
+                        id: episodeCacheId(seasonId, episodeIndex),
+                        episodeId,
+                        animeTitle: parsed.animeTitle,
+                        episodeTitle: parsed.episodeTitle,
+                        timestamp: Date.now(),
+                    });
+
+                    const offsetKey = `${key}_offset`;
+                    const offsetRaw = localStorage.getItem(offsetKey);
+                    if (offsetRaw !== null) {
+                        const offset = Number(offsetRaw);
+                        if (Number.isFinite(offset)) {
+                            await idbPut(EPISODE_OFFSET_STORE, {
+                                id: episodeCacheId(seasonId, episodeIndex),
+                                offset,
+                            });
+                            localStorage.removeItem(offsetKey);
+                        }
+                    }
+
+                    localStorage.removeItem(key);
+                } catch {
+                    // 保留旧数据，下次启动继续尝试。
                 }
             }
         } catch (error) {
