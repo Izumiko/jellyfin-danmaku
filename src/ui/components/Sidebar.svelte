@@ -161,7 +161,11 @@
                         <div class="switch-label">
                             <span>日志显示</span>
                             <label class="modern-switch">
-                                <input type="checkbox" bind:checked={danmakuState.logSwitch} />
+                                <input
+                                    type="checkbox"
+                                    bind:checked={danmakuState.logSwitch}
+                                    onchange={() => logger.setEnabled(danmakuState.logSwitch)}
+                                />
                                 <span class="modern-slider"></span>
                             </label>
                         </div>
