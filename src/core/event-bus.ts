@@ -13,6 +13,8 @@ type EventMap = {
     'settings:open': undefined;
     /** 设置已保存 */
     'settings:saved': undefined;
+    /** 即时切换弹幕可见性 */
+    'danmaku:visibility': { visible: boolean };
     /** 增加弹幕源 */
     'danmaku:add-source': { url: string };
     /** 发送弹幕 */
