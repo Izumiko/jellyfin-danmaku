@@ -143,6 +143,7 @@ export interface AnimeInfo {
     animeId: number;
     animeTitle: string;
     type: string;
+    typeDescription?: string;
     episodes: EpisodeItem[];
 }
 
@@ -150,7 +151,7 @@ export interface AnimeInfo {
 export interface EpisodeItem {
     episodeId: number;
     episodeTitle: string;
-    episodeNumber?: number;
+    episodeNumber?: number | string;
 }
 
 /** /api/v2/bangumi/{animeId} 响应 */
