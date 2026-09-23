@@ -20,7 +20,7 @@ function jellyfinEpisodeNumber(item: JellyfinItem): number {
 function selectEpisodeIndex(anime: AnimeInfo, indexNumber?: number): number {
     const numeric = indexNumber && indexNumber > 0 ? Math.floor(indexNumber) : 1;
 
-    const byNumber = anime.episodes.findIndex((episode) => episode.episodeNumber === numeric);
+    const byNumber = anime.episodes.findIndex((episode) => Number(episode.episodeNumber) === numeric);
     if (byNumber >= 0) return byNumber;
 
     const match = anime.episodes[0]?.episodeTitle.match(/第(\d+)[话集]/);
@@ -113,7 +113,7 @@ export class EpisodeMatcher {
             if (mode === 'manual') {
                 const animeIndex = await this.deps.showSelectDialog(
                     '选择节目',
-                    searchResult.animes.map((a) => `${a.animeTitle} 类型:${a.type}`),
+                    searchResult.animes.map((a) => `${a.animeTitle} 类型:${a.typeDescription ?? a.type}`),
                     0,
                 );
                 if (animeIndex === null) {
