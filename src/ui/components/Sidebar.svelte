@@ -144,7 +144,14 @@
                         <div class="switch-label">
                             <span>弹幕显示</span>
                             <label class="modern-switch">
-                                <input type="checkbox" bind:checked={danmakuState.danmakuSwitch} />
+                                <input
+                                    type="checkbox"
+                                    bind:checked={danmakuState.danmakuSwitch}
+                                    onchange={() =>
+                                        eventBus.emit('danmaku:visibility', {
+                                            visible: danmakuState.danmakuSwitch,
+                                        })}
+                                />
                                 <span class="modern-slider"></span>
                             </label>
                         </div>
