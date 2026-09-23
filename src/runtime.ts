@@ -8,7 +8,7 @@ import { EpisodeMatcher } from './services/episode-matcher';
 import { CommentFetcher } from './services/comment-fetcher';
 import { DanDanPlayAuth } from './services/dandanplay/auth';
 import { getExtComments, convertDanDanPlayComment, postComment, postRelatedSource } from './services/dandanplay/client';
-import { getCurrentItem } from './services/jellyfin/client';
+import { getCurrentItem, getSeriesOriginalTitle } from './services/jellyfin/client';
 import { danmakuEngine } from './danmaku/engine';
 import { formatComment } from './danmaku/processor';
 import { showInputDialog, showSelectDialog } from './ui/dialogs';
@@ -65,6 +65,7 @@ function defaultMatcher(): DanmakuRuntimeHooks['matcher'] {
                 chConvert: danmakuState.chConvert,
                 showInputDialog,
                 showSelectDialog,
+                getSeriesOriginalTitle,
             }).match(item, mode),
     };
 }
@@ -174,8 +175,7 @@ export class DanmakuRuntime {
             }
             if (this.destroyed || signal.aborted) return;
             if (!item) {
-                logger.warn('runtime', 'No current item');
-                this.clearPlayback();
+                logger.warn('runtime', 'No current item; keeping current danmaku until a valid item is available');
                 return;
             }
 
@@ -188,8 +188,7 @@ export class DanmakuRuntime {
             const episode = await this.hooks.matcher.match(item, reason === 'search' ? 'manual' : 'auto');
             if (this.destroyed || signal.aborted) return;
             if (!episode) {
-                logger.warn('runtime', 'No episode matched');
-                this.clearPlayback();
+                logger.warn('runtime', 'No episode matched; keeping current danmaku');
                 return;
             }
             showMatchTitle(episode);
