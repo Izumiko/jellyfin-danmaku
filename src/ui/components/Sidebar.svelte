@@ -231,21 +231,21 @@
                     <div class="setting-item">
                         <label>
                             弹幕速度: {danmakuState.speed}
-                            <input type="range" min="50" max="600" step="10" bind:value={danmakuState.speed} onpointerdown={stopPlayerGestures} />
+                            <input type="range" min="20" max="600" step="10" bind:value={danmakuState.speed} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             字体大小: {danmakuState.fontSize}px
-                            <input type="range" min="10" max="60" step="1" bind:value={danmakuState.fontSize} onpointerdown={stopPlayerGestures} />
+                            <input type="range" min="8" max="80" step="1" bind:value={danmakuState.fontSize} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
                     <div class="setting-item">
                         <label>
                             显示区域比例: {danmakuState.heightRatio}
-                            <input type="range" min="0.1" max="1" step="0.05" bind:value={danmakuState.heightRatio} onpointerdown={stopPlayerGestures} />
+                            <input type="range" min="0" max="1" step="0.05" bind:value={danmakuState.heightRatio} onpointerdown={stopPlayerGestures} />
                         </label>
                     </div>
 
