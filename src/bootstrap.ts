@@ -346,6 +346,8 @@ function openSidebar() {
             },
             onCancel: () => {
                 danmakuState.hydrate();
+                eventBus.emit('danmaku:visibility', { visible: danmakuState.danmakuSwitch });
+                logger.setEnabled(danmakuState.logSwitch);
                 closeSidebar();
             },
         },
