@@ -17,6 +17,18 @@ describe('convertDanDanPlayComment', () => {
         });
     });
 
+    it('normalizes malformed numeric fields instead of leaking NaN', () => {
+        const raw = convertDanDanPlayComment({
+            cid: 3,
+            p: 'bad,999,999999999,user',
+            m: 'broken',
+        });
+
+        expect(raw.time).toBe(0);
+        expect(raw.modeId).toBe(1);
+        expect(raw.color).toBe(0xffffff);
+    });
+
     it('does not wrap user with [DanDanPlay]', () => {
         const raw = convertDanDanPlayComment({
             cid: 2,
