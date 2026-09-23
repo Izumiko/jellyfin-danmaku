@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import '../styles/variables.css';
     import '../styles/base.css';
     import { danmakuState } from '../../core/state.svelte';
@@ -19,6 +20,38 @@
     let activeTab = $state('control');
     let account = $state('');
     let password = $state('');
+    let loginPending = $state(false);
+    let loginMessage = $state('');
+
+    onMount(() => {
+        return eventBus.on('auth:login-result', ({ success }) => {
+            loginPending = false;
+            if (success) {
+                password = '';
+                loginMessage = '登录成功';
+            } else {
+                loginMessage = '登录失败，请检查账号、密码或网络';
+            }
+        });
+    });
+
+    function handleLogin() {
+        if (loginPending) return;
+        if (!account.trim() || !password) {
+            loginMessage = '请输入账号和密码';
+            return;
+        }
+        loginPending = true;
+        loginMessage = '';
+        eventBus.emit('auth:login', { account: account.trim(), password });
+    }
+
+    function handleLogout() {
+        loginPending = false;
+        loginMessage = '';
+        password = '';
+        eventBus.emit('auth:logout', undefined);
+    }
 
     function stopHotkeys(e: KeyboardEvent) {
         e.stopPropagation();
@@ -133,7 +166,7 @@
                     <div class="setting-item">
                         {#if danmakuState.ddplayLoggedIn}
                             <span>已登录：{danmakuState.ddplayUserName}</span>
-                            <button class="action-btn" type="button" onclick={() => eventBus.emit('auth:logout', undefined)}>登出</button>
+                            <button class="action-btn" type="button" onclick={handleLogout}>登出</button>
                         {:else}
                             <label>
                                 账号:
@@ -143,7 +176,12 @@
                                 密码:
                                 <input class="setting-input" type="password" bind:value={password} onkeydown={stopHotkeys} />
                             </label>
-                            <button class="action-btn" type="button" onclick={() => eventBus.emit('auth:login', { account, password })}>登录</button>
+                            <button class="action-btn" type="button" disabled={loginPending} onclick={handleLogin}>
+                                {loginPending ? '登录中…' : '登录'}
+                            </button>
+                        {/if}
+                        {#if loginMessage}
+                            <div class:login-error={!danmakuState.ddplayLoggedIn} class="login-message">{loginMessage}</div>
                         {/if}
                     </div>
 
@@ -593,5 +631,20 @@
 
     .action-btn:hover {
         background: #0090c0;
+    }
+
+    .login-message {
+        margin-top: 8px;
+        font-size: 13px;
+        opacity: 0.85;
+    }
+
+    .login-error {
+        color: #ff8a80;
+    }
+
+    .action-btn:disabled {
+        opacity: 0.55;
+        cursor: default;
     }
 </style>
