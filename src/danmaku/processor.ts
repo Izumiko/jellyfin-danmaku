@@ -63,15 +63,17 @@ export function deduplicateComments(comments: RawComment[]): RawComment[] {
  */
 export function filterBySource(comments: RawComment[], filter: SourceFilter): RawComment[] {
     return comments.filter((comment) => {
-        if (!comment.user) return filter.other;
+        const user = comment.user ?? '';
 
-        const user = comment.user.toLowerCase();
-
-        if (user.includes('bilibili')) return filter.bilibili;
-        if (user.includes('gamer') || user.includes('bahamut')) return filter.gamer;
-        if (user.includes('dandanplay')) return filter.dandanplay;
-
-        return filter.other;
+        // 与 ede.js 的来源约定一致：
+        // [BiliBili]... -> Bilibili
+        // [Gamer]...    -> Gamer
+        // 其他 [...]     -> 第三方来源
+        // 无 [] 前缀     -> 弹弹Play原生弹幕
+        if (user.startsWith('[BiliBili]')) return filter.bilibili;
+        if (user.startsWith('[Gamer]')) return filter.gamer;
+        if (user.startsWith('[')) return filter.other;
+        return filter.dandanplay;
     });
 }
 
@@ -106,43 +108,25 @@ export function limitDensity(
 ): RawComment[] {
     if (limit === DensityLimit.Unlimited) return comments;
 
-    // 与 ede.js 保持一致：等级越高限制越严格。
-    // 滚动弹幕每个 duration 时间桶最多 (9 - level * 2) * lines 条；
-    // 顶部/底部弹幕分别最多 lines - 1 条（至少 1 条）。
-    const scrollLimit = Math.max(1, (9 - limit * 2) * Math.max(1, lines));
-    const fixedLimit = Math.max(1, lines - 1);
-
-    const sorted = [...comments].sort((a, b) => a.time - b.time);
+    const scrollLimit = (9 - limit * 2) * lines;
+    const verticalLimit = lines - 1 > 0 ? lines - 1 : 1;
     const scrollBuckets = new Map<number, number>();
-    const topBuckets = new Map<number, number>();
-    const bottomBuckets = new Map<number, number>();
+    const verticalBuckets = new Map<number, number>();
     const result: RawComment[] = [];
 
-    for (const comment of sorted) {
-        const bucketIndex = Math.floor(comment.time / Math.max(bucketSize, Number.EPSILON));
+    // ede.js 按原始顺序处理，不重排弹幕。
+    for (const comment of comments) {
+        const timeIndex = Math.ceil(comment.time / Math.max(bucketSize, Number.EPSILON));
+        const isVertical = comment.modeId === 4 || comment.modeId === 5;
 
-        if (comment.modeId === 1 || comment.modeId === 6) {
-            const count = scrollBuckets.get(bucketIndex) ?? 0;
-            if (count >= scrollLimit) continue;
-            scrollBuckets.set(bucketIndex, count + 1);
-            result.push(comment);
-            continue;
-        }
-
-        if (comment.modeId === 5) {
-            const count = topBuckets.get(bucketIndex) ?? 0;
-            if (count >= fixedLimit) continue;
-            topBuckets.set(bucketIndex, count + 1);
-            result.push(comment);
-            continue;
-        }
-
-        if (comment.modeId === 4) {
-            const count = bottomBuckets.get(bucketIndex) ?? 0;
-            if (count >= fixedLimit) continue;
-            bottomBuckets.set(bucketIndex, count + 1);
-            result.push(comment);
-            continue;
+        if (isVertical) {
+            const count = (verticalBuckets.get(timeIndex) ?? 0) + 1;
+            verticalBuckets.set(timeIndex, count);
+            if (count > verticalLimit) continue;
+        } else {
+            const count = (scrollBuckets.get(timeIndex) ?? 0) + 1;
+            scrollBuckets.set(timeIndex, count);
+            if (count > scrollLimit) continue;
         }
 
         result.push(comment);
