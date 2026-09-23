@@ -37,6 +37,8 @@ export type DanmakuRuntimeHooks = {
     engine: {
         init: (config: EngineConfig, comments: RawComment[]) => void;
         emit: (comment: ProcessedComment) => void;
+        show: () => void;
+        hide: () => void;
         destroy: () => void;
     };
     getCurrentItem: typeof getCurrentItem;
@@ -110,6 +112,10 @@ export class DanmakuRuntime {
         this.unsubscribers.push(
             eventBus.on('danmaku:reload', (data) => {
                 void this.load(data.reason);
+            }),
+            eventBus.on('danmaku:visibility', ({ visible }) => {
+                if (visible) this.hooks.engine.show();
+                else this.hooks.engine.hide();
             }),
             eventBus.on('danmaku:add-source', (data) => {
                 void this.addSource(data.url);
