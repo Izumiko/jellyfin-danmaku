@@ -15,6 +15,10 @@ export async function searchEpisodes(apiPrefix: string, animeName: string, optio
         signal: options?.signal,
     });
 
+    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay search API error: ${response.errorCode}`);
+    }
+
     logger.info('dandanplay', `Found ${response.animes?.length || 0} anime results for "${animeName}"`);
     return response;
 }
@@ -32,6 +36,10 @@ export async function getAnimeById(apiPrefix: string, animeId: number, options?:
         retries: 2,
         signal: options?.signal,
     });
+
+    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay bangumi API error: ${response.errorCode}`);
+    }
 
     const anime = response.bangumi;
     if (!anime?.episodes?.length) {
@@ -57,11 +65,15 @@ export async function getComments(
 
     logger.debug('dandanplay', `Fetching comments for episode ${episodeId}`);
 
-    const response = await get<{ comments: DanDanPlayComment[] }>(url, {
+    const response = await get<{ comments?: DanDanPlayComment[]; errorCode?: number; errorMessage?: string }>(url, {
         timeout: 15000,
         retries: 2,
         signal: options?.signal,
     });
+
+    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay comment API error: ${response.errorCode}`);
+    }
 
     const comments = response.comments || [];
     logger.info('dandanplay', `Fetched ${comments.length} comments for episode ${episodeId}`);
@@ -76,11 +88,15 @@ export async function getRelatedSources(apiPrefix: string, episodeId: number, op
     const url = `${apiPrefix}/api/v2/related/${episodeId}`;
     logger.debug('dandanplay', `Fetching related sources for episode ${episodeId}`);
 
-    const response = await get<{ relateds: RelatedSource[] }>(url, {
+    const response = await get<{ relateds?: RelatedSource[]; errorCode?: number; errorMessage?: string }>(url, {
         timeout: 10000,
         retries: 2,
         signal: options?.signal,
     });
+
+    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay related API error: ${response.errorCode}`);
+    }
 
     const sources = response.relateds || [];
     logger.info('dandanplay', `Found ${sources.length} related sources for episode ${episodeId}`);
@@ -97,11 +113,15 @@ export async function getExtComments(apiPrefix: string, sourceUrl: string, confi
 
     logger.debug('dandanplay', `Fetching ext comments from ${sourceUrl}`);
 
-    const response = await get<{ comments: DanDanPlayComment[] }>(url, {
+    const response = await get<{ comments?: DanDanPlayComment[]; errorCode?: number; errorMessage?: string }>(url, {
         timeout: 15000,
         retries: 1, // 外部源只重试一次
         signal: options?.signal,
     });
+
+    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
+        throw new Error(response.errorMessage || `DanDanPlay extcomment API error: ${response.errorCode}`);
+    }
 
     const comments = response.comments || [];
     logger.info('dandanplay', `Fetched ${comments.length} ext comments from ${sourceUrl}`);
