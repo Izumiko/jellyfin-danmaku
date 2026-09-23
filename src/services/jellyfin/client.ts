@@ -49,12 +49,31 @@ export async function getCurrentItem(isNewJellyfin: boolean, itemId: string): Pr
         }
 
         const deviceId = client.deviceId();
+        const userId = client.getCurrentUserId();
         logger.debug('jellyfin', `Getting current item from session (device: ${deviceId})`);
-        const sessions = await client.getSessions({ deviceId });
+        const sessions = await client.getSessions({ userId, deviceId });
         return sessions?.[0]?.NowPlayingItem ?? null;
     } catch (error) {
         logger.error('jellyfin', 'Failed to get current item', error);
         return null;
+    }
+}
+
+/**
+ * 获取当前媒体所属 Series 的 OriginalTitle。
+ * ede.js 在主标题搜索无结果时会读取 Series 项，而不是直接使用 episode.OriginalTitle。
+ */
+export async function getSeriesOriginalTitle(item: JellyfinItem): Promise<string | undefined> {
+    const client = getApiClient();
+    if (!client) return item.OriginalTitle;
+
+    const seriesId = item.SeriesId || item.Id;
+    try {
+        const series = await client.getItem(client.getCurrentUserId(), seriesId);
+        return series?.OriginalTitle || item.OriginalTitle;
+    } catch (error) {
+        logger.warn('jellyfin', 'Failed to get series OriginalTitle', error);
+        return item.OriginalTitle;
     }
 }
 
