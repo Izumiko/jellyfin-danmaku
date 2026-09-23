@@ -36,6 +36,20 @@ describe('DanDanPlayAuth', () => {
         expect(auth.isLoggedIn).toBe(true);
     });
 
+    it('clears an already expired saved session without renewing it', async () => {
+        localStorage.setItem(
+            'jellyfin_danmaku_ddplay_status',
+            JSON.stringify({ isLogin: true, token: 'expired', tokenExpire: Date.now() - 1000 }),
+        );
+
+        const auth = new DanDanPlayAuth('https://api.example.com');
+        await auth.refreshIfNeeded();
+
+        expect(auth.isLoggedIn).toBe(false);
+        expect(auth.token).toBe('');
+        expect(get).not.toHaveBeenCalled();
+    });
+
     it('renews with GET /login/renew', async () => {
         const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
         localStorage.setItem(
