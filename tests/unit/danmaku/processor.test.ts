@@ -80,12 +80,34 @@ describe('processor', () => {
             expect(result[0].user).toBe('[BiliBili]user1');
         });
 
-        it('should classify unknown users as other', () => {
-            const comments = [
-                createComment({ user: 'unknown' }),
-            ];
+        it('should classify unprefixed users as native DanDanPlay', () => {
+            const comments = [createComment({ user: 'unknown' })];
 
-            const result = filterBySource(comments, { bilibili: true, gamer: true, dandanplay: true, other: false });
+            const kept = filterBySource(comments, {
+                bilibili: true,
+                gamer: true,
+                dandanplay: true,
+                other: false,
+            });
+            const filtered = filterBySource(comments, {
+                bilibili: true,
+                gamer: true,
+                dandanplay: false,
+                other: true,
+            });
+
+            expect(kept).toHaveLength(1);
+            expect(filtered).toHaveLength(0);
+        });
+
+        it('should classify unknown bracketed prefixes as other', () => {
+            const comments = [createComment({ user: '[AcFun]user' })];
+            const result = filterBySource(comments, {
+                bilibili: true,
+                gamer: true,
+                dandanplay: true,
+                other: false,
+            });
             expect(result).toHaveLength(0);
         });
     });
@@ -171,6 +193,24 @@ describe('processor', () => {
             const result = formatComment(comment, { fontSize: 18, fontFamily: 'sans-serif', fontOptions: '', timeOffset: 5.0 });
 
             expect(result.time).toBe(15.0);
+        });
+
+        it('should use a white outline only for pure black comments', () => {
+            const black = formatComment(createComment({ color: 0 }), {
+                fontSize: 18,
+                fontFamily: 'sans-serif',
+                fontOptions: '',
+                timeOffset: 0,
+            });
+            const darkGray = formatComment(createComment({ color: 0x111111 }), {
+                fontSize: 18,
+                fontFamily: 'sans-serif',
+                fontOptions: '',
+                timeOffset: 0,
+            });
+
+            expect(black.style.strokeStyle).toBe('#fff');
+            expect(darkGray.style.strokeStyle).toBe('#000');
         });
 
         it('should convert color to hex', () => {
