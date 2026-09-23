@@ -15,8 +15,14 @@ type EventMap = {
     'settings:saved': undefined;
     /** 增加弹幕源 */
     'danmaku:add-source': { url: string };
+    /** 发送弹幕 */
+    'danmaku:send': { text: string; mode: 1 | 4 | 5 | 6; color: number };
+    /** 发送弹幕结果 */
+    'danmaku:send-result': { success: boolean; message?: string };
     /** 弹弹play 登录 */
     'auth:login': { account: string; password: string };
+    /** 弹弹play 登录结果 */
+    'auth:login-result': { success: boolean };
     /** 弹弹play 登出 */
     'auth:logout': undefined;
 };
