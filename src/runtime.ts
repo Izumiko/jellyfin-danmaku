@@ -7,12 +7,13 @@ import { hideMatchTitle, showMatchTitle } from './ui/match-title';
 import { EpisodeMatcher } from './services/episode-matcher';
 import { CommentFetcher } from './services/comment-fetcher';
 import { DanDanPlayAuth } from './services/dandanplay/auth';
-import { getExtComments, convertDanDanPlayComment, postRelatedSource } from './services/dandanplay/client';
+import { getExtComments, convertDanDanPlayComment, postComment, postRelatedSource } from './services/dandanplay/client';
 import { getCurrentItem } from './services/jellyfin/client';
 import { danmakuEngine } from './danmaku/engine';
+import { formatComment } from './danmaku/processor';
 import { showInputDialog, showSelectDialog } from './ui/dialogs';
 import { DanmakuError, ErrorCode } from './types/index';
-import type { EngineConfig, RawComment } from './types/index';
+import type { EngineConfig, ProcessedComment, RawComment } from './types/index';
 
 export type LoadReason = 'init' | 'search' | 'refresh' | 'settings-changed';
 
@@ -32,12 +33,17 @@ export type DanmakuRuntimeHooks = {
         logout: () => void;
         refreshIfNeeded: () => Promise<void>;
     };
-    engine: { init: (config: EngineConfig, comments: RawComment[]) => void; destroy: () => void };
+    engine: {
+        init: (config: EngineConfig, comments: RawComment[]) => void;
+        emit: (comment: ProcessedComment) => void;
+        destroy: () => void;
+    };
     getCurrentItem: typeof getCurrentItem;
     getMedia: () => RuntimeMedia;
     waitMs: (ms: number) => Promise<void>;
     getExtComments?: typeof getExtComments;
     postRelatedSource?: typeof postRelatedSource;
+    postComment?: typeof postComment;
 };
 
 function defaultGetMedia(): RuntimeMedia {
@@ -94,6 +100,7 @@ export class DanmakuRuntime {
             waitMs: hooks.waitMs ?? defaultWaitMs,
             getExtComments: hooks.getExtComments ?? getExtComments,
             postRelatedSource: hooks.postRelatedSource ?? postRelatedSource,
+            postComment: hooks.postComment ?? postComment,
         };
     }
 
@@ -104,6 +111,9 @@ export class DanmakuRuntime {
             }),
             eventBus.on('danmaku:add-source', (data) => {
                 void this.addSource(data.url);
+            }),
+            eventBus.on('danmaku:send', (data) => {
+                void this.sendDanmaku(data.text, data.mode, data.color);
             }),
             eventBus.on('auth:login', (data) => {
                 void this.login(data.account, data.password);
@@ -239,8 +249,67 @@ export class DanmakuRuntime {
     }
 
     private async login(account: string, password: string): Promise<void> {
-        await this.hooks.auth.login(account, password);
+        const success = await this.hooks.auth.login(account, password);
         this.syncAuthState();
+        eventBus.emit('auth:login-result', { success });
+    }
+
+    private async sendDanmaku(text: string, mode: 1 | 4 | 5 | 6, color: number): Promise<void> {
+        const message = text.trim();
+        if (!message) {
+            eventBus.emit('danmaku:send-result', { success: false, message: '弹幕内容不能为空' });
+            return;
+        }
+        if (!this.hooks.auth.isLoggedIn) {
+            eventBus.emit('danmaku:send-result', { success: false, message: '请先登录弹弹Play' });
+            return;
+        }
+        if (this.lastEpisodeId == null || !danmakuState.episodeInfo) {
+            eventBus.emit('danmaku:send-result', { success: false, message: '请先完成弹幕匹配' });
+            return;
+        }
+
+        const media = this.hooks.getMedia();
+        if (!media.video) {
+            eventBus.emit('danmaku:send-result', { success: false, message: '未找到播放器' });
+            return;
+        }
+
+        const time = media.video.currentTime;
+        try {
+            await this.hooks.postComment(
+                danmakuState.effectiveApiPrefix,
+                this.lastEpisodeId,
+                { text: message, time, mode, color },
+                this.hooks.auth.token,
+            );
+
+            const raw: RawComment = {
+                time,
+                modeId: mode,
+                color,
+                text: message,
+                user: this.hooks.auth.userName || undefined,
+            };
+            this.rawComments.push(raw);
+            this.hooks.engine.emit(
+                formatComment(raw, {
+                    fontSize: danmakuState.fontSize,
+                    fontFamily: danmakuState.fontFamily,
+                    fontOptions: danmakuState.fontOptions,
+                    timeOffset: 0,
+                }),
+            );
+
+            logger.info('runtime', 'Danmaku posted successfully');
+            eventBus.emit('danmaku:send-result', { success: true });
+        } catch (error) {
+            logger.error('runtime', 'Failed to post danmaku', error);
+            eventBus.emit('danmaku:send-result', {
+                success: false,
+                message: error instanceof Error ? error.message : '发送弹幕失败',
+            });
+        }
     }
 
     private logout(): void {
