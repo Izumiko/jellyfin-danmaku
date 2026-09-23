@@ -20,8 +20,11 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        // 合并外部信号和超时信号
-        const combinedSignal = externalSignal ? createCombinedSignal(externalSignal, controller.signal) : controller.signal;
+        // 合并外部信号和超时信号，并在本次请求结束后移除监听器。
+        const combined = externalSignal
+            ? createCombinedSignal(externalSignal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
+        const combinedSignal = combined.signal;
 
         try {
             logger.debug('http', `Request ${method} ${url} (attempt ${attempt + 1}/${retries + 1})`);
@@ -35,8 +38,6 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
                 body,
                 signal: combinedSignal,
             });
-
-            clearTimeout(timeoutId);
 
             // HTTP 错误处理
             if (!response.ok) {
@@ -56,8 +57,6 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
                 return text as T;
             }
         } catch (error) {
-            clearTimeout(timeoutId);
-
             // 处理取消
             if (error instanceof Error && error.name === 'AbortError') {
                 if (externalSignal?.aborted) {
@@ -82,6 +81,9 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
                 await sleep(delay);
                 continue;
             }
+        } finally {
+            clearTimeout(timeoutId);
+            combined.cleanup();
         }
     }
 
@@ -92,7 +94,10 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
 /**
  * 创建组合的 AbortSignal
  */
-function createCombinedSignal(signal1: AbortSignal, signal2: AbortSignal): AbortSignal {
+function createCombinedSignal(
+    signal1: AbortSignal,
+    signal2: AbortSignal,
+): { signal: AbortSignal; cleanup: () => void } {
     const controller = new AbortController();
 
     const abort = () => controller.abort();
@@ -100,7 +105,18 @@ function createCombinedSignal(signal1: AbortSignal, signal2: AbortSignal): Abort
     signal1.addEventListener('abort', abort);
     signal2.addEventListener('abort', abort);
 
-    return controller.signal;
+    // addEventListener 不会补发已经发生过的 abort。
+    if (signal1.aborted || signal2.aborted) {
+        controller.abort();
+    }
+
+    return {
+        signal: controller.signal,
+        cleanup: () => {
+            signal1.removeEventListener('abort', abort);
+            signal2.removeEventListener('abort', abort);
+        },
+    };
 }
 
 /**
