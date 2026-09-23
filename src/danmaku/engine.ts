@@ -45,7 +45,7 @@ export class DanmakuEngine {
             speed: config.speed,
             timeOffset: danmakuState.curEpOffset || 0,
             containerWidth: config.container.clientWidth,
-            containerHeight: config.container.clientHeight,
+            containerHeight: config.container.clientHeight * config.heightRatio,
         });
 
         // 2. 防重叠过滤（如果启用）
@@ -53,7 +53,7 @@ export class DanmakuEngine {
         if (danmakuState.useAntiOverlap) {
             finalComments = antiOverlapFilter(processed, {
                 containerWidth: config.container.clientWidth,
-                containerHeight: config.container.clientHeight,
+                containerHeight: config.container.clientHeight * config.heightRatio,
                 fontSize: danmakuState.fontSize,
                 speed: config.speed,
                 fontFamily: danmakuState.fontFamily,
