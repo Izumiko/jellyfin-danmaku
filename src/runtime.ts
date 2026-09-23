@@ -32,6 +32,7 @@ export type DanmakuRuntimeHooks = {
         login: (account: string, password: string) => Promise<boolean>;
         logout: () => void;
         refreshIfNeeded: () => Promise<void>;
+        setApiPrefix?: (apiPrefix: string) => void;
     };
     engine: {
         init: (config: EngineConfig, comments: RawComment[]) => void;
@@ -135,6 +136,7 @@ export class DanmakuRuntime {
             logger.warn('runtime', 'Episode cache migrate/sweep failed', error);
         }
 
+        this.syncAuthApiPrefix();
         await this.hooks.auth.refreshIfNeeded();
         this.syncAuthState();
         await this.load('init');
@@ -160,6 +162,9 @@ export class DanmakuRuntime {
 
         danmakuState.loading = true;
         try {
+            if (reason === 'settings-changed') {
+                this.syncAuthApiPrefix();
+            }
             if (danmakuState.isNewJellyfin && !danmakuState.itemId) {
                 for (let i = 0; i < 10 && !danmakuState.itemId; i++) {
                     await this.hooks.waitMs(200);
@@ -240,7 +245,17 @@ export class DanmakuRuntime {
             this.initEngine(this.rawComments);
 
             if (this.hooks.auth.isLoggedIn) {
-                await this.hooks.postRelatedSource(danmakuState.effectiveApiPrefix, this.lastEpisodeId, url, this.hooks.auth.token);
+                try {
+                    await this.hooks.postRelatedSource(
+                        danmakuState.effectiveApiPrefix,
+                        this.lastEpisodeId,
+                        url,
+                        this.hooks.auth.token,
+                    );
+                } catch (error) {
+                    // 本地追加已经成功，related 提交失败不应把整个“增加弹幕源”视为失败。
+                    logger.warn('runtime', 'Source loaded, but failed to post related source', error);
+                }
             }
         } catch (error) {
             logger.error('runtime', 'Failed to add source', error);
@@ -248,6 +263,7 @@ export class DanmakuRuntime {
     }
 
     private async login(account: string, password: string): Promise<void> {
+        this.syncAuthApiPrefix();
         const success = await this.hooks.auth.login(account, password);
         this.syncAuthState();
         eventBus.emit('auth:login-result', { success });
@@ -322,6 +338,10 @@ export class DanmakuRuntime {
         this.lastEpisodeId = null;
         this.rawComments = [];
         danmakuState.episodeInfo = null;
+    }
+
+    private syncAuthApiPrefix(): void {
+        this.hooks.auth.setApiPrefix?.(danmakuState.effectiveApiPrefix);
     }
 
     private syncAuthState(): void {
