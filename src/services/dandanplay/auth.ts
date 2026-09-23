@@ -14,6 +14,10 @@ export class DanDanPlayAuth {
         };
     }
 
+    setApiPrefix(apiPrefix: string): void {
+        this.apiPrefix = apiPrefix;
+    }
+
     get isLoggedIn(): boolean {
         return this.status.isLogin && this.status.tokenExpire > Date.now();
     }
