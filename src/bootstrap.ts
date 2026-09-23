@@ -22,6 +22,7 @@ let menuInjectionCleanup: (() => void) | null = null;
 let sidebarOpen = false;
 let sidebarApp: ReturnType<typeof mount> | null = null;
 let sidebarContainer: HTMLDivElement | null = null;
+let controlsContainer: HTMLDivElement | null = null;
 let toggleApp: ReturnType<typeof mount> | null = null;
 let toggleContainer: HTMLDivElement | null = null;
 let sendApp: ReturnType<typeof mount> | null = null;
@@ -151,10 +152,21 @@ async function initPlayer() {
             throw new Error('Player control bar not found');
         }
 
-        // 挂载弹幕开关
+        // 与 ede.js 一致：弹幕控制使用独立容器，作为暂停控制组的兄弟节点，
+        // 避免把自定义按钮塞入 Jellyfin 内部按钮组导致主题/版本兼容问题。
+        controlsContainer = document.createElement('div');
+        controlsContainer.id = 'danmakuCtr';
+        controlsContainer.style.display = 'flex';
+        controlsContainer.style.alignItems = 'center';
+        controlBar.parentNode?.insertBefore(controlsContainer, controlBar.nextSibling);
+
+        if (!controlsContainer.parentNode) {
+            throw new Error('Unable to mount danmaku controls');
+        }
+
         toggleContainer = document.createElement('div');
         toggleContainer.style.display = 'contents';
-        controlBar.appendChild(toggleContainer);
+        controlsContainer.appendChild(toggleContainer);
 
         toggleApp = mount(DanmakuToggle, {
             target: toggleContainer,
@@ -162,7 +174,7 @@ async function initPlayer() {
 
         sendContainer = document.createElement('div');
         sendContainer.style.display = 'contents';
-        controlBar.appendChild(sendContainer);
+        controlsContainer.appendChild(sendContainer);
 
         sendApp = mount(SendDanmaku, {
             target: sendContainer,
@@ -229,6 +241,10 @@ function cleanupPlayer() {
     if (sendContainer) {
         sendContainer.remove();
         sendContainer = null;
+    }
+    if (controlsContainer) {
+        controlsContainer.remove();
+        controlsContainer = null;
     }
 
     if (debugApp) {
