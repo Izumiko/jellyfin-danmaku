@@ -24,12 +24,19 @@ function createHooks(overrides: Partial<DanmakuRuntimeHooks> = {}) {
             logout: vi.fn(),
             refreshIfNeeded: vi.fn().mockResolvedValue(undefined),
         },
-        engine: { init: vi.fn(), destroy: vi.fn() },
+        engine: {
+            init: vi.fn(),
+            emit: vi.fn(),
+            show: vi.fn(),
+            hide: vi.fn(),
+            destroy: vi.fn(),
+        },
         getCurrentItem: vi.fn().mockResolvedValue(item),
         getMedia: vi.fn().mockReturnValue({ video, container }),
         waitMs: vi.fn().mockResolvedValue(undefined),
         getExtComments: vi.fn(),
         postRelatedSource: vi.fn(),
+        postComment: vi.fn().mockResolvedValue(undefined),
         ...overrides,
     };
     return { hooks, video, container };
@@ -245,15 +252,51 @@ describe('DanmakuRuntime', () => {
         expect(hooks.engine.init).not.toHaveBeenCalled();
     });
 
-    it('clears previous match when auto match fails', async () => {
+    it('keeps current danmaku when a refresh match fails or is cancelled', async () => {
         await runtime.start();
         vi.mocked(hooks.matcher.match).mockResolvedValue(null);
         vi.mocked(hooks.engine.destroy).mockClear();
 
         await runtime.load('refresh');
 
-        expect(hooks.engine.destroy).toHaveBeenCalled();
-        expect(document.getElementById('danmakuInfoTitle')).toBeNull();
+        expect(hooks.engine.destroy).not.toHaveBeenCalled();
+        expect(document.getElementById('danmakuInfoTitle')?.textContent).toBe('弹幕匹配：A - E1');
+    });
+
+    it('applies visibility events without rebuilding the engine', async () => {
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+
+        eventBus.emit('danmaku:visibility', { visible: false });
+        eventBus.emit('danmaku:visibility', { visible: true });
+
+        expect(hooks.engine.hide).toHaveBeenCalledTimes(1);
+        expect(hooks.engine.show).toHaveBeenCalledTimes(1);
+        expect(hooks.engine.init).not.toHaveBeenCalled();
+    });
+
+    it('posts a danmaku and emits it locally at current playback time', async () => {
+        hooks.auth.isLoggedIn = true;
+        hooks.auth.token = 'tok';
+        hooks.auth.userName = 'alice';
+        const media = hooks.getMedia();
+        if (media.video) media.video.currentTime = 12.5;
+
+        await runtime.start();
+        vi.mocked(hooks.engine.emit).mockClear();
+
+        eventBus.emit('danmaku:send', { text: 'hello', mode: 5, color: 0xffffff });
+        await vi.waitFor(() => expect(hooks.postComment).toHaveBeenCalled());
+
+        expect(hooks.postComment).toHaveBeenCalledWith(
+            danmakuState.effectiveApiPrefix,
+            42,
+            { text: 'hello', time: 12.5, mode: 5, color: 0xffffff },
+            'tok',
+        );
+        expect(hooks.engine.emit).toHaveBeenCalledWith(
+            expect.objectContaining({ text: 'hello', time: 12.5, mode: 'top' }),
+        );
     });
 
     it('shows match title after load and removes it on destroy', async () => {
