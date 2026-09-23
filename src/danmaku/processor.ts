@@ -1,4 +1,4 @@
-import { intToHex, isDarkColor } from '../utils/color';
+import { intToHex } from '../utils/color';
 import { DensityLimit } from '../types/index';
 import type { RawComment, ProcessedComment, ProcessingConfig, SourceFilter, ModeFilter } from '../types/index';
 
@@ -149,7 +149,7 @@ export function formatComment(comment: RawComment, style: { fontSize: number; fo
 
     const mode = modeMap[comment.modeId] || 'rtl';
     const fillStyle = intToHex(comment.color);
-    const strokeStyle = isDarkColor(comment.color) ? '#fff' : '#000';
+    const strokeStyle = comment.color === 0 ? '#fff' : '#000';
 
     return {
         text: comment.text,
