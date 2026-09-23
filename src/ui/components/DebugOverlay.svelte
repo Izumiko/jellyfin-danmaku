@@ -83,7 +83,9 @@
                             {levelLabels[entry.level]}
                         </span>
                         <span class="debug-module">[{entry.module}]</span>
-                        <span class="debug-message">{entry.message}</span>
+                        <span class="debug-message">
+                            {entry.message}{entry.repeat && entry.repeat > 1 ? ` X${entry.repeat}` : ''}
+                        </span>
                     </div>
                 {/each}
             {/if}
