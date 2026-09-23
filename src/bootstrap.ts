@@ -9,6 +9,7 @@ import { insertBeforeRef, waitForElement } from './utils/dom';
 import { SELECTORS } from './core/config';
 import { DanmakuRuntime } from './runtime';
 import DanmakuToggle from './ui/components/DanmakuToggle.svelte';
+import SendDanmaku from './ui/components/SendDanmaku.svelte';
 import Sidebar from './ui/components/Sidebar.svelte';
 import DebugOverlay from './ui/components/DebugOverlay.svelte';
 
@@ -23,6 +24,8 @@ let sidebarApp: ReturnType<typeof mount> | null = null;
 let sidebarContainer: HTMLDivElement | null = null;
 let toggleApp: ReturnType<typeof mount> | null = null;
 let toggleContainer: HTMLDivElement | null = null;
+let sendApp: ReturnType<typeof mount> | null = null;
+let sendContainer: HTMLDivElement | null = null;
 let debugApp: ReturnType<typeof mount> | null = null;
 let debugContainer: HTMLDivElement | null = null;
 
@@ -143,6 +146,14 @@ async function initPlayer() {
             target: toggleContainer,
         });
 
+        sendContainer = document.createElement('div');
+        sendContainer.style.display = 'contents';
+        controlBar?.appendChild(sendContainer);
+
+        sendApp = mount(SendDanmaku, {
+            target: sendContainer,
+        });
+
         debugContainer = document.createElement('div');
         debugContainer.style.position = 'fixed';
         debugContainer.style.zIndex = '2';
@@ -188,6 +199,19 @@ function cleanupPlayer() {
     if (toggleContainer) {
         toggleContainer.remove();
         toggleContainer = null;
+    }
+
+    if (sendApp) {
+        try {
+            unmount(sendApp);
+        } catch {
+            // ignore cleanup errors
+        }
+        sendApp = null;
+    }
+    if (sendContainer) {
+        sendContainer.remove();
+        sendContainer = null;
     }
 
     if (debugApp) {
