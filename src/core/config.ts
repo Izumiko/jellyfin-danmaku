@@ -109,11 +109,60 @@ export function validateConfigValue<K extends keyof DanmakuConfig>(key: K, value
  * 合并部分配置到默认配置
  * 用于从 localStorage 恢复时的部分数据合并
  */
-export function mergeConfig(partial: Partial<DanmakuConfig>): DanmakuConfig {
+export function mergeConfig(partial: Partial<DanmakuConfig> | unknown): DanmakuConfig {
+    const input = partial && typeof partial === 'object' ? (partial as Partial<DanmakuConfig>) : {};
+
+    const numberOr = (value: unknown, fallback: number): number =>
+        typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const booleanOr = (value: unknown, fallback: boolean): boolean =>
+        typeof value === 'boolean' ? value : fallback;
+    const stringOr = (value: unknown, fallback: string): string =>
+        typeof value === 'string' ? value : fallback;
+
+    const source =
+        input.sourceFilter && typeof input.sourceFilter === 'object'
+            ? input.sourceFilter
+            : DEFAULT_CONFIG.sourceFilter;
+    const mode =
+        input.modeFilter && typeof input.modeFilter === 'object'
+            ? input.modeFilter
+            : DEFAULT_CONFIG.modeFilter;
+
+    const chConvert = Math.max(0, Math.min(2, Math.floor(numberOr(input.chConvert, DEFAULT_CONFIG.chConvert)))) as ChConvertMode;
+    const densityLimit = Math.max(
+        0,
+        Math.min(3, Math.floor(numberOr(input.densityLimit, DEFAULT_CONFIG.densityLimit))),
+    ) as DensityLimit;
+
     return {
-        ...DEFAULT_CONFIG,
-        ...partial,
-        sourceFilter: { ...DEFAULT_CONFIG.sourceFilter, ...partial.sourceFilter },
-        modeFilter: { ...DEFAULT_CONFIG.modeFilter, ...partial.modeFilter },
+        opacity: validateConfigValue('opacity', numberOr(input.opacity, DEFAULT_CONFIG.opacity)),
+        speed: validateConfigValue('speed', numberOr(input.speed, DEFAULT_CONFIG.speed)),
+        fontSize: validateConfigValue('fontSize', numberOr(input.fontSize, DEFAULT_CONFIG.fontSize)),
+        heightRatio: validateConfigValue(
+            'heightRatio',
+            numberOr(input.heightRatio, DEFAULT_CONFIG.heightRatio),
+        ),
+        fontFamily: stringOr(input.fontFamily, DEFAULT_CONFIG.fontFamily),
+        fontOptions: stringOr(input.fontOptions, DEFAULT_CONFIG.fontOptions),
+        danmakuSwitch: booleanOr(input.danmakuSwitch, DEFAULT_CONFIG.danmakuSwitch),
+        logSwitch: booleanOr(input.logSwitch, DEFAULT_CONFIG.logSwitch),
+        chConvert,
+        sourceFilter: {
+            bilibili: booleanOr(source.bilibili, DEFAULT_CONFIG.sourceFilter.bilibili),
+            gamer: booleanOr(source.gamer, DEFAULT_CONFIG.sourceFilter.gamer),
+            dandanplay: booleanOr(source.dandanplay, DEFAULT_CONFIG.sourceFilter.dandanplay),
+            other: booleanOr(source.other, DEFAULT_CONFIG.sourceFilter.other),
+        },
+        modeFilter: {
+            scroll: booleanOr(mode.scroll, DEFAULT_CONFIG.modeFilter.scroll),
+            top: booleanOr(mode.top, DEFAULT_CONFIG.modeFilter.top),
+            bottom: booleanOr(mode.bottom, DEFAULT_CONFIG.modeFilter.bottom),
+        },
+        densityLimit,
+        useAntiOverlap: booleanOr(input.useAntiOverlap, DEFAULT_CONFIG.useAntiOverlap),
+        useXmlDanmaku: booleanOr(input.useXmlDanmaku, DEFAULT_CONFIG.useXmlDanmaku),
+        curEpOffset: numberOr(input.curEpOffset, DEFAULT_CONFIG.curEpOffset),
+        customCorsProxy: stringOr(input.customCorsProxy, DEFAULT_CONFIG.customCorsProxy),
+        customApiPrefix: stringOr(input.customApiPrefix, DEFAULT_CONFIG.customApiPrefix),
     };
 }
