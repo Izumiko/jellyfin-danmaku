@@ -419,13 +419,13 @@ function migrateLegacyConfig(): DanmakuConfig | null {
         if (opacity !== undefined) config.opacity = Math.max(0, Math.min(1, opacity));
 
         const speed = getNumber('danmakuspeed');
-        if (speed !== undefined) config.speed = Math.max(50, Math.min(600, speed));
+        if (speed !== undefined) config.speed = Math.max(20, Math.min(600, speed));
 
         const fontSize = getNumber('danmakusize');
-        if (fontSize !== undefined) config.fontSize = Math.max(10, Math.min(60, fontSize));
+        if (fontSize !== undefined) config.fontSize = Math.max(8, Math.min(80, fontSize));
 
         const heightRatio = getNumber('danmakuheight');
-        if (heightRatio !== undefined) config.heightRatio = Math.max(0.1, Math.min(1, heightRatio));
+        if (heightRatio !== undefined) config.heightRatio = Math.max(0, Math.min(1, heightRatio));
 
         // 字体
         const fontFamily = getString('danmakuFontFamily');
