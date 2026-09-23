@@ -66,6 +66,10 @@ export class CommentFetcher {
         allComments.push(...mainComments.map(convertDanDanPlayComment));
         logger.info('fetcher', `Loaded ${mainComments.length} main comments`);
 
+        const hasBilibiliInMain =
+            this.deps.sourceFilter.bilibili &&
+            mainComments.some((comment) => (comment.p.split(',')[3] ?? '').startsWith('[BiliBili]'));
+
         // 2. 获取关联源
         try {
             const relatedSources = await getRelatedSources(this.deps.apiPrefix, episodeId, options);
@@ -74,8 +78,18 @@ export class CommentFetcher {
             const filteredSources = relatedSources.filter((source) => {
                 const url = source.url.toLowerCase();
 
-                if (url.includes('bilibili.com')) return this.deps.sourceFilter.bilibili;
-                if (url.includes('gamer') || url.includes('bahamut')) return this.deps.sourceFilter.gamer;
+                // ede.js 中 withRelated=true 的主请求通常已经包含番剧 Bilibili 弹幕；
+                // 若主结果已有 [BiliBili]，避免再次抓 bangumi 源造成重复。
+                if (url.includes('bilibili.com/bangumi')) {
+                    return this.deps.sourceFilter.bilibili && !hasBilibiliInMain;
+                }
+                // 普通 Bilibili 视频源仍需单独抓取。
+                if (url.includes('bilibili.com/video')) {
+                    return this.deps.sourceFilter.bilibili;
+                }
+                if (url.includes('gamer') || url.includes('bahamut')) {
+                    return this.deps.sourceFilter.gamer;
+                }
 
                 return this.deps.sourceFilter.other;
             });
