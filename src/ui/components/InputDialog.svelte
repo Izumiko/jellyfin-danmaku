@@ -17,6 +17,10 @@
 
     let inputEl: HTMLInputElement | undefined;
 
+    function stopPlayerGestures(e: Event) {
+        e.stopPropagation();
+    }
+
     function handleKeydown(e: KeyboardEvent) {
         if (e.key === 'Escape') {
             e.stopImmediatePropagation();
@@ -45,7 +49,16 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="dialog-backdrop" data-dialog="input" role="dialog" aria-modal="true">
-    <div class="dialog-panel">
+    <div
+        class="dialog-panel"
+        onpointerdown={stopPlayerGestures}
+        onpointerup={stopPlayerGestures}
+        onmousedown={stopPlayerGestures}
+        onmouseup={stopPlayerGestures}
+        ontouchstart={stopPlayerGestures}
+        ontouchmove={stopPlayerGestures}
+        onwheel={stopPlayerGestures}
+    >
         <h3>{title}</h3>
         <!-- svelte-ignore a11y_autofocus -->
         <input bind:this={inputEl} type="text" {placeholder} value={defaultValue} autofocus onkeydown={handleInputKeydown} />
