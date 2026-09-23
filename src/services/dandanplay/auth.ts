@@ -54,6 +54,10 @@ export class DanDanPlayAuth {
             }
 
             const tokenExpire = new Date(response.tokenExpireTime).getTime();
+            if (!response.token || !Number.isFinite(tokenExpire) || tokenExpire <= Date.now()) {
+                logger.error('auth', 'Login returned an invalid token or expiration');
+                return false;
+            }
 
             this.status = {
                 isLogin: true,
@@ -76,7 +80,11 @@ export class DanDanPlayAuth {
      * 检查 token 是否需要刷新，如需则自动刷新
      */
     async refreshIfNeeded(): Promise<void> {
-        if (!this.isLoggedIn) return;
+        if (!this.status.isLogin) return;
+        if (!this.status.token || !Number.isFinite(this.status.tokenExpire) || this.status.tokenExpire <= Date.now()) {
+            this.logout();
+            return;
+        }
 
         const daysUntilExpire = (this.status.tokenExpire - Date.now()) / (24 * 60 * 60 * 1000);
 
@@ -105,6 +113,10 @@ export class DanDanPlayAuth {
             }
 
             const tokenExpire = new Date(response.tokenExpireTime).getTime();
+            if (!response.token || !Number.isFinite(tokenExpire) || tokenExpire <= Date.now()) {
+                this.logout();
+                return;
+            }
 
             this.status.token = response.token;
             this.status.tokenExpire = tokenExpire;
