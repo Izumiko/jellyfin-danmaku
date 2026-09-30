@@ -1,0 +1,113 @@
+name = "ddplay-api"
+main = "ddplay_worker.mjs"
+compatibility_date = "2026-09-30"
+
+# ------------------------------
+# Public / non-secret settings
+# ------------------------------
+[vars]
+
+# Client-side burst protection. This is separate from dandanplay quota protection.
+CLIENT_RPM = "120"
+
+# True-origin burst protection: evaluated only after all cache layers miss.
+ORIGIN_RPM = "20"
+ORIGIN_HOURLY_LIMIT = "60"
+ORIGIN_DAILY_LIMIT_PER_IP = "200"
+
+# Optional aggregate hard caps across ALL functional groups. 0 = disabled.
+# Usually the per-group limits below are enough because dandanplay accounts quota by group.
+GLOBAL_ORIGIN_DAILY_LIMIT = "0"
+GLOBAL_ORIGIN_MONTHLY_LIMIT = "0"
+
+# dandanplay quota protection, with ~10% reserve left unused.
+# Official quotas supplied by the account status page:
+#   search:       100/day,  2400/month
+#   bangumi:      200/day,  4800/month
+#   comment:      100/day,  2400/month
+#   send_comment:  10/day,   240/month
+#   match:        200/day,  4800/month
+#
+# Route mapping in the Worker:
+#   search        <- /search/episodes, /search/anime
+#   bangumi       <- /bangumi/*
+#   comment       <- GET /comment/*, /related/*, /extcomment
+#   send_comment  <- POST /comment/*, POST /related/*
+#   match         <- POST /match
+#
+# These counters are enforced by the ORIGIN_QUOTA Durable Object and are consumed only
+# on a real upstream request after Edge/R2 cache misses.
+GROUP_DAILY_LIMITS = '''{
+  "search": 90,
+  "bangumi": 180,
+  "comment": 90,
+  "send_comment": 9,
+  "match": 180
+}'''
+
+GROUP_MONTHLY_LIMITS = '''{
+  "search": 2160,
+  "bangumi": 4320,
+  "comment": 2160,
+  "send_comment": 216,
+  "match": 4320
+}'''
+
+UPSTREAM_TIMEOUT_MS = "15000"
+MAX_CACHEABLE_BYTES = "12582912"
+ALLOWED_ORIGINS = "*"
+LOG_REQUESTS = "0"
+
+# APP_ID / APP_SECRET must be Secrets, not plaintext vars:
+#   npx wrangler secret put APP_ID
+#   npx wrangler secret put APP_SECRET
+# Optional private-proxy token:
+#   npx wrangler secret put PROXY_TOKEN
+# If PROXY_TOKEN is configured, clients must send X-Proxy-Token.
+
+# ------------------------------
+# Persistent L2 cache + episode airDate index
+# ------------------------------
+# One R2 bucket stores:
+#   - cached API responses
+#   - episodeId -> airDate metadata learned from /api/v2/bangumi/{id}
+#
+# Create it once:
+#   npx wrangler r2 bucket create ddplay-api-cache
+[[r2_buckets]]
+binding = "DANMAKU_CACHE"
+bucket_name = "ddplay-api-cache"
+
+# ------------------------------
+# Native Cloudflare rate limiting
+# ------------------------------
+# namespace_id values only need to be positive and unique within your account.
+[[ratelimits]]
+name = "CLIENT_RATE_LIMITER"
+namespace_id = "93052401"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+# Evaluated only when Worker is about to really contact api.dandanplay.net.
+[[ratelimits]]
+name = "ORIGIN_RATE_LIMITER"
+namespace_id = "93052402"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+# ------------------------------
+# Cross-PoP daily + monthly quota counters
+# ------------------------------
+[[durable_objects.bindings]]
+name = "ORIGIN_QUOTA"
+class_name = "OriginQuotaLimiter"
+
+# Keep this migration tag if deploying this Worker for the first time.
+# If v1-origin-quota was already deployed previously, leave the existing migration history
+# in your real wrangler.toml unchanged; the class itself does not need a new migration merely
+# because its stored counter schema has gained monthly fields.
+[[migrations]]
+tag = "v1-origin-quota"
+new_sqlite_classes = ["OriginQuotaLimiter"]
