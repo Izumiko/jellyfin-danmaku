@@ -55,14 +55,17 @@ GROUP_MONTHLY_LIMITS = '''{
 
 UPSTREAM_TIMEOUT_MS = "15000"
 MAX_CACHEABLE_BYTES = "12582912"
+# R2 JSON storage compression. Small or poorly-compressible payloads stay plain.
+R2_GZIP_MIN_BYTES = "1024"
+R2_GZIP_MIN_SAVINGS_BYTES = "64"
 ALLOWED_ORIGINS = "*"
 LOG_REQUESTS = "0"
 
 # APP_ID / APP_SECRET must be Secrets, not plaintext vars:
-#   npx wrangler secret put APP_ID
-#   npx wrangler secret put APP_SECRET
+#   pnpx wrangler secret put APP_ID
+#   pnpx wrangler secret put APP_SECRET
 # Optional private-proxy token:
-#   npx wrangler secret put PROXY_TOKEN
+#   pnpx wrangler secret put PROXY_TOKEN
 # If PROXY_TOKEN is configured, clients must send X-Proxy-Token.
 
 # ------------------------------
@@ -73,10 +76,32 @@ LOG_REQUESTS = "0"
 #   - episodeId -> airDate metadata learned from /api/v2/bangumi/{id}
 #
 # Create it once:
-#   npx wrangler r2 bucket create ddplay-api-cache
+#   pnpx wrangler r2 bucket create ddplay-api-cache
 [[r2_buckets]]
 binding = "DANMAKU_CACHE"
 bucket_name = "ddplay-api-cache"
+
+# R2 object lifecycle rules are bucket settings, not wrangler.toml bindings.
+# Configure them once after the bucket is created. They provide a final cleanup safety net
+# for objects that are never requested again (the Worker also deletes over-stale objects on read).
+#
+# Recommended rules for CACHE_VERSION=v4:
+#   comment cache:               120 days (Worker stale window: 90d)
+#   search/bangumi/related/etc:   45 days (Worker stale windows: <=30d)
+#   match cache:                  30 days (Worker stale window: 14d)
+#   episode air-date metadata:   730 days (tiny, effectively immutable)
+#
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-comment-v4 "v4/comment/" --expire-days 120
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-search-episodes-v4 "v4/search_episodes/" --expire-days 45
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-search-anime-v4 "v4/search_anime/" --expire-days 45
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-bangumi-v4 "v4/bangumi/" --expire-days 45
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-related-v4 "v4/related/" --expire-days 45
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-extcomment-v4 "v4/extcomment/" --expire-days 45
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-match-v4 "v4/match/" --expire-days 30
+# pnpx wrangler r2 bucket lifecycle add ddplay-api-cache ddplay-meta-v4 "v4/meta/episode-air-date/" --expire-days 730
+#
+# Verify:
+# pnpx wrangler r2 bucket lifecycle list ddplay-api-cache
 
 # ------------------------------
 # Native Cloudflare rate limiting

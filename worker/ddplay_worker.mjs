@@ -7,6 +7,7 @@
  * - Also supports direct /api/v2/... proxy paths.
  * - Explicit method/path allow-list to avoid turning the Worker into a generic signed proxy.
  * - L1 Cloudflare Cache API + optional L2 R2 persistent cache.
+ * - R2 cache objects are gzip-compressed when worthwhile; existing plain objects remain readable.
  * - Caches comment/search/bangumi/related/extcomment and POST /match responses.
  * - Cache key includes the full normalized query string (so withRelated/chConvert are isolated).
  * - Per-client request limiting and stricter cache-miss/origin limiting.
@@ -43,6 +44,9 @@
  *   PROXY_TOKEN=                      // optional; if set, clients must send X-Proxy-Token
  *   ALLOWED_ORIGINS=*                 // CORS only; comma-separated browser origins
  *   UPSTREAM_TIMEOUT_MS=15000
+ *   MAX_CACHEABLE_BYTES=12582912
+ *   R2_GZIP_MIN_BYTES=1024          // gzip only when raw body is at least this large
+ *   R2_GZIP_MIN_SAVINGS_BYTES=64   // keep gzip only when it saves at least this many bytes
  *   LOG_REQUESTS=0
  */
 
@@ -61,6 +65,8 @@ const DEFAULTS = Object.freeze({
     GLOBAL_ORIGIN_MONTHLY_LIMIT: 0,
     UPSTREAM_TIMEOUT_MS: 15000,
     MAX_CACHEABLE_BYTES: 12 * 1024 * 1024,
+    R2_GZIP_MIN_BYTES: 1024,
+    R2_GZIP_MIN_SAVINGS_BYTES: 64,
 });
 
 // Cache TTLs. comment is replaced dynamically from bangumi.episodes[].airDate when known.
@@ -691,7 +697,11 @@ async function readR2Cache(env, ctx, plan) {
             return null;
         }
 
-        const body = await obj.text();
+        // Backward compatible:
+        // - old objects: no encoding metadata -> read as plain UTF-8 JSON
+        // - new objects: customMetadata.encoding=gzip (and httpMetadata.contentEncoding=gzip)
+        //   -> transparently decompress before returning JSON to the caller/Edge Cache.
+        const body = await readR2TextObject(obj);
         return {
             body,
             ageSeconds,
@@ -705,27 +715,87 @@ async function readR2Cache(env, ctx, plan) {
     }
 }
 
+async function readR2TextObject(obj) {
+    const meta = obj.customMetadata || {};
+    const encoding = String(meta.encoding || obj.httpMetadata?.contentEncoding || '').toLowerCase();
+
+    if (encoding !== 'gzip') {
+        return await obj.text();
+    }
+
+    if (typeof DecompressionStream !== 'function') {
+        throw new Error('gzip cached object found but DecompressionStream is unavailable');
+    }
+
+    const decompressed = obj.body.pipeThrough(new DecompressionStream('gzip'));
+    return await new Response(decompressed).text();
+}
+
+async function gzipUtf8(text) {
+    if (typeof CompressionStream !== 'function') return null;
+
+    const rawBytes = new TextEncoder().encode(text);
+    const source = new Blob([rawBytes]).stream();
+    const compressedStream = source.pipeThrough(new CompressionStream('gzip'));
+    const compressed = await new Response(compressedStream).arrayBuffer();
+
+    return {
+        rawBytes: rawBytes.byteLength,
+        compressedBytes: compressed.byteLength,
+        body: compressed,
+    };
+}
+
 async function writeR2Cache(env, plan, body) {
     if (!env.DANMAKU_CACHE || !body) return;
+
     const maxBytes = envNumber(env.MAX_CACHEABLE_BYTES, DEFAULTS.MAX_CACHEABLE_BYTES);
-    const size = new TextEncoder().encode(body).byteLength;
-    if (size > maxBytes) {
-        console.warn(`Skip R2 cache: body too large (${size} bytes)`);
+    const rawBytes = new TextEncoder().encode(body).byteLength;
+    if (rawBytes > maxBytes) {
+        console.warn(`Skip R2 cache: body too large (${rawBytes} bytes)`);
         return;
     }
 
-    await env.DANMAKU_CACHE.put(plan.r2Key, body, {
-        httpMetadata: { contentType: 'application/json; charset=utf-8' },
+    const gzipMinBytes = envNumber(env.R2_GZIP_MIN_BYTES, DEFAULTS.R2_GZIP_MIN_BYTES);
+    const minSavings = envNumber(env.R2_GZIP_MIN_SAVINGS_BYTES, DEFAULTS.R2_GZIP_MIN_SAVINGS_BYTES);
+
+    let storedBody = body;
+    let encoding = 'identity';
+    let storedBytes = rawBytes;
+
+    if (rawBytes >= gzipMinBytes) {
+        try {
+            const gz = await gzipUtf8(body);
+            if (gz && gz.compressedBytes + Math.max(0, minSavings) < gz.rawBytes) {
+                storedBody = gz.body;
+                encoding = 'gzip';
+                storedBytes = gz.compressedBytes;
+            }
+        } catch (error) {
+            // Compression is an optimization only. A failure must never make the proxy fail.
+            console.warn('R2 gzip compression failed; storing plain JSON:', error?.message || error);
+        }
+    }
+
+    const httpMetadata = { contentType: 'application/json; charset=utf-8' };
+    if (encoding === 'gzip') {
+        httpMetadata.contentEncoding = 'gzip';
+    }
+
+    await env.DANMAKU_CACHE.put(plan.r2Key, storedBody, {
+        httpMetadata,
         customMetadata: {
             storedAt: String(Date.now()),
             ttlSeconds: String(plan.policy.ttlSeconds),
             staleSeconds: String(plan.policy.staleSeconds),
             version: CACHE_VERSION,
             group: plan.group,
+            encoding,
+            originalBytes: String(rawBytes),
+            storedBytes: String(storedBytes),
         },
     });
 }
-
 function adjustPolicyForBody(policy, group, body) {
     let parsed;
     try {
