@@ -2,7 +2,25 @@
 
 > 更新：2026-09-23  
 > 基线：`jellyfin/ede.js`（3769 行）→ `typescript/src/**`  
-> 本轮仅做源码对照、实现与静态检查；**未执行 Vitest、typecheck、svelte-check、lint 或 build**，运行验证由维护者后续完成。
+> 2026-10-10 审查轮次已执行全部自动化检查，详见下节。
+
+## 2026-10-10 审查与修复
+
+本轮已执行完整验证：`vitest`（149 通过）、`typecheck`、`svelte-check`（0 错误）、`lint`、`build:all` 全部通过。修复内容：
+
+1. **用户脚本沙箱**：原构建声明 `@grant GM_addStyle`，脚本管理器会进入沙箱，`window.ApiClient` 与 XHR 拦截器失效。改为 `@grant none` 并直接插入 `<style>`；`@name`/`@namespace`/`@updateURL` 沿用 ede.js，老用户可原地升级。
+2. **发布流程**：DEPLOY 工作流和 `vercel.json` 仍复制已删除的 `ede.js`。改为构建 `dist/`，并额外发布 `ede.user.js`（兼容 Tampermonkey 更新地址与服务端 `<script>` 注入）。
+3. **启动**：XHR 拦截器先于 ApiClient 等待安装；ApiClient 不再 5 秒超时即永久失败；改为等待暂停按钮本身。
+4. **输入对话框返回默认值而非用户输入**（手动搜索名、弹幕源 URL 被忽略）；空输入视为取消；选择对话框聚焦默认项，回车不再误选第一项。
+5. **弹幕模式**：与 ede.js 一致，只渲染 1/4/5/6，其余模式丢弃（原先被当作滚动弹幕显示）。
+6. **匹配**：`/bangumi` 查询失败回退标题搜索；手动模式预选已记忆的番剧；无集号条目（电影）也写入匹配缓存。
+7. **运行时**：使用本地 XML 时也可增加弹幕源；设置偏移后发送的弹幕换算回服务端时间轴；同一条目的本地 XML 不因 `src` 变化重复加载。
+8. **登录**：续期遇到网络错误不再清除仍有效的登录态。
+9. **迁移**：只保存过设置、从未切换弹幕开关的旧用户（无 `danmakuSwitch` key）设置也能迁移；独立存在的旧偏移 key 也会迁移。
+10. **设置取消**：取消时恢复当前集偏移，而不是全局配置中的旧值。
+11. 合并 `jellyfin` 分支的 `worker/`，移除被其取代的 `tools/cf_worker.js`。
+
+仍需实机验证的项目见文末清单；尤其是用户脚本在 Tampermonkey/Violentmonkey 下的 `@grant none` 行为和旧版本升级。
 
 ## 当前结论
 
