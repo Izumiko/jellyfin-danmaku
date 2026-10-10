@@ -40,6 +40,8 @@ class DanmakuState {
     loadedCount = $state(0);
     /** 经过过滤/密度/防重叠后实际交给引擎的条数 */
     visibleCount = $state(0);
+    /** 最近一次加载失败的原因（成功加载后清空） */
+    loadError = $state<string | null>(null);
 
     constructor() {
         this.hydrate();

@@ -150,6 +150,10 @@
             <section class="card">
                 {#if danmakuState.loading}
                     <div class="card-title">正在加载弹幕…</div>
+                {:else if danmakuState.loadError}
+                    <div class="card-title error-title">弹幕加载失败</div>
+                    <div class="card-subtitle">{danmakuState.loadError}</div>
+                    <div class="card-subtitle">默认代理不可用时，可在「更多」中填写自己的 CORS 代理或 API。</div>
                 {:else if danmakuState.loadedSource === 'online' && danmakuState.episodeInfo}
                     <div class="card-title">{danmakuState.episodeInfo.animeTitle}</div>
                     <div class="card-subtitle">{danmakuState.episodeInfo.episodeTitle}</div>
@@ -164,7 +168,14 @@
                     <div class="card-meta">共 {danmakuState.loadedCount} 条 · 当前显示 {danmakuState.visibleCount} 条</div>
                 {/if}
                 <div class="card-actions">
-                    <button type="button" class="button contained" onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}>
+                    {#if danmakuState.loadError && !danmakuState.loading}
+                        <button type="button" class="button contained" onclick={() => eventBus.emit('danmaku:reload', { reason: 'refresh' })}>重试</button>
+                    {/if}
+                    <button
+                        type="button"
+                        class="button {danmakuState.loadError ? 'outlined' : 'contained'}"
+                        onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}
+                    >
                         手动匹配
                     </button>
                     <button type="button" class="button outlined" onclick={handleAddSource}>增加弹幕源</button>
@@ -326,7 +337,7 @@
         flex-direction: column;
         width: min(360px, 100vw);
         box-sizing: border-box;
-        background: rgb(var(--danmaku-bg-channel) / 0.96);
+        background: var(--danmaku-bg);
         color: var(--danmaku-text);
         font-family: var(--danmaku-font);
         box-shadow: var(--danmaku-shadow);
@@ -462,6 +473,10 @@
         overflow-wrap: anywhere;
     }
 
+    .error-title {
+        color: var(--danmaku-error);
+    }
+
     .card-subtitle {
         margin-top: 2px;
         font-size: 0.85rem;
@@ -484,6 +499,9 @@
 
     .card-actions .button {
         flex: 1;
+        padding-left: 8px;
+        padding-right: 8px;
+        white-space: nowrap;
     }
 
     .button {

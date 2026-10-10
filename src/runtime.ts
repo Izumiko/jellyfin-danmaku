@@ -69,6 +69,25 @@ export type DanmakuRuntimeHooks = {
     getLocalComments?: typeof getLocalXmlDanmaku;
 };
 
+/** 把 HTTP/API 错误转成面向用户的一句话，优先使用接口返回的 errorMessage */
+export function describeLoadError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const http = message.match(/^HTTP (\d+): ([\s\S]*)$/);
+    if (http) {
+        try {
+            const body = JSON.parse(http[2]) as { errorMessage?: string; message?: string };
+            const detail = body.errorMessage || body.message;
+            if (detail) return `${detail}（HTTP ${http[1]}）`;
+        } catch {
+            // 非 JSON 响应体
+        }
+        return `服务器返回 HTTP ${http[1]}`;
+    }
+    if (error instanceof DanmakuError && error.code === ErrorCode.Timeout) return '请求超时';
+    if (error instanceof DanmakuError && error.code === ErrorCode.Network) return '网络错误，无法连接弹幕服务器';
+    return message;
+}
+
 function defaultGetMedia(): RuntimeMedia {
     return {
         video: document.querySelector('video'),
@@ -232,6 +251,7 @@ export class DanmakuRuntime {
         const { signal } = controller;
 
         danmakuState.loading = true;
+        danmakuState.loadError = null;
         try {
             if (reason === 'settings-changed') {
                 this.syncAuthApiPrefix();
@@ -337,7 +357,8 @@ export class DanmakuRuntime {
         } catch (error) {
             if (this.isCancelled(error, signal)) return;
             logger.error('runtime', 'Failed to load danmaku', error);
-            this.toast('弹幕加载失败，请检查网络或 API 设置', 'error');
+            danmakuState.loadError = describeLoadError(error);
+            this.toast(`弹幕加载失败：${danmakuState.loadError}`, 'error');
             eventBus.emit('danmaku:error', { error: error as Error, source: 'load' });
         } finally {
             if (this.controller === controller) {

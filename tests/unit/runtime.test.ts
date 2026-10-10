@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DanmakuRuntime } from '@/runtime';
+import { DanmakuRuntime, describeLoadError } from '@/runtime';
+import { DanmakuError, ErrorCode } from '@/types/index';
 import { eventBus } from '@/core/event-bus';
 import { danmakuState } from '@/core/state.svelte';
 import { Storage } from '@/core/storage';
@@ -438,5 +439,25 @@ describe('DanmakuRuntime', () => {
         await runtime.load('refresh');
 
         expect(hooks.getLocalComments).toHaveBeenCalledTimes(1);
+    });
+
+    it('records a readable load error and clears it after a successful retry', async () => {
+        vi.mocked(hooks.fetcher.fetch).mockRejectedValueOnce(
+            new DanmakuError('HTTP 429: {"errorCode":429,"errorMessage":"代理今日回源配额已达到保护上限"}', ErrorCode.HttpError),
+        );
+        await runtime.start();
+        expect(danmakuState.loadError).toBe('代理今日回源配额已达到保护上限（HTTP 429）');
+
+        await runtime.load('refresh');
+        expect(danmakuState.loadError).toBeNull();
+        expect(danmakuState.loadedSource).toBe('online');
+    });
+});
+
+describe('describeLoadError', () => {
+    it('falls back to status code or error category', () => {
+        expect(describeLoadError(new DanmakuError('HTTP 502: <html>', ErrorCode.HttpError))).toBe('服务器返回 HTTP 502');
+        expect(describeLoadError(new DanmakuError('Request timeout after 10000ms', ErrorCode.Timeout))).toBe('请求超时');
+        expect(describeLoadError(new Error('boom'))).toBe('boom');
     });
 });

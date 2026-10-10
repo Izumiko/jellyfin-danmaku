@@ -226,6 +226,7 @@ function cleanupPlayer() {
     danmakuState.loadedSource = null;
     danmakuState.loadedCount = 0;
     danmakuState.visibleCount = 0;
+    danmakuState.loadError = null;
 
     pluginActive = false;
 }
