@@ -45,9 +45,37 @@
     let itemId = '';
     const defaultFontFamily = '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
 
+    // 从请求地址里取当前播放条目 id：PlaybackInfo、直接播放的 stream、HLS 的 m3u8
+    const itemIdUrlRegex = /\/(?:Items|Videos)\/([0-9a-f]{32}|[0-9a-f-]{36})\/(?:PlaybackInfo|stream|master\.m3u8|main\.m3u8)/i;
+    function captureItemIdFromUrl(url) {
+        const match = String(url || '').match(itemIdUrlRegex);
+        if (match) {
+            itemId = match[1].replace(/-/g, '');
+        }
+    }
+
+    // 直接播放时 video.src 不经过 XHR/fetch，换集时从 loadstart 取 id（媒体事件不冒泡，用捕获阶段）
+    document.addEventListener(
+        'loadstart',
+        (event) => {
+            if (event.target instanceof HTMLVideoElement) {
+                captureItemIdFromUrl(event.target.currentSrc);
+            }
+        },
+        true,
+    );
+
+    // 新版前端的 ApiClient 走 fetch
+    const originalFetch = window.fetch;
+    window.fetch = function (input) {
+        captureItemIdFromUrl(typeof input === 'string' ? input : input?.url);
+        return originalFetch.apply(this, arguments);
+    };
+
     // Intercept XMLHttpRequest
     const originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (_, url) {
+        captureItemIdFromUrl(url);
         this.addEventListener('load', function () {
             if (url.endsWith('PlaybackInfo')) {
                 const res = JSON.parse(this.responseText);
@@ -320,17 +348,13 @@
         window.ede.danmakuSwitch = (window.ede.danmakuSwitch + 1) % 2;
         window.localStorage.setItem('danmakuSwitch', window.ede.danmakuSwitch);
         document.querySelector('#displayDanmaku').children[0].className = spanClass + danmaku_icons[window.ede.danmakuSwitch];
-        const switchWrapper = document.getElementById('danmakuWrapper');
         if (window.ede.danmaku) {
             if (window.ede.danmakuSwitch == 1) {
-                if (switchWrapper) {
-                    switchWrapper.style.visibility = 'visible';
-                }
                 window.ede.danmaku.show();
-            } else if (switchWrapper) {
-                // v2：只隐藏容器，不调用 hide()——hide() 会清空 runningList，弹幕位置会丢
-                switchWrapper.style.visibility = 'hidden';
+                // hide() 清掉了屏幕上的弹幕；把读取位置拉回 currentTime - duration，补回正在飞行中的弹幕
+                window.ede.danmaku._patchedSeekingHandler?.();
             } else {
+                // hide() 会停掉帧循环，关闭期间不再占用 CPU
                 window.ede.danmaku.hide();
             }
         }
@@ -659,6 +683,12 @@
                 if (sorted[j].mode !== sorted[i].mode) {
                     continue;
                 }
+                // 编辑距离至少是长度差，相似度上限为 短/长；够不到阈值就不必算编辑距离
+                const la = base.text.length;
+                const lb = sorted[j].text.length;
+                if (base.text !== sorted[j].text && (Math.min(la, lb) / Math.max(la, lb)) * 100 < threshold) {
+                    continue;
+                }
                 if (similarityPercentage(base.text, sorted[j].text) >= threshold) {
                     consumed[j] = true;
                     count++;
@@ -731,14 +761,6 @@
         const initialep = initialEp === null ? 1 : initialEp;
         showDebugInfo('按标题集号未命中，回退到顺序匹配');
         return targetEp < initialep ? targetEp - 1 : targetEp - initialep;
-    }
-
-    // 从 Jellyfin 网页地址里取当前条目 id（#/details?id=xxx、#/video?id=xxx），
-    // 作为 PlaybackInfo 拦截失败时的兜底（上游 issue #72）
-    function getItemIdFromLocation() {
-        const hash = window.location.hash || '';
-        const match = hash.match(/[?&]id=([0-9a-fA-F]{32})/);
-        return match ? match[1] : '';
     }
 
     // ---------- 搜索候选择优（上游 issue #94：御坂网络返回的数组顺序不稳定） ----------
@@ -2830,12 +2852,7 @@
             await new Promise((resolve) => setTimeout(resolve, 200));
             if (isNewJellyfin) {
                 if (!itemId) {
-                    const fallbackItemId = getItemIdFromLocation();
-                    if (!fallbackItemId) {
-                        continue;
-                    }
-                    itemId = fallbackItemId;
-                    showDebugInfo('未拦截到 PlaybackInfo，已从地址栏取到 itemId');
+                    continue;
                 }
                 try {
                     // params: userId, itemId
@@ -3325,9 +3342,7 @@
             speed: window.ede.speed,
         });
 
-        // v2：用 visibility 控制显隐，引擎保持运行（hide() 会清空 runningList，位置会丢）
-        wrapper.style.visibility = window.ede.danmakuSwitch === 1 ? 'visible' : 'hidden';
-        window.ede.danmaku.show();
+        window.ede.danmakuSwitch === 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
 
         // v2：重置重试计数并启动容器看门狗
         resetDanmakuRetry();
@@ -3814,26 +3829,8 @@
                     initListener();
                 }, check_interval);
 
-                if (isNewJellyfin) {
-                    let retry = 0;
-                    while (!itemId) {
-                        await new Promise((resolve) => setTimeout(resolve, 200));
-                        retry++;
-                        if (retry === 10) {
-                            // 拦截 PlaybackInfo 失败时，退而从地址栏取 itemId
-                            const fallbackItemId = getItemIdFromLocation();
-                            if (fallbackItemId) {
-                                itemId = fallbackItemId;
-                                showDebugInfo('未拦截到 PlaybackInfo，已从地址栏取到 itemId');
-                                break;
-                            }
-                        }
-                        if (retry > 50) {
-                            showDebugInfo('暂时拿不到 itemId，播放下一集时会自动重试');
-                            break;
-                        }
-                    }
-                } else {
+                // 新版前端不用在这里等 itemId：getEmbyItemInfo 自己会等（有超时）
+                if (!isNewJellyfin) {
                     // v2：非新版前端同样不要死循环
                     let retry = 0;
                     while (retry < 50) {
