@@ -38,15 +38,9 @@ export async function bootstrap() {
     const disposables = new DisposableStore();
 
     try {
-        // 1. 等待 ApiClient 就绪
-        await waitForApiClient();
-
-        // 2. 检测 Jellyfin 版本
-        const { isNewJellyfin } = detectJellyfinVersion();
-        danmakuState.isNewJellyfin = isNewJellyfin;
         logger.setEnabled(danmakuState.logSwitch);
 
-        // 3. 安装 XHR 拦截器
+        // 1. 尽早安装 XHR 拦截器，避免等待 ApiClient 期间错过首个 PlaybackInfo 请求
         const cleanupInterceptor = interceptPlaybackInfo((id) => {
             const previous = danmakuState.itemId;
             danmakuState.itemId = id;
@@ -57,6 +51,13 @@ export async function bootstrap() {
         });
         disposables.add(cleanupInterceptor);
 
+        // 2. 等待 ApiClient 就绪。登录页或慢网络下可能较久，不设超时（ede.js 同样无限等待播放器）
+        await waitForApiClient(Number.POSITIVE_INFINITY);
+
+        // 3. 检测 Jellyfin 版本
+        const { isNewJellyfin } = detectJellyfinVersion();
+        danmakuState.isNewJellyfin = isNewJellyfin;
+
         // 4. 监听播放器生命周期
         const cleanupLifecycle = observePlayerLifecycle();
         disposables.add(cleanupLifecycle);
@@ -66,6 +67,7 @@ export async function bootstrap() {
 
         logger.info('bootstrap', 'Bootstrap completed, watching for video player');
     } catch (error) {
+        disposables.dispose();
         logger.error('bootstrap', 'Bootstrap failed', error);
         throw error;
     }
@@ -139,15 +141,14 @@ async function initPlayer() {
     pluginActive = true;
 
     try {
-        // 等待控制栏
-        const osdPage = await waitForElement(SELECTORS.mediaContainer, { timeout: 10000 });
+        // 等待控制栏：OSD 页面可能先于其中的按钮渲染，直接等待暂停按钮
+        const pauseButton = await waitForElement(`${SELECTORS.mediaContainer} ${SELECTORS.pauseButton}`, { timeout: 15000 });
         if (generation !== playerInitGeneration || !document.querySelector('.videoPlayerContainer')) {
             return;
         }
 
         logger.info('lifecycle', 'Control bar detected');
-        const pauseButton = osdPage.querySelector(SELECTORS.pauseButton);
-        const controlBar = pauseButton?.parentElement;
+        const controlBar = pauseButton.parentElement;
         if (!controlBar) {
             throw new Error('Player control bar not found');
         }
@@ -280,11 +281,9 @@ function setupMenuInjection(): () => void {
 
                 const actionSheet = node.classList.contains('actionSheet') ? node : node.querySelector('.actionSheet');
 
-                if (!actionSheet) continue;
-                if (!actionSheet.querySelector('[data-id="aspectratio"]')) continue;
-                if (!actionSheet.querySelector('[data-id="playbackrate"]')) continue;
-
-                injectSettingsMenuItem(actionSheet);
+                if (actionSheet && isPlayerSettingsSheet(actionSheet)) {
+                    injectSettingsMenuItem(actionSheet);
+                }
             }
         }
     });
@@ -292,12 +291,16 @@ function setupMenuInjection(): () => void {
     observer.observe(document.body, { childList: true, subtree: true });
 
     // 检查当前是否已经有菜单
-    const existingActionSheet = document.querySelector('.actionSheet');
-    if (existingActionSheet) {
-        injectSettingsMenuItem(existingActionSheet);
-    }
+    document.querySelectorAll('.actionSheet').forEach((actionSheet) => {
+        if (isPlayerSettingsSheet(actionSheet)) injectSettingsMenuItem(actionSheet);
+    });
 
     return () => observer.disconnect();
+}
+
+/** 仅播放器设置菜单（含画面比例与播放速度项）才注入弹幕设置 */
+function isPlayerSettingsSheet(actionSheet: Element): boolean {
+    return !!actionSheet.querySelector('[data-id="aspectratio"]') && !!actionSheet.querySelector('[data-id="playbackrate"]');
 }
 
 /**
@@ -351,17 +354,23 @@ function openSidebar() {
     sidebarContainer = document.createElement('div');
     document.body.appendChild(sidebarContainer);
 
+    // 偏移是当前剧集的运行时值（存于 IndexedDB），hydrate() 读到的是全局配置里的旧值，取消时需单独恢复。
+    const offsetBeforeEdit = danmakuState.curEpOffset;
+
     sidebarApp = mount(Sidebar, {
         target: sidebarContainer,
         props: {
             open: true,
             onSave: () => {
+                const offset = Number(danmakuState.curEpOffset);
+                danmakuState.curEpOffset = Number.isFinite(offset) ? offset : 0;
                 danmakuState.persist();
                 closeSidebar();
                 eventBus.emit('danmaku:reload', { reason: 'settings-changed' });
             },
             onCancel: () => {
                 danmakuState.hydrate();
+                danmakuState.curEpOffset = offsetBeforeEdit;
                 eventBus.emit('danmaku:visibility', { visible: danmakuState.danmakuSwitch });
                 logger.setEnabled(danmakuState.logSwitch);
                 closeSidebar();

@@ -1,6 +1,5 @@
 import { Storage } from './storage';
-import { DEFAULT_CONFIG } from './config';
-import { debounce } from '../utils/dom';
+import { API_DEFAULTS, DEFAULT_CONFIG } from './config';
 import type { DanmakuConfig, EpisodeInfo } from '../types/index';
 
 /**
@@ -64,11 +63,12 @@ class DanmakuState {
     }
 
     /**
-     * 持久化到 localStorage（debounced）
+     * 持久化到 localStorage
+     * 同步写入：取消设置时会立刻 hydrate()，延迟写入会让两者竞争。
      */
-    persist = debounce(() => {
+    persist(): void {
         Storage.saveConfig(this.toConfig());
-    }, 300);
+    }
 
     /**
      * 导出当前配置
@@ -99,14 +99,14 @@ class DanmakuState {
      * 获取有效的 CORS 代理前缀
      */
     get effectiveCorsProxy(): string {
-        return this.customCorsProxy.length > 7 ? this.customCorsProxy : 'https://ddplay-api.930524.xyz/cors/';
+        return this.customCorsProxy.length > 7 ? this.customCorsProxy : API_DEFAULTS.corsProxy;
     }
 
     /**
      * 获取完整的 API 前缀（包含 CORS 代理）
      */
     get effectiveApiPrefix(): string {
-        return this.customApiPrefix.length > 7 ? this.customApiPrefix : this.effectiveCorsProxy + 'https://api.dandanplay.net';
+        return this.customApiPrefix.length > 7 ? this.customApiPrefix : this.effectiveCorsProxy + API_DEFAULTS.apiPrefix;
     }
 }
 
