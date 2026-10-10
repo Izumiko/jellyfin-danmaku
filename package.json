@@ -14,7 +14,10 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "format": "prettier --write 'src/**/*.{ts,svelte}'",
-    "lint": "eslint 'src/**/*.{ts,svelte}'"
+    "lint": "eslint 'src/**/*.{ts,svelte}'",
+    "e2e:setup": "bash tools/e2e/setup.sh",
+    "e2e": "bash tools/e2e/run.sh",
+    "e2e:teardown": "bash tools/e2e/teardown.sh"
   },
   "keywords": [
     "jellyfin",
