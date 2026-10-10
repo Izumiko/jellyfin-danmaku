@@ -25,6 +25,30 @@ describe('http', () => {
             expect(result).toEqual({ data: 'test' });
         });
 
+        it('parses JSON bodies served with a text content type', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({
+                    ok: true,
+                    headers: new Headers({ 'content-type': 'text/plain' }),
+                    text: () => Promise.resolve('{"comments":[]}'),
+                } as Response),
+            );
+
+            await expect(request('https://example.com/api')).resolves.toEqual({ comments: [] });
+        });
+
+        it('returns non-JSON text bodies (e.g. XML) unchanged', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({
+                    ok: true,
+                    headers: new Headers({ 'content-type': 'application/xml' }),
+                    text: () => Promise.resolve('<i><d p="1,1,25,0">x</d></i>'),
+                } as Response),
+            );
+
+            await expect(request('https://example.com/raw')).resolves.toBe('<i><d p="1,1,25,0">x</d></i>');
+        });
+
         it('should make successful POST request', async () => {
             global.fetch = vi.fn(() =>
                 Promise.resolve({

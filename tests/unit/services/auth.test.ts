@@ -88,4 +88,16 @@ describe('DanDanPlayAuth', () => {
         expect(auth.isLoggedIn).toBe(false);
         expect(auth.token).toBe('');
     });
+
+    it('keeps a still-valid session when renew fails on the network', async () => {
+        localStorage.setItem(
+            'jellyfin_danmaku_ddplay_status',
+            JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }),
+        );
+        vi.mocked(get).mockRejectedValue(new Error('network down'));
+        const auth = new DanDanPlayAuth('https://api.example.com');
+        await auth.refreshIfNeeded();
+        expect(auth.isLoggedIn).toBe(true);
+        expect(auth.token).toBe('old');
+    });
 });

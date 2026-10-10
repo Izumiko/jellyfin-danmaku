@@ -56,6 +56,15 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
             } else {
                 const text = await response.text();
                 logger.debug('http', `Response from ${url}`, { textSize: text.length });
+                // 自建 CORS 代理/第三方弹幕服务器常把 JSON 标成 text/plain，按内容兜底解析。
+                const trimmed = text.trimStart();
+                if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                    try {
+                        return JSON.parse(text) as T;
+                    } catch {
+                        // 不是合法 JSON，按文本返回
+                    }
+                }
                 return text as T;
             }
         } catch (error) {

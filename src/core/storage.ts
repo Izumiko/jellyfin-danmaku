@@ -180,7 +180,7 @@ export class Storage {
                 }
             }
 
-            // 3. 迁移 ede.js 的逐集匹配和逐集时间偏移：
+            // 3. 迁移 ede.js 的逐集匹配和逐集时间偏移（偏移在下方第 4 步单独处理）：
             //    _episode_id_rel_<seasonId>_<episode>
             //    _episode_id_rel_<seasonId>_<episode>_offset
             for (const key of keys.filter(
@@ -208,19 +208,26 @@ export class Storage {
                         timestamp: Date.now(),
                     });
 
-                    const offsetKey = `${key}_offset`;
-                    const offsetRaw = localStorage.getItem(offsetKey);
-                    if (offsetRaw !== null) {
-                        const offset = Number(offsetRaw);
-                        if (Number.isFinite(offset)) {
-                            await idbPut(EPISODE_OFFSET_STORE, {
-                                id: episodeCacheId(seasonId, episodeIndex),
-                                offset,
-                            });
-                            localStorage.removeItem(offsetKey);
-                        }
-                    }
+                    localStorage.removeItem(key);
+                } catch {
+                    // 保留旧数据，下次启动继续尝试。
+                }
+            }
 
+            // 4. 迁移逐集偏移。ede.js 的偏移 key 可以在没有对应匹配 key 时单独存在，需独立迁移。
+            for (const key of keys.filter((key) => key.startsWith(LEGACY_EPISODE_PREFIX) && key.endsWith('_offset'))) {
+                const rest = key.slice(LEGACY_EPISODE_PREFIX.length, -'_offset'.length);
+                const sep = rest.lastIndexOf('_');
+                const offsetRaw = localStorage.getItem(key);
+                if (sep < 0 || offsetRaw === null) continue;
+
+                const seasonId = rest.slice(0, sep);
+                const episodeIndex = Number(rest.slice(sep + 1));
+                const offset = Number(offsetRaw);
+                if (!seasonId || !Number.isFinite(episodeIndex) || !Number.isFinite(offset)) continue;
+
+                try {
+                    await idbPut(EPISODE_OFFSET_STORE, { id: episodeCacheId(seasonId, episodeIndex), offset });
                     localStorage.removeItem(key);
                 } catch {
                     // 保留旧数据，下次启动继续尝试。
@@ -380,8 +387,28 @@ export class Storage {
  * 从旧版独立 key 迁移配置到新版统一格式
  * 旧版 key: chConvert, danmakuSwitch, danmakuopacity, danmakuspeed 等
  */
+const LEGACY_CONFIG_KEYS = [
+    'chConvert',
+    'danmakuSwitch',
+    'logSwitch',
+    'danmakuopacity',
+    'danmakuspeed',
+    'danmakusize',
+    'danmakuheight',
+    'danmakuFontFamily',
+    'danmakuFontOptions',
+    'danmakuDensityLimit',
+    'useAnitOverlap',
+    'useXmlDanmaku',
+    'customCorsProxy',
+    'customApiPrefix',
+    'danmakuFilter',
+    'danmakuModeFilter',
+];
+
 function migrateLegacyConfig(): DanmakuConfig | null {
-    const hasLegacy = localStorage.getItem('danmakuSwitch') !== null;
+    // ede.js 只在点击开关时写 danmakuSwitch，「保存设置」不会写它，因此需检查全部旧 key。
+    const hasLegacy = LEGACY_CONFIG_KEYS.some((key) => localStorage.getItem(key) !== null);
     if (!hasLegacy) return null;
 
     try {

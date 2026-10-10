@@ -124,9 +124,9 @@ export class DanDanPlayAuth {
             Storage.saveDanDanPlayStatus(this.status);
             logger.info('auth', 'Token refreshed successfully');
         } catch (error) {
-            logger.error('auth', 'Token refresh failed', error);
-            // 刷新失败，清除登录状态
-            this.logout();
+            // 网络/代理暂时不可用：旧 token 仍在有效期内（上面已检查），保留登录态，下次启动再续期。
+            // 与 ede.js 一致，只有服务端明确拒绝（errorCode != 0）才清除登录。
+            logger.warn('auth', 'Token refresh failed, keeping current session', error);
         }
     }
 

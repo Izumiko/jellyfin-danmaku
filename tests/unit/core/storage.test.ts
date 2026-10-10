@@ -46,6 +46,17 @@ describe('Storage', () => {
     });
 
     describe('saveConfig', () => {
+        it('migrates legacy settings saved without ever toggling danmakuSwitch', () => {
+            localStorage.setItem('danmakuspeed', '300');
+            localStorage.setItem('danmakuFilter', '1');
+
+            const config = Storage.loadConfig();
+
+            expect(config.speed).toBe(300);
+            expect(config.sourceFilter.bilibili).toBe(false);
+            expect(config.danmakuSwitch).toBe(true);
+        });
+
         it('should save config to localStorage', () => {
             const testConfig: DanmakuConfig = {
                 ...DEFAULT_CONFIG,
@@ -124,6 +135,15 @@ describe('Storage', () => {
             expect(localStorage.getItem('_anime_id_rel_season-old')).toBeNull();
             expect(localStorage.getItem('_episode_id_rel_season-old_2')).toBeNull();
             expect(localStorage.getItem('_episode_id_rel_season-old_2_offset')).toBeNull();
+        });
+
+        it('migrates ede.js offset keys that have no matching episode key', async () => {
+            localStorage.setItem('_episode_id_rel_season-x_3_offset', '-2');
+
+            await Storage.migrateEpisodeCacheFromLocalStorage();
+
+            await expect(Storage.getEpisodeOffset('season-x', 3)).resolves.toBe(-2);
+            expect(localStorage.getItem('_episode_id_rel_season-x_3_offset')).toBeNull();
         });
 
         it('returns null when IndexedDB get fails', async () => {
