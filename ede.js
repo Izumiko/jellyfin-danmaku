@@ -291,6 +291,7 @@
             }
             // 最近一次拉到的原始弹幕（改设置/补挂容器时本地重渲染，不再请求接口）
             this.lastRawComments = null;
+            this.lastRawCommentsItemId = '';
             this.lastStats = null;
             this.lastBlocked = 0;
             this.loadingSince = 0;
@@ -337,6 +338,9 @@
     // 保存设置
     function saveSettings() {
         try {
+            // 这些设置会改变请求本身（简繁转换参数 / 弹幕来源 / 请求地址），不能用缓存重渲染
+            const fetchKey = () => [window.ede.chConvert, window.ede.useXmlDanmaku, window.ede.customCorsProxy, window.ede.customApiPrefix].join('\u0001');
+            const prevFetchKey = fetchKey();
             window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
             window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
             showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
@@ -373,10 +377,9 @@
             window.ede.useXmlDanmaku = parseInt(document.querySelector('input[name="useXmlDanmaku"]:checked').value);
             window.localStorage.setItem('useXmlDanmaku', window.ede.useXmlDanmaku);
             showDebugInfo(`是否使用本地xml弹幕：${window.ede.useXmlDanmaku}`);
-            const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value);
-            window.ede.curEpOffsetModified = epOffset !== window.ede.curEpOffset;
-            if (window.ede.curEpOffsetModified) {
-                window.ede.curEpOffset = epOffset;
+            const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value) || 0;
+            if (epOffset !== window.ede.curEpOffset) {
+                setCurEpOffset(epOffset);
                 showDebugInfo(`设置弹幕偏移时间：${window.ede.curEpOffset}`);
             }
             window.ede.fontFamily = document.getElementById('danmakuFontFamily').value || 'sans-serif';
@@ -437,6 +440,10 @@
                 if (clearedCount > 0) {
                     showDebugInfo(`已切换弹幕 API，清理 ${clearedCount} 条旧匹配缓存`);
                 }
+            }
+
+            if (prevFetchKey !== fetchKey()) {
+                window.ede.lastRawComments = null;
             }
 
             // v2：有本地缓存就直接重渲染，省掉一次网络请求
@@ -684,7 +691,7 @@
         if (window.ede.stripLikeSuffix !== 1) {
             return raw;
         }
-        const cleaned = raw.replace(/\s*[🤍❤♥💛💙💚💜🖤🧡]\s*\d+\s*$/u, '').trim();
+        const cleaned = raw.replace(/\s*[🤍❤♥💛💙💚💜🖤🧡]️?\s*\d+\s*$/u, '').trim();
         return cleaned.length > 0 ? cleaned : raw;
     }
 
@@ -1048,6 +1055,24 @@
         'misakaToken',
     ];
 
+    // 运行时状态（弹幕实例、观察器、定时器、当前集信息等），导入设置时不能被覆盖
+    const EDE_RUNTIME_KEYS = new Set([
+        'curEpOffset',
+        'curEpOffsetModified',
+        'curEpOffsetKey',
+        'lastRawComments',
+        'lastRawCommentsItemId',
+        'lastStats',
+        'lastBlocked',
+        'loadingSince',
+        'watchdogTimer',
+        'danmaku',
+        'episode_info',
+        'obResize',
+        'obMutation',
+        'loading',
+    ]);
+
     function collectSettingsBackup() {
         const settings = {};
         for (const key of BACKUP_KEYS) {
@@ -1089,7 +1114,9 @@
             // 让最新的 localStorage 值生效：直接刷新最省事，但会打断播放，所以这里先同步到内存再重载弹幕
             const fresh = new EDE();
             for (const prop of Object.keys(fresh)) {
-                window.ede[prop] = fresh[prop];
+                if (!EDE_RUNTIME_KEYS.has(prop)) {
+                    window.ede[prop] = fresh[prop];
+                }
             }
             blockRulesCache = { key: null, rules: null };
             window.ede.lastRawComments = null;
@@ -1128,6 +1155,11 @@
     /** 用最近一次拉取的原始弹幕本地重渲染（不重新请求接口） */
     function rerenderFromCache() {
         if (!window.ede.lastRawComments || window.ede.lastRawComments.length === 0) {
+            return false;
+        }
+        // 已经换到别的条目：缓存是上一集的，不能拿来渲染
+        if (window.ede.lastRawCommentsItemId !== itemId) {
+            window.ede.lastRawComments = null;
             return false;
         }
         createDanmaku(window.ede.lastRawComments).catch((err) => showDebugInfo(`重新渲染失败: ${err.message}`));
@@ -1270,14 +1302,21 @@
         if (input) {
             input.value = next;
         }
-        window.ede.curEpOffset = next;
-        window.ede.curEpOffsetModified = true;
-        if (window.ede.curEpOffsetKey) {
-            window.localStorage.setItem(window.ede.curEpOffsetKey, next);
-        }
+        setCurEpOffset(next);
         showDebugInfo(`弹幕偏移调整为 ${next} 秒`);
         if (!rerenderFromCache()) {
             reloadDanmaku('reload');
+        }
+    }
+
+    // 偏移按集保存：已知当前集的 key 就立即写入，否则留到 getEpisodeInfo 拿到 key 时再写
+    function setCurEpOffset(offset) {
+        window.ede.curEpOffset = offset;
+        if (window.ede.curEpOffsetKey) {
+            window.localStorage.setItem(window.ede.curEpOffsetKey, offset);
+            window.ede.curEpOffsetModified = false;
+        } else {
+            window.ede.curEpOffsetModified = true;
         }
     }
 
@@ -2878,8 +2917,10 @@
         const _episode_key_offset = _episode_key + '_offset';
         if (window.ede.curEpOffsetModified) {
             window.localStorage.setItem(_episode_key_offset, window.ede.curEpOffset);
+            window.ede.curEpOffsetModified = false;
         }
-        window.ede.curEpOffset = window.localStorage.getItem(_episode_key_offset) || 0;
+        // localStorage 取出来是字符串，不转成数字的话 time + curEpOffset 会变成字符串拼接
+        window.ede.curEpOffset = parseFloat(window.localStorage.getItem(_episode_key_offset)) || 0;
         window.ede.curEpOffsetKey = _episode_key_offset;
 
         let searchUrl = getApiPrefix() + '/api/v2/search/episodes?anime=' + animeName;
@@ -3142,6 +3183,7 @@
         if (comments && comments.length > 0) {
             // v2：缓存原始弹幕，改设置或容器被 React 摘掉时可以本地重渲染
             window.ede.lastRawComments = comments;
+            window.ede.lastRawCommentsItemId = itemId;
             window.ede.lastStats = danmakuSourceStats(comments);
         }
         if (!window.obVideo) {
@@ -3433,7 +3475,7 @@
                     if (msg && msg !== '当前播放视频未变动') {
                         showDebugInfo(msg);
                         // v2：在线搜索无结果时，用 Jellyfin 弹幕插件（后端就是御坂网络）的弹幕兜底
-                        if (window.ede.xmlFallback === 1) {
+                        if (window.ede.xmlFallback === 1 && type !== 'search') {
                             return tryXmlDanmakuFallback();
                         }
                     }
