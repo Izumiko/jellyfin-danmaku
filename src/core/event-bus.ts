@@ -2,7 +2,7 @@ import type { DanmakuConfig } from '../types/index';
 
 type EventMap = {
     /** 请求重新加载弹幕 */
-    'danmaku:reload': { reason: 'init' | 'search' | 'refresh' | 'settings-changed' };
+    'danmaku:reload': { reason: 'init' | 'search' | 'refresh' | 'reload' | 'settings-changed' };
     /** 弹幕加载完成 */
     'danmaku:loaded': { count: number; source: string };
     /** 弹幕加载失败 */

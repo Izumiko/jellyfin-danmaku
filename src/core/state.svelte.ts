@@ -2,13 +2,21 @@ import { Storage } from './storage';
 import { API_DEFAULTS, DEFAULT_CONFIG } from './config';
 import { eventBus } from './event-bus';
 import { logger } from './logger';
-import type { DanmakuConfig, EpisodeInfo } from '../types/index';
+import type { DanmakuConfig, EpisodeInfo, SourceStats } from '../types/index';
+
+const CONFIG_KEYS = Object.keys(DEFAULT_CONFIG) as (keyof DanmakuConfig)[];
+
+/** 对象类配置（sourceFilter / modeFilter）复制一份，避免与存档共享引用 */
+function cloneValue<T>(value: T): T {
+    return value && typeof value === 'object' ? ({ ...value } as T) : value;
+}
 
 /**
  * 全局响应式状态
  * 使用 Svelte 5 $state rune 实现真正的响应式
  */
-class DanmakuState {
+// implements DanmakuConfig：新增配置项时，漏写对应的 $state 字段会直接编译失败
+class DanmakuState implements DanmakuConfig {
     // ===== 持久化配置 =====
     opacity = $state(DEFAULT_CONFIG.opacity);
     speed = $state(DEFAULT_CONFIG.speed);
@@ -27,6 +35,16 @@ class DanmakuState {
     curEpOffset = $state(DEFAULT_CONFIG.curEpOffset);
     customCorsProxy = $state(DEFAULT_CONFIG.customCorsProxy);
     customApiPrefix = $state(DEFAULT_CONFIG.customApiPrefix);
+    blockKeywords = $state(DEFAULT_CONFIG.blockKeywords);
+    blockUsers = $state(DEFAULT_CONFIG.blockUsers);
+    blockColors = $state(DEFAULT_CONFIG.blockColors);
+    blockEnableKeywords = $state(DEFAULT_CONFIG.blockEnableKeywords);
+    blockEnableUsers = $state(DEFAULT_CONFIG.blockEnableUsers);
+    blockEnableColors = $state(DEFAULT_CONFIG.blockEnableColors);
+    mergeSimilar = $state(DEFAULT_CONFIG.mergeSimilar);
+    mergeThreshold = $state(DEFAULT_CONFIG.mergeThreshold);
+    stripLikeSuffix = $state(DEFAULT_CONFIG.stripLikeSuffix);
+    xmlFallback = $state(DEFAULT_CONFIG.xmlFallback);
 
     // ===== 运行时状态 =====
     episodeInfo = $state<EpisodeInfo | null>(null);
@@ -42,6 +60,11 @@ class DanmakuState {
     visibleCount = $state(0);
     /** 最近一次加载失败的原因（成功加载后清空） */
     loadError = $state<string | null>(null);
+    /** 当前弹幕的来源构成，以及被屏蔽规则过滤掉的条数 */
+    sourceStats = $state<SourceStats | null>(null);
+    blockedCount = $state(0);
+    /** 当前条目的番剧名（未匹配时也有，供「测试连接」搜索） */
+    currentTitle = $state('');
 
     constructor() {
         this.hydrate();
@@ -52,23 +75,10 @@ class DanmakuState {
      */
     hydrate(): void {
         const saved = Storage.loadConfig();
-        this.opacity = saved.opacity;
-        this.speed = saved.speed;
-        this.fontSize = saved.fontSize;
-        this.heightRatio = saved.heightRatio;
-        this.fontFamily = saved.fontFamily;
-        this.fontOptions = saved.fontOptions;
-        this.danmakuSwitch = saved.danmakuSwitch;
-        this.logSwitch = saved.logSwitch;
-        this.chConvert = saved.chConvert;
-        this.sourceFilter = { ...saved.sourceFilter };
-        this.modeFilter = { ...saved.modeFilter };
-        this.densityLimit = saved.densityLimit;
-        this.useAntiOverlap = saved.useAntiOverlap;
-        this.useXmlDanmaku = saved.useXmlDanmaku;
-        this.curEpOffset = saved.curEpOffset;
-        this.customCorsProxy = saved.customCorsProxy;
-        this.customApiPrefix = saved.customApiPrefix;
+        const target = this as unknown as Record<keyof DanmakuConfig, unknown>;
+        for (const key of CONFIG_KEYS) {
+            target[key] = cloneValue(saved[key]);
+        }
     }
 
     /**
@@ -96,25 +106,12 @@ class DanmakuState {
      * 导出当前配置
      */
     toConfig(): DanmakuConfig {
-        return {
-            opacity: this.opacity,
-            speed: this.speed,
-            fontSize: this.fontSize,
-            heightRatio: this.heightRatio,
-            fontFamily: this.fontFamily,
-            fontOptions: this.fontOptions,
-            danmakuSwitch: this.danmakuSwitch,
-            logSwitch: this.logSwitch,
-            chConvert: this.chConvert,
-            sourceFilter: { ...this.sourceFilter },
-            modeFilter: { ...this.modeFilter },
-            densityLimit: this.densityLimit,
-            useAntiOverlap: this.useAntiOverlap,
-            useXmlDanmaku: this.useXmlDanmaku,
-            curEpOffset: this.curEpOffset,
-            customCorsProxy: this.customCorsProxy,
-            customApiPrefix: this.customApiPrefix,
-        };
+        const source = this as unknown as DanmakuConfig;
+        const config = {} as Record<keyof DanmakuConfig, unknown>;
+        for (const key of CONFIG_KEYS) {
+            config[key] = cloneValue(source[key]);
+        }
+        return config as unknown as DanmakuConfig;
     }
 
     /**

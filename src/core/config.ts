@@ -20,11 +20,32 @@ export const DEFAULT_CONFIG: DanmakuConfig = {
     curEpOffset: 0,
     customCorsProxy: '',
     customApiPrefix: '',
+    blockKeywords: '',
+    blockUsers: '',
+    blockColors: '',
+    blockEnableKeywords: true,
+    blockEnableUsers: true,
+    blockEnableColors: false,
+    mergeSimilar: false,
+    mergeThreshold: 85,
+    stripLikeSuffix: true,
+    xmlFallback: true,
 };
 
 /** 「恢复默认」按分组重置的配置项 */
 export const DISPLAY_KEYS = ['opacity', 'speed', 'fontSize', 'heightRatio', 'fontFamily', 'fontOptions', 'densityLimit', 'useAntiOverlap'] as const;
 export const FILTER_KEYS = ['sourceFilter', 'modeFilter'] as const;
+export const BLOCK_KEYS = [
+    'blockKeywords',
+    'blockUsers',
+    'blockColors',
+    'blockEnableKeywords',
+    'blockEnableUsers',
+    'blockEnableColors',
+    'mergeSimilar',
+    'mergeThreshold',
+    'stripLikeSuffix',
+] as const;
 
 /** 配置值合法范围 */
 export const CONFIG_CONSTRAINTS = {
@@ -32,6 +53,7 @@ export const CONFIG_CONSTRAINTS = {
     speed: { min: 20, max: 600 },
     fontSize: { min: 8, max: 80 },
     heightRatio: { min: 0, max: 1.0 },
+    mergeThreshold: { min: 50, max: 100 },
 } as const;
 
 /** API 默认配置 */
@@ -87,6 +109,16 @@ export const DanmakuConfigSchema = v.object({
     curEpOffset: v.number(),
     customCorsProxy: v.string(),
     customApiPrefix: v.string(),
+    blockKeywords: v.string(),
+    blockUsers: v.string(),
+    blockColors: v.string(),
+    blockEnableKeywords: v.boolean(),
+    blockEnableUsers: v.boolean(),
+    blockEnableColors: v.boolean(),
+    mergeSimilar: v.boolean(),
+    mergeThreshold: v.pipe(v.number(), v.minValue(50), v.maxValue(100)),
+    stripLikeSuffix: v.boolean(),
+    xmlFallback: v.boolean(),
 });
 
 /**
@@ -105,6 +137,9 @@ export function validateConfigValue<K extends keyof DanmakuConfig>(key: K, value
     }
     if (key === 'heightRatio') {
         return Math.max(CONFIG_CONSTRAINTS.heightRatio.min, Math.min(CONFIG_CONSTRAINTS.heightRatio.max, value as number)) as DanmakuConfig[K];
+    }
+    if (key === 'mergeThreshold') {
+        return Math.max(CONFIG_CONSTRAINTS.mergeThreshold.min, Math.min(CONFIG_CONSTRAINTS.mergeThreshold.max, Math.round(value as number))) as DanmakuConfig[K];
     }
     return value;
 }
@@ -168,5 +203,15 @@ export function mergeConfig(partial: Partial<DanmakuConfig> | unknown): DanmakuC
         curEpOffset: numberOr(input.curEpOffset, DEFAULT_CONFIG.curEpOffset),
         customCorsProxy: stringOr(input.customCorsProxy, DEFAULT_CONFIG.customCorsProxy),
         customApiPrefix: stringOr(input.customApiPrefix, DEFAULT_CONFIG.customApiPrefix),
+        blockKeywords: stringOr(input.blockKeywords, DEFAULT_CONFIG.blockKeywords),
+        blockUsers: stringOr(input.blockUsers, DEFAULT_CONFIG.blockUsers),
+        blockColors: stringOr(input.blockColors, DEFAULT_CONFIG.blockColors),
+        blockEnableKeywords: booleanOr(input.blockEnableKeywords, DEFAULT_CONFIG.blockEnableKeywords),
+        blockEnableUsers: booleanOr(input.blockEnableUsers, DEFAULT_CONFIG.blockEnableUsers),
+        blockEnableColors: booleanOr(input.blockEnableColors, DEFAULT_CONFIG.blockEnableColors),
+        mergeSimilar: booleanOr(input.mergeSimilar, DEFAULT_CONFIG.mergeSimilar),
+        mergeThreshold: validateConfigValue('mergeThreshold', numberOr(input.mergeThreshold, DEFAULT_CONFIG.mergeThreshold)),
+        stripLikeSuffix: booleanOr(input.stripLikeSuffix, DEFAULT_CONFIG.stripLikeSuffix),
+        xmlFallback: booleanOr(input.xmlFallback, DEFAULT_CONFIG.xmlFallback),
     };
 }

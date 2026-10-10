@@ -238,6 +238,19 @@ export class Storage {
         }
     }
 
+    /**
+     * 清除番剧/剧集匹配记忆（保留逐集偏移）。
+     * 切换弹幕 API 后旧记录指向另一个服务端的 id，继续使用会匹配到错误的剧集（上游 issue #91）。
+     */
+    static async clearEpisodeMappings(): Promise<void> {
+        try {
+            await idbClear(EPISODE_CACHE_STORE);
+            await idbClear(SEASON_ANIME_STORE);
+        } catch (error) {
+            console.warn('[Storage] Failed to clear episode mappings:', error);
+        }
+    }
+
     static async sweepExpiredEpisodeCache(maxAgeMs = EPISODE_CACHE_MAX_AGE_MS): Promise<void> {
         try {
             const records = await idbGetAll<CachedEpisode & { id: string }>(EPISODE_CACHE_STORE);
@@ -404,32 +417,50 @@ const LEGACY_CONFIG_KEYS = [
     'customApiPrefix',
     'danmakuFilter',
     'danmakuModeFilter',
+    // ede.js v1.62 新增
+    'danmakuBlockKeywords',
+    'danmakuBlockUsers',
+    'danmakuBlockColors',
+    'danmakuBlockEnableKeywords',
+    'danmakuBlockEnableUsers',
+    'danmakuBlockEnableColors',
+    'danmakuMergeSimilar',
+    'danmakuMergeThreshold',
+    'danmakuStripLikeSuffix',
+    'danmakuXmlFallback',
 ];
 
 function migrateLegacyConfig(): DanmakuConfig | null {
     // ede.js 只在点击开关时写 danmakuSwitch，「保存设置」不会写它，因此需检查全部旧 key。
     const hasLegacy = LEGACY_CONFIG_KEYS.some((key) => localStorage.getItem(key) !== null);
     if (!hasLegacy) return null;
+    return legacyConfigFrom((key) => localStorage.getItem(key));
+}
 
+/**
+ * 按 ede.js 的独立 key 读取配置并转换为新版格式。
+ * 数据源可以是 localStorage，也可以是 ede.js「设置备份」导出的 JSON。
+ */
+export function legacyConfigFrom(read: (key: string) => string | null): DanmakuConfig | null {
     try {
         const config: Partial<DanmakuConfig> = {};
 
         // 辅助函数：读取旧版 number/boolean
         const getBool = (key: string): boolean | undefined => {
-            const val = localStorage.getItem(key);
+            const val = read(key);
             if (val === null) return undefined;
             return val === '1' || val === 'true';
         };
 
         const getNumber = (key: string): number | undefined => {
-            const val = localStorage.getItem(key);
+            const val = read(key);
             if (val === null) return undefined;
             const n = parseFloat(val);
             return isNaN(n) ? undefined : n;
         };
 
         const getString = (key: string): string | undefined => {
-            return localStorage.getItem(key) ?? undefined;
+            return read(key) ?? undefined;
         };
 
         // 基础设置
@@ -500,6 +531,28 @@ function migrateLegacyConfig(): DanmakuConfig | null {
                 scroll: (danmakuModeFilter & 4) !== 4, // bit 2: 4=disable scroll
             };
         }
+
+        // ede.js v1.62：屏蔽 / 合并 / 正文清理 / 插件回退
+        const blockKeywords = getString('danmakuBlockKeywords');
+        if (blockKeywords !== undefined) config.blockKeywords = blockKeywords;
+        const blockUsers = getString('danmakuBlockUsers');
+        if (blockUsers !== undefined) config.blockUsers = blockUsers;
+        const blockColors = getString('danmakuBlockColors');
+        if (blockColors !== undefined) config.blockColors = blockColors;
+        const blockEnableKeywords = getBool('danmakuBlockEnableKeywords');
+        if (blockEnableKeywords !== undefined) config.blockEnableKeywords = blockEnableKeywords;
+        const blockEnableUsers = getBool('danmakuBlockEnableUsers');
+        if (blockEnableUsers !== undefined) config.blockEnableUsers = blockEnableUsers;
+        const blockEnableColors = getBool('danmakuBlockEnableColors');
+        if (blockEnableColors !== undefined) config.blockEnableColors = blockEnableColors;
+        const mergeSimilar = getBool('danmakuMergeSimilar');
+        if (mergeSimilar !== undefined) config.mergeSimilar = mergeSimilar;
+        const mergeThreshold = getNumber('danmakuMergeThreshold');
+        if (mergeThreshold !== undefined) config.mergeThreshold = mergeThreshold;
+        const stripLikeSuffix = getBool('danmakuStripLikeSuffix');
+        if (stripLikeSuffix !== undefined) config.stripLikeSuffix = stripLikeSuffix;
+        const xmlFallback = getBool('danmakuXmlFallback');
+        if (xmlFallback !== undefined) config.xmlFallback = xmlFallback;
 
         return mergeConfig(config);
     } catch (error) {

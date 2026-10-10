@@ -73,6 +73,23 @@ export interface DanmakuConfig {
     curEpOffset: number;
     customCorsProxy: string;
     customApiPrefix: string;
+    /** 屏蔽关键词，每行一条；/正则/flags 或 re:正则 按正则匹配，# 开头为注释 */
+    blockKeywords: string;
+    /** 屏蔽发送者，每行一条，包含即屏蔽 */
+    blockUsers: string;
+    /** 屏蔽颜色，十六进制，逗号/空白分隔 */
+    blockColors: string;
+    blockEnableKeywords: boolean;
+    blockEnableUsers: boolean;
+    blockEnableColors: boolean;
+    /** 合并时间窗内的相似弹幕，标注 [xN] */
+    mergeSimilar: boolean;
+    /** 相似度阈值 50-100 */
+    mergeThreshold: number;
+    /** 去掉第三方 API 拼在正文尾部的 B 站点赞数（如「🤍 28」） */
+    stripLikeSuffix: boolean;
+    /** 在线匹配失败时回退到 Jellyfin 弹幕插件的本地弹幕 */
+    xmlFallback: boolean;
 }
 
 /** DanDanPlay API 返回的原始评论 */
@@ -227,6 +244,28 @@ export interface ProcessingConfig {
     timeOffset: number;
     containerWidth: number;
     containerHeight: number;
+    /** 屏蔽规则（已解析） */
+    blockRules?: BlockRules;
+    stripLikeSuffix?: boolean;
+    mergeSimilar?: boolean;
+    mergeThreshold?: number;
+}
+
+/** 解析后的屏蔽规则 */
+export interface BlockRules {
+    keywords: { re: RegExp | null; text: string }[];
+    users: string[];
+    /** 小写 6 位十六进制 */
+    colors: string[];
+}
+
+/** 弹幕来源统计 */
+export interface SourceStats {
+    total: number;
+    bilibili: number;
+    gamer: number;
+    dandanplay: number;
+    other: number;
 }
 
 /** 防重叠配置 */

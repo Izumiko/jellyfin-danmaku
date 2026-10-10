@@ -57,6 +57,25 @@ describe('Storage', () => {
             expect(config.danmakuSwitch).toBe(true);
         });
 
+        it('migrates ede.js v1.62 block / merge settings', () => {
+            localStorage.setItem('danmakuBlockKeywords', '剧透\n/^前方/');
+            localStorage.setItem('danmakuBlockEnableColors', '1');
+            localStorage.setItem('danmakuMergeSimilar', '1');
+            localStorage.setItem('danmakuMergeThreshold', '120');
+            localStorage.setItem('danmakuStripLikeSuffix', '0');
+            localStorage.setItem('danmakuXmlFallback', '0');
+
+            const config = Storage.loadConfig();
+
+            expect(config.blockKeywords).toBe('剧透\n/^前方/');
+            expect(config.blockEnableColors).toBe(true);
+            expect(config.blockEnableUsers).toBe(true);
+            expect(config.mergeSimilar).toBe(true);
+            expect(config.mergeThreshold).toBe(100);
+            expect(config.stripLikeSuffix).toBe(false);
+            expect(config.xmlFallback).toBe(false);
+        });
+
         it('should save config to localStorage', () => {
             const testConfig: DanmakuConfig = {
                 ...DEFAULT_CONFIG,
@@ -144,6 +163,18 @@ describe('Storage', () => {
 
             await expect(Storage.getEpisodeOffset('season-x', 3)).resolves.toBe(-2);
             expect(localStorage.getItem('_episode_id_rel_season-x_3_offset')).toBeNull();
+        });
+
+        it('clearEpisodeMappings drops matches but keeps per-episode offsets', async () => {
+            await Storage.setEpisodeCache('s1', 1, { episodeId: 1, animeTitle: 'A', episodeTitle: 'E1', timestamp: Date.now() });
+            await Storage.setSeasonAnime('s1', { animeId: 9, animeTitle: 'A' });
+            await Storage.setEpisodeOffset('s1', 1, 2.5);
+
+            await Storage.clearEpisodeMappings();
+
+            await expect(Storage.getEpisodeCache('s1', 1)).resolves.toBeNull();
+            await expect(Storage.getSeasonAnime('s1')).resolves.toBeNull();
+            await expect(Storage.getEpisodeOffset('s1', 1)).resolves.toBe(2.5);
         });
 
         it('returns null when IndexedDB get fails', async () => {

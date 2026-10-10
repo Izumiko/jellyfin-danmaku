@@ -1,6 +1,7 @@
 import { getComments, getRelatedSources, getExtComments, convertDanDanPlayComment } from './dandanplay/client';
 import { getLocalXmlDanmaku } from './jellyfin/danmaku';
 import { logger } from '../core/logger';
+import { classifySource } from '../danmaku/processor';
 import type { RawComment, ChConvertMode, SourceFilter } from '../types/index';
 
 export interface CommentFetcherDeps {
@@ -68,7 +69,7 @@ export class CommentFetcher {
 
         const hasBilibiliInMain =
             this.deps.sourceFilter.bilibili &&
-            mainComments.some((comment) => (comment.p.split(',')[3] ?? '').startsWith('[BiliBili]'));
+            mainComments.some((comment) => classifySource(comment.p.split(',')[3]) === 'bilibili');
 
         // 2. 获取关联源
         try {

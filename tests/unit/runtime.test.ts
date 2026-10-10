@@ -452,6 +452,88 @@ describe('DanmakuRuntime', () => {
         expect(danmakuState.loadError).toBeNull();
         expect(danmakuState.loadedSource).toBe('online');
     });
+
+    it('falls back to plugin XML danmaku when online matching finds nothing', async () => {
+        vi.mocked(hooks.matcher.match).mockResolvedValue(null);
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([{ time: 1, modeId: 1, color: 0, text: 'plugin' }]);
+
+        await runtime.start();
+
+        expect(hooks.getLocalComments).toHaveBeenCalledWith('i1', expect.anything());
+        expect(danmakuState.loadedSource).toBe('local');
+    });
+
+    it('does not fall back on a manual search, or when the fallback is disabled', async () => {
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([{ time: 1, modeId: 1, color: 0, text: 'plugin' }]);
+        await runtime.start();
+        vi.mocked(hooks.matcher.match).mockResolvedValue(null);
+        vi.mocked(hooks.getLocalComments!).mockClear();
+
+        await runtime.load('search');
+        danmakuState.xmlFallback = false;
+        await runtime.load('reload');
+
+        expect(hooks.getLocalComments).not.toHaveBeenCalled();
+    });
+
+    it('records source stats for the loaded comments', async () => {
+        vi.mocked(hooks.fetcher.fetch).mockResolvedValue([
+            { time: 1, modeId: 1, color: 0, text: 'a', user: '[bilibili]x' },
+            { time: 2, modeId: 1, color: 0, text: 'b', user: 'ddp' },
+        ]);
+        await runtime.start();
+        expect(danmakuState.sourceStats).toEqual({ total: 2, bilibili: 1, gamer: 0, dandanplay: 1, other: 0 });
+    });
+
+    it('clears episode mappings when the API prefix changes, then refetches', async () => {
+        const clear = vi.spyOn(Storage, 'clearEpisodeMappings');
+        await runtime.start();
+        vi.mocked(hooks.fetcher.fetch).mockClear();
+
+        danmakuState.update({ customApiPrefix: 'http://misaka:7768/api/v1/token' });
+
+        await vi.waitFor(() => expect(hooks.fetcher.fetch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+        expect(clear).toHaveBeenCalled();
+        clear.mockRestore();
+    });
+
+    it('rebuilds locally when block rules change', async () => {
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+        vi.mocked(hooks.fetcher.fetch).mockClear();
+
+        danmakuState.update({ blockKeywords: '剧透' });
+
+        await vi.waitFor(() => expect(hooks.engine.init).toHaveBeenCalledTimes(1));
+        expect(hooks.fetcher.fetch).not.toHaveBeenCalled();
+    });
+
+    it('does not re-render the previous episode while a new item is loading', async () => {
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+
+        danmakuState.itemId = 'ffffffffffffffffffffffffffffffff';
+        danmakuState.update({ fontSize: 40 });
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        expect(hooks.engine.init).not.toHaveBeenCalled();
+    });
+
+    it('remounts the engine when its container is detached', async () => {
+        vi.useFakeTimers({ toFake: ['setInterval'] });
+        let mounted = true;
+        hooks.engine.isMounted = () => mounted;
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+
+        mounted = false;
+        vi.advanceTimersByTime(2000);
+        expect(hooks.engine.init).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(10000);
+        expect(hooks.engine.init).toHaveBeenCalledTimes(3);
+        vi.useRealTimers();
+    });
 });
 
 describe('describeLoadError', () => {
