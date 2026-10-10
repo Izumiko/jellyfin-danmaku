@@ -44,10 +44,10 @@ export class EpisodeMatcher {
      */
     async match(item: JellyfinItem, mode: 'auto' | 'manual' = 'auto'): Promise<EpisodeInfo | null> {
         try {
-            const { seasonId } = episodeScope(item);
+            const { seasonId, episodeIndex: cacheIndex } = episodeScope(item);
 
-            if (mode === 'auto' && item.IndexNumber !== undefined) {
-                const cached = await Storage.getEpisodeCache(seasonId, item.IndexNumber);
+            if (mode === 'auto') {
+                const cached = await Storage.getEpisodeCache(seasonId, cacheIndex);
                 if (cached) {
                     logger.info('matcher', `Using cached episode: ${cached.animeTitle} - ${cached.episodeTitle}`);
                     return {
@@ -62,7 +62,11 @@ export class EpisodeMatcher {
 
             // 已知 animeId：直接按 id 拉取剧集，避免完整标题在 DanDanPlay 搜不到
             if (remembered && mode === 'auto') {
-                const anime = await getAnimeById(this.deps.apiPrefix, remembered.animeId);
+                // 自定义 API（如御坂网络）可能不支持 /bangumi，失败时回退到标题搜索
+                const anime = await getAnimeById(this.deps.apiPrefix, remembered.animeId).catch((error) => {
+                    logger.warn('matcher', `animeId ${remembered.animeId} lookup failed, falling back to search`, error);
+                    return null;
+                });
                 if (anime) {
                     logger.info('matcher', `Using animeId ${remembered.animeId}: ${anime.animeTitle}`);
                     // 沿用首次匹配学到的集数偏移，保证「前一集偏移多少，后面就偏移多少」
@@ -119,7 +123,7 @@ export class EpisodeMatcher {
                 const animeIndex = await this.deps.showSelectDialog(
                     '选择节目',
                     searchResult.animes.map((a) => `${a.animeTitle} 类型:${a.typeDescription ?? a.type}`),
-                    0,
+                    Math.max(0, searchResult.animes.indexOf(selectedAnime)),
                 );
                 if (animeIndex === null) {
                     return null;
@@ -164,9 +168,7 @@ export class EpisodeMatcher {
             animeTitle: anime.animeTitle,
             episodeIndexOffset: episodeIndex - (jellyfinEpisodeNumber(item) - 1),
         });
-        if (item.IndexNumber !== undefined) {
-            await Storage.setEpisodeCache(seasonId, item.IndexNumber, { ...result, timestamp: Date.now() });
-        }
+        await Storage.setEpisodeCache(seasonId, episodeScope(item).episodeIndex, { ...result, timestamp: Date.now() });
 
         logger.info('matcher', `Matched: ${result.animeTitle} - ${result.episodeTitle}`);
         return result;

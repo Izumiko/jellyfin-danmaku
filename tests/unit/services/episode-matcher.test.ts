@@ -282,6 +282,43 @@ describe('EpisodeMatcher', () => {
             expect(result?.episodeId).toBe(2);
         });
 
+        it('falls back to title search when animeId lookup throws', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
+            vi.mocked(Storage.getSeasonAnime).mockResolvedValue({
+                animeId: 2,
+                animeTitle: 'Correct DDP Name',
+            });
+            vi.mocked(getAnimeById).mockRejectedValue(new Error('HTTP 404'));
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(2));
+
+            const result = await matcher.match(createJellyfinItem({ IndexNumber: 2 }));
+
+            expect(searchEpisodes).toHaveBeenCalledWith('https://api.example.com', 'Correct DDP Name');
+            expect(result?.animeTitle).toBe('Anime 2');
+        });
+
+        it('preselects the remembered anime in manual mode', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
+            vi.mocked(Storage.getSeasonAnime).mockResolvedValue({ animeId: 2, animeTitle: 'Anime 2' });
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(3));
+            dialogs.showInputDialog.mockResolvedValue('Anime 2');
+            dialogs.showSelectDialog.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+
+            await matcher.match(createJellyfinItem(), 'manual');
+
+            expect(dialogs.showSelectDialog.mock.calls[0][2]).toBe(1);
+        });
+
+        it('caches items without IndexNumber (movies) as episode 1', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));
+
+            await matcher.match(createJellyfinItem({ SeasonId: 'movie-1', IndexNumber: undefined }));
+
+            expect(Storage.getEpisodeCache).toHaveBeenCalledWith('movie-1', 1);
+            expect(Storage.setEpisodeCache).toHaveBeenCalledWith('movie-1', 1, expect.anything());
+        });
+
         it('does not use animeId in manual mode', async () => {
             vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(Storage.getSeasonAnime).mockResolvedValue({

@@ -67,4 +67,29 @@ describe('dialogs', () => {
         (options[0] as HTMLButtonElement).click();
         await expect(pending).resolves.toBe(0);
     });
+
+    it('treats blank input as cancel and trims the value', async () => {
+        let pending = showInputDialog('标题', '', '');
+        let input = document.querySelector('input') as HTMLInputElement;
+        input.value = '   ';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        (document.querySelector('[data-action="confirm"]') as HTMLButtonElement).click();
+        await expect(pending).resolves.toBeNull();
+
+        pending = showInputDialog('标题', '', '');
+        input = document.querySelector('input') as HTMLInputElement;
+        input.value = '  名字 ';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        (document.querySelector('[data-action="confirm"]') as HTMLButtonElement).click();
+        await expect(pending).resolves.toBe('名字');
+    });
+
+    it('autofocuses the default option so Enter keeps the preselection', async () => {
+        const pending = showSelectDialog('选', ['A', 'B', 'C'], 2);
+        const options = document.querySelectorAll('[data-action="option"]');
+        expect(options[2].hasAttribute('autofocus')).toBe(true);
+        expect(options[0].hasAttribute('autofocus')).toBe(false);
+        (document.querySelector('[data-action="cancel"]') as HTMLButtonElement).click();
+        await pending;
+    });
 });

@@ -15,7 +15,8 @@
         onCancel: () => void;
     }>();
 
-    let inputEl: HTMLInputElement | undefined;
+    // svelte-ignore state_referenced_locally
+    let value = $state(defaultValue);
 
     function stopPlayerGestures(e: Event) {
         e.stopPropagation();
@@ -37,12 +38,12 @@
         }
         if (e.key === 'Enter') {
             e.preventDefault();
-            onConfirm(inputEl?.value ?? defaultValue);
+            onConfirm(value);
         }
     }
 
     function handleConfirm() {
-        onConfirm(inputEl?.value ?? defaultValue);
+        onConfirm(value);
     }
 </script>
 
@@ -61,7 +62,7 @@
     >
         <h3>{title}</h3>
         <!-- svelte-ignore a11y_autofocus -->
-        <input bind:this={inputEl} type="text" {placeholder} value={defaultValue} autofocus onkeydown={handleInputKeydown} />
+        <input bind:value type="text" {placeholder} autofocus onkeydown={handleInputKeydown} />
         <div class="dialog-actions">
             <button type="button" data-action="confirm" onclick={handleConfirm}>确定</button>
             <button type="button" data-action="cancel" onclick={onCancel}>取消</button>
