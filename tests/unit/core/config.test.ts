@@ -9,20 +9,20 @@ describe('config', () => {
             expect(validateConfigValue('opacity', 0.7)).toBe(0.7);
         });
 
-        it('should clamp speed to [50, 600]', () => {
-            expect(validateConfigValue('speed', 10)).toBe(50);
+        it('should clamp speed to [20, 600]', () => {
+            expect(validateConfigValue('speed', 10)).toBe(20);
             expect(validateConfigValue('speed', 1000)).toBe(600);
             expect(validateConfigValue('speed', 200)).toBe(200);
         });
 
-        it('should clamp fontSize to [10, 60]', () => {
-            expect(validateConfigValue('fontSize', 5)).toBe(10);
-            expect(validateConfigValue('fontSize', 100)).toBe(60);
+        it('should clamp fontSize to [8, 80]', () => {
+            expect(validateConfigValue('fontSize', 5)).toBe(8);
+            expect(validateConfigValue('fontSize', 100)).toBe(80);
             expect(validateConfigValue('fontSize', 18)).toBe(18);
         });
 
-        it('should clamp heightRatio to [0.1, 1.0]', () => {
-            expect(validateConfigValue('heightRatio', 0)).toBe(0.1);
+        it('should clamp heightRatio to [0, 1.0]', () => {
+            expect(validateConfigValue('heightRatio', -1)).toBe(0);
             expect(validateConfigValue('heightRatio', 2)).toBe(1.0);
             expect(validateConfigValue('heightRatio', 0.9)).toBe(0.9);
         });

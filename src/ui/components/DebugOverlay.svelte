@@ -60,7 +60,6 @@
 </script>
 
 {#if danmakuState.logSwitch}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="debug-overlay" bind:this={overlayEl} onwheel={stopVolumeWheel}>
         <div class="debug-header">
             <span>调试日志 ({entries.length})</span>

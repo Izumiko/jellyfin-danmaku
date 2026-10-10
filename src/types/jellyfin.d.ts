@@ -3,7 +3,7 @@ interface JellyfinApiClient {
     deviceId(): string;
     _appVersion: string;
     getItem(userId: string, itemId: string): Promise<import('./index').JellyfinItem>;
-    getSessions(options: { deviceId: string }): Promise<JellyfinSession[]>;
+    getSessions(options?: { userId?: string; deviceId?: string }): Promise<JellyfinSession[]>;
 }
 
 interface JellyfinSession {
