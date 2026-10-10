@@ -125,7 +125,7 @@
 
     [data-action='confirm'] {
         background: var(--danmaku-primary, #00a4dc);
-        color: white;
+        color: var(--danmaku-on-primary, #fff);
         border: none;
     }
 

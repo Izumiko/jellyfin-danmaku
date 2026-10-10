@@ -5,9 +5,8 @@
 :root {
     --danmaku-primary: var(--jf-palette-primary-main, #00a4dc);
     --danmaku-primary-channel: var(--jf-palette-primary-mainChannel, 0 164 220);
-    --danmaku-on-primary: #fff;
+    --danmaku-on-primary: var(--jf-palette-primary-contrastText, #fff);
     --danmaku-bg: var(--jf-palette-background-paper, #202020);
-    --danmaku-bg-channel: var(--jf-palette-background-paperChannel, 32 32 32);
     --danmaku-text: var(--jf-palette-text-primary, #fff);
     --danmaku-text-secondary: var(--jf-palette-text-secondary, rgba(255, 255, 255, 0.7));
     --danmaku-border: var(--jf-palette-divider, rgba(255, 255, 255, 0.12));

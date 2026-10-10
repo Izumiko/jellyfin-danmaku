@@ -310,6 +310,6 @@
     .dialog-actions .primary {
         border: none;
         background: var(--danmaku-primary, #00a4dc);
-        color: white;
+        color: var(--danmaku-on-primary, #fff);
     }
 </style>
