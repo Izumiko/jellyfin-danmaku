@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Jellyfin danmaku extension
-// @description  Jellyfin弹幕插件
+// @description  Jellyfin弹幕插件（含 dd-danmaku 的屏蔽 / 相似弹幕合并与第三方 API 适配）
 // @namespace    https://github.com/RyoLee
-// @author       RyoLee
-// @version      1.61
+// @author       RyoLee, Izumiko, Xarth-Mai, guiyuanyuanbao, chen3861229, misaka10876
+// @version      1.62.0
 // @copyright    2022, RyoLee (https://github.com/RyoLee)
 // @license      MIT; https://raw.githubusercontent.com/Izumiko/jellyfin-danmaku/jellyfin/LICENSE
 // @icon         https://github.githubassets.com/pinned-octocat.svg
@@ -19,7 +19,8 @@
 
 (async function () {
     'use strict';
-    if (document.querySelector('meta[name="application-name"]').content !== 'Jellyfin') {
+    // v2：非 Jellyfin 前端（例如 Jellyfin-Vue）没有这个 meta，直接 .content 会抛 TypeError（上游 issue #24）
+    if (document.querySelector('meta[name="application-name"]')?.content !== 'Jellyfin') {
         return;
     }
     // ------ configs start------
@@ -44,9 +45,37 @@
     let itemId = '';
     const defaultFontFamily = '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
 
+    // 从请求地址里取当前播放条目 id：PlaybackInfo、直接播放的 stream、HLS 的 m3u8
+    const itemIdUrlRegex = /\/(?:Items|Videos)\/([0-9a-f]{32}|[0-9a-f-]{36})\/(?:PlaybackInfo|stream|master\.m3u8|main\.m3u8)/i;
+    function captureItemIdFromUrl(url) {
+        const match = String(url || '').match(itemIdUrlRegex);
+        if (match) {
+            itemId = match[1].replace(/-/g, '');
+        }
+    }
+
+    // 直接播放时 video.src 不经过 XHR/fetch，换集时从 loadstart 取 id（媒体事件不冒泡，用捕获阶段）
+    document.addEventListener(
+        'loadstart',
+        (event) => {
+            if (event.target instanceof HTMLVideoElement) {
+                captureItemIdFromUrl(event.target.currentSrc);
+            }
+        },
+        true,
+    );
+
+    // 新版前端的 ApiClient 走 fetch
+    const originalFetch = window.fetch;
+    window.fetch = function (input) {
+        captureItemIdFromUrl(typeof input === 'string' ? input : input?.url);
+        return originalFetch.apply(this, arguments);
+    };
+
     // Intercept XMLHttpRequest
     const originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (_, url) {
+        captureItemIdFromUrl(url);
         this.addEventListener('load', function () {
             if (url.endsWith('PlaybackInfo')) {
                 const res = JSON.parse(this.responseText);
@@ -203,7 +232,7 @@
     /* eslint-disable */
     /* https://cdn.jsdelivr.net/npm/danmaku/dist/danmaku.min.js */
     // prettier-ignore
-    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t="undefined"!=typeof globalThis?globalThis:t||self).Danmaku=e()}(this,(function(){"use strict";var t=function(){if("undefined"==typeof document)return"transform";for(var t=["oTransform","msTransform","mozTransform","webkitTransform","transform"],e=document.createElement("div").style,i=0;i<t.length;i++)if(t[i]in e)return t[i];return"transform"}();function e(t){var e=document.createElement("div");if(e.style.cssText="position:absolute;","function"==typeof t.render){var i=t.render();if(i instanceof HTMLElement)return e.appendChild(i),e}if(e.textContent=t.text,t.style)for(var n in t.style)e.style[n]=t.style[n];return e}var i={name:"dom",init:function(){var t=document.createElement("div");return t.style.cssText="overflow:hidden;white-space:nowrap;transform:translateZ(0);",t},clear:function(t){for(var e=t.lastChild;e;)t.removeChild(e),e=t.lastChild},resize:function(t,e,i){t.style.width=e+"px",t.style.height=i+"px"},framing:function(){},setup:function(t,i){var n=document.createDocumentFragment(),s=0,r=null;for(s=0;s<i.length;s++)(r=i[s]).node=r.node||e(r),n.appendChild(r.node);for(i.length&&t.appendChild(n),s=0;s<i.length;s++)(r=i[s]).width=r.width||r.node.offsetWidth,r.height=r.height||r.node.offsetHeight},render:function(e,i){i.node.style[t]="translate("+i.x+"px,"+i.y+"px)"},remove:function(t,e){t.removeChild(e.node),this.media||(e.node=null)}},n="undefined"!=typeof window&&window.devicePixelRatio||1,s=Object.create(null);function r(t,e){if("function"==typeof t.render){var i=t.render();if(i instanceof HTMLCanvasElement)return t.width=i.width,t.height=i.height,i}var r=document.createElement("canvas"),h=r.getContext("2d"),o=t.style||{};o.font=o.font||"10px sans-serif",o.textBaseline=o.textBaseline||"bottom";var a=1*o.lineWidth;for(var d in a=a>0&&a!==1/0?Math.ceil(a):1*!!o.strokeStyle,h.font=o.font,t.width=t.width||Math.max(1,Math.ceil(h.measureText(t.text).width)+2*a),t.height=t.height||Math.ceil(function(t,e){if(s[t])return s[t];var i=12,n=t.match(/(\d+(?:\.\d+)?)(px|%|em|rem)(?:\s*\/\s*(\d+(?:\.\d+)?)(px|%|em|rem)?)?/);if(n){var r=1*n[1]||10,h=n[2],o=1*n[3]||1.2,a=n[4];"%"===h&&(r*=e.container/100),"em"===h&&(r*=e.container),"rem"===h&&(r*=e.root),"px"===a&&(i=o),"%"===a&&(i=r*o/100),"em"===a&&(i=r*o),"rem"===a&&(i=e.root*o),void 0===a&&(i=r*o)}return s[t]=i,i}(o.font,e))+2*a,r.width=t.width*n,r.height=t.height*n,h.scale(n,n),o)h[d]=o[d];var u=0;switch(o.textBaseline){case"top":case"hanging":u=a;break;case"middle":u=t.height>>1;break;default:u=t.height-a}return o.strokeStyle&&h.strokeText(t.text,a,u),h.fillText(t.text,a,u),r}function h(t){return 1*window.getComputedStyle(t,null).getPropertyValue("font-size").match(/(.+)px/)[1]}var o={name:"canvas",init:function(t){var e=document.createElement("canvas");return e.context=e.getContext("2d"),e._fontSize={root:h(document.getElementsByTagName("html")[0]),container:h(t)},e},clear:function(t,e){t.context.clearRect(0,0,t.width,t.height);for(var i=0;i<e.length;i++)e[i].canvas=null},resize:function(t,e,i){t.width=e*n,t.height=i*n,t.style.width=e+"px",t.style.height=i+"px"},framing:function(t){t.context.clearRect(0,0,t.width,t.height)},setup:function(t,e){for(var i=0;i<e.length;i++){var n=e[i];n.canvas=r(n,t._fontSize)}},render:function(t,e){t.context.drawImage(e.canvas,e.x*n,e.y*n)},remove:function(t,e){e.canvas=null}},a=function(){if("undefined"!=typeof window){var t=window.requestAnimationFrame||window.mozRequestAnimationFrame||window.webkitRequestAnimationFrame;if(t)return t.bind(window)}return function(t){return setTimeout(t,50/3)}}(),d=function(){if("undefined"!=typeof window){var t=window.cancelAnimationFrame||window.mozCancelAnimationFrame||window.webkitCancelAnimationFrame;if(t)return t.bind(window)}return clearTimeout}();function u(t,e,i){for(var n=0,s=0,r=t.length;s<r-1;)i>=t[n=s+r>>1][e]?s=n:r=n;return t[s]&&i<t[s][e]?s:r}function m(t){return/^(ltr|top|bottom)$/i.test(t)?t.toLowerCase():"rtl"}function c(){var t=9007199254740991;return[{range:0,time:-t,width:t,height:0},{range:t,time:t,width:0,height:0}]}function l(t){t.ltr=c(),t.rtl=c(),t.top=c(),t.bottom=c()}function f(){return void 0!==window.performance&&window.performance.now?window.performance.now():Date.now()}function p(t){var e=this,i=this.media?this.media.currentTime:f()/1e3,n=this.media?this.media.playbackRate:1;function s(t,s){if("top"===s.mode||"bottom"===s.mode)return i-t.time<e._.duration;var r=(e._.width+t.width)*(i-t.time)*n/e._.duration;if(t.width>r)return!0;var h=e._.duration+t.time-i,o=e._.width+s.width,a=e.media?s.time:s._utc,d=o*(i-a)*n/e._.duration,u=e._.width-d;return h>e._.duration*u/(e._.width+s.width)}for(var r=this._.space[t.mode],h=0,o=0,a=1;a<r.length;a++){var d=r[a],u=t.height;if("top"!==t.mode&&"bottom"!==t.mode||(u+=d.height),d.range-d.height-r[h].range>=u){o=a;break}s(d,t)&&(h=a)}var m=r[h].range,c={range:m+t.height,time:this.media?t.time:t._utc,width:t.width,height:t.height};return r.splice(h+1,o-h-1,c),"bottom"===t.mode?this._.height-t.height-m%this._.height:m%(this._.height-t.height)}function g(){if(!this._.visible||!this._.paused)return this;if(this._.paused=!1,this.media)for(var t=0;t<this._.runningList.length;t++){var e=this._.runningList[t];e._utc=f()/1e3-(this.media.currentTime-e.time)}var i=this,n=function(t,e,i,n){return function(s){t(this._.stage);var r=(s||f())/1e3,h=this.media?this.media.currentTime:r,o=this.media?this.media.playbackRate:1,a=null,d=0,u=0;for(u=this._.runningList.length-1;u>=0;u--)a=this._.runningList[u],h-(d=this.media?a.time:a._utc)>this._.duration&&(n(this._.stage,a),this._.runningList.splice(u,1));for(var m=[];this._.position<this.comments.length&&(a=this.comments[this._.position],!((d=this.media?a.time:a._utc)>=h));)h-d>this._.duration||(this.media&&(a._utc=r-(this.media.currentTime-a.time)),m.push(a)),++this._.position;for(e(this._.stage,m),u=0;u<m.length;u++)(a=m[u]).y=p.call(this,a),this._.runningList.push(a);for(u=0;u<this._.runningList.length;u++){a=this._.runningList[u];var c=(this._.width+a.width)*(r-a._utc)*o/this._.duration;"ltr"===a.mode&&(a.x=c-a.width),"rtl"===a.mode&&(a.x=this._.width-c),"top"!==a.mode&&"bottom"!==a.mode||(a.x=this._.width-a.width>>1),i(this._.stage,a)}}}(this._.engine.framing.bind(this),this._.engine.setup.bind(this),this._.engine.render.bind(this),this._.engine.remove.bind(this));return this._.requestID=a((function t(e){n.call(i,e),i._.requestID=a(t)})),this}function _(){return!this._.visible||this._.paused||(this._.paused=!0,d(this._.requestID),this._.requestID=0),this}function v(){if(!this.media)return this;this.clear(),l(this._.space);var t=u(this.comments,"time",this.media.currentTime);return this._.position=Math.max(0,t-1),this}function w(t){t.play=g.bind(this),t.pause=_.bind(this),t.seeking=v.bind(this),this.media.addEventListener("play",t.play),this.media.addEventListener("pause",t.pause),this.media.addEventListener("playing",t.play),this.media.addEventListener("waiting",t.pause),this.media.addEventListener("seeking",t.seeking)}function y(t){this.media.removeEventListener("play",t.play),this.media.removeEventListener("pause",t.pause),this.media.removeEventListener("playing",t.play),this.media.removeEventListener("waiting",t.pause),this.media.removeEventListener("seeking",t.seeking),t.play=null,t.pause=null,t.seeking=null}function x(t){this._={},this.container=t.container||document.createElement("div"),this.media=t.media,this._.visible=!0,this.engine=(t.engine||"DOM").toLowerCase(),this._.engine="canvas"===this.engine?o:i,this._.requestID=0,this._.speed=Math.max(0,t.speed)||144,this._.duration=4,this.comments=t.comments||[],this.comments.sort((function(t,e){return t.time-e.time}));for(var e=0;e<this.comments.length;e++)this.comments[e].mode=m(this.comments[e].mode);return this._.runningList=[],this._.position=0,this._.paused=!0,this.media&&(this._.listener={},w.call(this,this._.listener)),this._.stage=this._.engine.init(this.container),this._.stage.style.cssText+="position:relative;pointer-events:none;",this.resize(),this.container.appendChild(this._.stage),this._.space={},l(this._.space),this.media&&this.media.paused||(v.call(this),g.call(this)),this}function b(){if(!this.container)return this;for(var t in _.call(this),this.clear(),this.container.removeChild(this._.stage),this.media&&y.call(this,this._.listener),this)Object.prototype.hasOwnProperty.call(this,t)&&(this[t]=null);return this}var L=["mode","time","text","render","style"];function T(t){if(!t||"[object Object]"!==Object.prototype.toString.call(t))return this;for(var e={},i=0;i<L.length;i++)void 0!==t[L[i]]&&(e[L[i]]=t[L[i]]);if(e.text=(e.text||"").toString(),e.mode=m(e.mode),e._utc=f()/1e3,this.media){var n=0;void 0===e.time?(e.time=this.media.currentTime,n=this._.position):(n=u(this.comments,"time",e.time))<this._.position&&(this._.position+=1),this.comments.splice(n,0,e)}else this.comments.push(e);return this}function E(){return this._.visible?this:(this._.visible=!0,this.media&&this.media.paused||(v.call(this),g.call(this)),this)}function k(){return this._.visible?(_.call(this),this.clear(),this._.visible=!1,this):this}function C(){return this._.engine.clear(this._.stage,this._.runningList),this._.runningList=[],this}function z(){return this._.width=this.container.offsetWidth,this._.height=this.container.offsetHeight,this._.engine.resize(this._.stage,this._.width,this._.height),this._.duration=this._.width/this._.speed,this}var D={get:function(){return this._.speed},set:function(t){return"number"!=typeof t||isNaN(t)||!isFinite(t)||t<=0?this._.speed:(this._.speed=t,this._.width&&(this._.duration=this._.width/t),t)}};function M(t){t&&x.call(this,t)}return M.prototype.destroy=function(){return b.call(this)},M.prototype.emit=function(t){return T.call(this,t)},M.prototype.show=function(){return E.call(this)},M.prototype.hide=function(){return k.call(this)},M.prototype.clear=function(){return C.call(this)},M.prototype.resize=function(){return z.call(this)},Object.defineProperty(M.prototype,"speed",D),M}));
+    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t="undefined"!=typeof globalThis?globalThis:t||self).Danmaku=e()}(this,(function(){"use strict";var t=function(){if("undefined"==typeof document)return"transform";for(var t=["oTransform","msTransform","mozTransform","webkitTransform","transform"],e=document.createElement("div").style,i=0;i<t.length;i++)if(t[i]in e)return t[i];return"transform"}();function e(t){var e=document.createElement("div");if(e.style.cssText="position:absolute;","function"==typeof t.render){var i=t.render();if(i instanceof HTMLElement)return e.appendChild(i),e}if(e.textContent=t.text,t.style)for(var n in t.style)e.style[n]=t.style[n];return e}var i={name:"dom",init:function(){var t=document.createElement("div");return t.style.cssText="overflow:hidden;white-space:nowrap;transform:translateZ(0);",t},clear:function(t){for(var e=t.lastChild;e;)t.removeChild(e),e=t.lastChild},resize:function(t,e,i){t.style.width=e+"px",t.style.height=i+"px"},framing:function(){},setup:function(t,i){var n=document.createDocumentFragment(),s=0,r=null;for(s=0;s<i.length;s++)(r=i[s]).node=r.node||e(r),n.appendChild(r.node);for(i.length&&t.appendChild(n),s=0;s<i.length;s++)(r=i[s]).width=r.width||r.node.offsetWidth,r.height=r.height||r.node.offsetHeight},render:function(e,i){i.node.style[t]="translate("+i.x+"px,"+i.y+"px)"},remove:function(t,e){t.removeChild(e.node),this.media||(e.node=null)}},n="undefined"!=typeof window&&window.devicePixelRatio||1,s=Object.create(null);function r(t,e){if("function"==typeof t.render){var i=t.render();if(i instanceof HTMLCanvasElement)return t.width=i.width,t.height=i.height,i}var r=document.createElement("canvas"),h=r.getContext("2d"),o=t.style||{};o.font=o.font||"10px sans-serif",o.textBaseline=o.textBaseline||"bottom";var a=1*o.lineWidth;for(var d in a=a>0&&a!==1/0?Math.ceil(a):1*!!o.strokeStyle,h.font=o.font,t.width=t.width||Math.max(1,Math.ceil(h.measureText(t.text).width)+2*a),t.height=t.height||Math.ceil(function(t,e){if(s[t])return s[t];var i=12,n=t.match(/(\d+(?:\.\d+)?)(px|%|em|rem)(?:\s*\/\s*(\d+(?:\.\d+)?)(px|%|em|rem)?)?/);if(n){var r=1*n[1]||10,h=n[2],o=1*n[3]||1.2,a=n[4];"%"===h&&(r*=e.container/100),"em"===h&&(r*=e.container),"rem"===h&&(r*=e.root),"px"===a&&(i=o),"%"===a&&(i=r*o/100),"em"===a&&(i=r*o),"rem"===a&&(i=e.root*o),void 0===a&&(i=r*o)}return s[t]=i,i}(o.font,e))+2*a,r.width=t.width*n,r.height=t.height*n,h.scale(n,n),o)h[d]=o[d];var u=0;switch(o.textBaseline){case"top":case"hanging":u=a;break;case"middle":u=t.height>>1;break;default:u=t.height-a}return o.strokeStyle&&h.strokeText(t.text,a,u),h.fillText(t.text,a,u),r}function h(t){return 1*window.getComputedStyle(t,null).getPropertyValue("font-size").match(/(.+)px/)[1]}var o={name:"canvas",init:function(t){var e=document.createElement("canvas");return e.context=e.getContext("2d"),e._fontSize={root:h(document.getElementsByTagName("html")[0]),container:h(t)},e},clear:function(t,e){t.context.clearRect(0,0,t.width,t.height);for(var i=0;i<e.length;i++)e[i].canvas=null},resize:function(t,e,i){t.width=e*n,t.height=i*n,t.style.width=e+"px",t.style.height=i+"px"},framing:function(t){t.context.clearRect(0,0,t.width,t.height)},setup:function(t,e){for(var i=0;i<e.length;i++){var n=e[i];n.canvas=r(n,t._fontSize)}},render:function(t,e){t.context.drawImage(e.canvas,e.x*n,e.y*n)},remove:function(t,e){e.canvas=null}},a=function(){if("undefined"!=typeof window){var t=window.requestAnimationFrame||window.mozRequestAnimationFrame||window.webkitRequestAnimationFrame;if(t)return t.bind(window)}return function(t){return setTimeout(t,50/3)}}(),d=function(){if("undefined"!=typeof window){var t=window.cancelAnimationFrame||window.mozCancelAnimationFrame||window.webkitCancelAnimationFrame;if(t)return t.bind(window)}return clearTimeout}();function u(t,e,i){for(var n=0,s=0,r=t.length;s<r-1;)i>=t[n=s+r>>1][e]?s=n:r=n;return t[s]&&i<t[s][e]?s:r}function m(t){return/^(ltr|top|bottom)$/i.test(t)?t.toLowerCase():"rtl"}function c(){var t=9007199254740991;return[{range:0,time:-t,width:t,height:0},{range:t,time:t,width:0,height:0}]}function l(t){t.ltr=c(),t.rtl=c(),t.top=c(),t.bottom=c()}function f(){return void 0!==window.performance&&window.performance.now?window.performance.now():Date.now()}function p(t){var e=this,i=this.media?this.media.currentTime:f()/1e3;function n(t,n){if("top"===n.mode||"bottom"===n.mode)return i-t.time<e._.duration;var s=(e._.width+t.width)*(i-t.time)/e._.duration;if(t.width>s)return!0;var r=e._.duration+t.time-i,h=e._.width+n.width,o=e.media?n.time:n._utc,a=h*(i-o)/e._.duration,d=e._.width-a;return r>e._.duration*d/(e._.width+n.width)}for(var s=this._.space[t.mode],r=0,h=0,o=1;o<s.length;o++){var a=s[o],d=t.height;if("top"!==t.mode&&"bottom"!==t.mode||(d+=a.height),a.range-a.height-s[r].range>=d){h=o;break}n(a,t)&&(r=o)}var u=s[r].range,m={range:u+t.height,time:this.media?t.time:t._utc,width:t.width,height:t.height};return s.splice(r+1,h-r-1,m),"bottom"===t.mode?this._.height-t.height-u%this._.height:u%(this._.height-t.height)}function g(){if(!this._.visible||!this._.paused)return this;if(this._.paused=!1,this.media)for(var t=0;t<this._.runningList.length;t++){var e=this._.runningList[t];e._utc=f()/1e3-(this.media.currentTime-e.time)}var i=this,n=function(t,e,i,n){return function(s){t(this._.stage);var r=(s||f())/1e3,h=this.media?this.media.currentTime:r,o=this.media?this.media.playbackRate:1,a=null,d=0,u=0;for(u=this._.runningList.length-1;u>=0;u--)a=this._.runningList[u],h-(d=this.media?a.time:a._utc)>this._.duration&&(n(this._.stage,a),this._.runningList.splice(u,1));for(var m=[];this._.position<this.comments.length&&(a=this.comments[this._.position],!((d=this.media?a.time:a._utc)>=h));)h-d>this._.duration||(this.media&&(a._utc=r-(this.media.currentTime-a.time)),m.push(a)),++this._.position;for(e(this._.stage,m),u=0;u<m.length;u++)(a=m[u]).y=p.call(this,a),this._.runningList.push(a);for(u=0;u<this._.runningList.length;u++){a=this._.runningList[u];var c=(this._.width+a.width)*(r-a._utc)*o/this._.duration;"ltr"===a.mode&&(a.x=c-a.width),"rtl"===a.mode&&(a.x=this._.width-c),"top"!==a.mode&&"bottom"!==a.mode||(a.x=this._.width-a.width>>1),i(this._.stage,a)}}}(this._.engine.framing.bind(this),this._.engine.setup.bind(this),this._.engine.render.bind(this),this._.engine.remove.bind(this));return this._.requestID=a((function t(e){n.call(i,e),i._.requestID=a(t)})),this}function _(){return!this._.visible||this._.paused||(this._.paused=!0,d(this._.requestID),this._.requestID=0),this}function v(){if(!this.media)return this;this.clear(),l(this._.space);var t=u(this.comments,"time",this.media.currentTime);return this._.position=Math.max(0,t-1),this}function w(t){t.play=g.bind(this),t.pause=_.bind(this),t.seeking=v.bind(this),this.media.addEventListener("play",t.play),this.media.addEventListener("pause",t.pause),this.media.addEventListener("playing",t.play),this.media.addEventListener("waiting",t.pause),this.media.addEventListener("seeking",t.seeking)}function y(t){this.media.removeEventListener("play",t.play),this.media.removeEventListener("pause",t.pause),this.media.removeEventListener("playing",t.play),this.media.removeEventListener("waiting",t.pause),this.media.removeEventListener("seeking",t.seeking),t.play=null,t.pause=null,t.seeking=null}function x(t){this._={},this.container=t.container||document.createElement("div"),this.media=t.media,this._.visible=!0,this.engine=(t.engine||"DOM").toLowerCase(),this._.engine="canvas"===this.engine?o:i,this._.requestID=0,this._.speed=Math.max(0,t.speed)||144,this._.duration=4,this.comments=t.comments||[],this.comments.sort((function(t,e){return t.time-e.time}));for(var e=0;e<this.comments.length;e++)this.comments[e].mode=m(this.comments[e].mode);return this._.runningList=[],this._.position=0,this._.paused=!0,this.media&&(this._.listener={},w.call(this,this._.listener)),this._.stage=this._.engine.init(this.container),this._.stage.style.cssText+="position:relative;pointer-events:none;",this.resize(),this.container.appendChild(this._.stage),this._.space={},l(this._.space),this.media&&this.media.paused||(v.call(this),g.call(this)),this}function b(){if(!this.container)return this;for(var t in _.call(this),this.clear(),this.container.removeChild(this._.stage),this.media&&y.call(this,this._.listener),this)Object.prototype.hasOwnProperty.call(this,t)&&(this[t]=null);return this}var L=["mode","time","text","render","style"];function T(t){if(!t||"[object Object]"!==Object.prototype.toString.call(t))return this;for(var e={},i=0;i<L.length;i++)void 0!==t[L[i]]&&(e[L[i]]=t[L[i]]);if(e.text=(e.text||"").toString(),e.mode=m(e.mode),e._utc=f()/1e3,this.media){var n=0;void 0===e.time?(e.time=this.media.currentTime,n=this._.position):(n=u(this.comments,"time",e.time))<this._.position&&(this._.position+=1),this.comments.splice(n,0,e)}else this.comments.push(e);return this}function E(){return this._.visible?this:(this._.visible=!0,this.media&&this.media.paused||(v.call(this),g.call(this)),this)}function C(){return this._.visible?(_.call(this),this.clear(),this._.visible=!1,this):this}function k(){return this._.engine.clear(this._.stage,this._.runningList),this._.runningList=[],this}function z(){return this._.width=this.container.offsetWidth,this._.height=this.container.offsetHeight,this._.engine.resize(this._.stage,this._.width,this._.height),this._.duration=this._.width/this._.speed,this}var D={get:function(){return this._.speed},set:function(t){return"number"!=typeof t||isNaN(t)||!isFinite(t)||t<=0?this._.speed:(this._.speed=t,this._.width&&(this._.duration=this._.width/t),t)}};function M(t){t&&x.call(this,t)}return M.prototype.destroy=function(){return b.call(this)},M.prototype.emit=function(t){return T.call(this,t)},M.prototype.show=function(){return E.call(this)},M.prototype.hide=function(){return C.call(this)},M.prototype.clear=function(){return k.call(this)},M.prototype.resize=function(){return z.call(this)},Object.defineProperty(M.prototype,"speed",D),M}));
     /* eslint-enable */
 
     class EDE {
@@ -260,6 +289,42 @@
             this.customCorsProxy = window.localStorage.getItem('customCorsProxy') ?? '';
             this.customApiPrefix = window.localStorage.getItem('customApiPrefix') ?? '';
 
+            // ===== v2 新增：屏蔽 / 合并 / 御坂网络 / 缓存 =====
+            this.blockKeywords = lsStr('danmakuBlockKeywords', '');
+            this.blockUsers = lsStr('danmakuBlockUsers', '');
+            this.blockColors = lsStr('danmakuBlockColors', '');
+            this.blockEnableKeywords = lsInt('danmakuBlockEnableKeywords', 1);
+            this.blockEnableUsers = lsInt('danmakuBlockEnableUsers', 1);
+            this.blockEnableColors = lsInt('danmakuBlockEnableColors', 0);
+            this.mergeSimilar = lsInt('danmakuMergeSimilar', 0);
+            this.mergeThreshold = lsInt('danmakuMergeThreshold', 85);
+            // 去掉 B 站点赞数后缀（御坂网络会把“🤍 28”拼在正文里）
+            this.stripLikeSuffix = lsInt('danmakuStripLikeSuffix', 1);
+            // 匹配信息自动隐藏秒数（0 = 常显）
+            this.infoHideSeconds = lsInt('danmakuInfoHideSeconds', 8);
+            // 在线搜索失败时回退到 Jellyfin 弹幕插件（御坂网络后端）的弹幕
+            this.xmlFallback = lsInt('danmakuXmlFallback', 1);
+            // 御坂网络（misaka）预设
+            this.misakaBase = lsStr('misakaBase', '');
+            this.misakaToken = lsStr('misakaToken', '');
+            // 已配置过自定义 API 的话，把它拆回“地址 + token”回填到御坂卡片，避免重复手填
+            const misakaMatch = String(this.customApiPrefix || '').match(/^(.*?)\/api\/v1\/([^/]+)$/);
+            if (misakaMatch) {
+                if (!this.misakaBase) {
+                    this.misakaBase = misakaMatch[1];
+                }
+                if (!this.misakaToken) {
+                    this.misakaToken = misakaMatch[2];
+                }
+            }
+            // 最近一次拉到的原始弹幕（改设置/补挂容器时本地重渲染，不再请求接口）
+            this.lastRawComments = null;
+            this.lastRawCommentsItemId = '';
+            this.lastStats = null;
+            this.lastBlocked = 0;
+            this.loadingSince = 0;
+            this.watchdogTimer = null;
+
             this.danmaku = null;
             this.episode_info = null;
             this.obResize = null;
@@ -284,12 +349,22 @@
         window.localStorage.setItem('danmakuSwitch', window.ede.danmakuSwitch);
         document.querySelector('#displayDanmaku').children[0].className = spanClass + danmaku_icons[window.ede.danmakuSwitch];
         if (window.ede.danmaku) {
-            window.ede.danmakuSwitch == 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
+            if (window.ede.danmakuSwitch == 1) {
+                window.ede.danmaku.show();
+                // hide() 清掉了屏幕上的弹幕；把读取位置拉回 currentTime - duration，补回正在飞行中的弹幕
+                window.ede.danmaku._patchedSeekingHandler?.();
+            } else {
+                // hide() 会停掉帧循环，关闭期间不再占用 CPU
+                window.ede.danmaku.hide();
+            }
         }
     }
     // 保存设置
     function saveSettings() {
         try {
+            // 这些设置会改变请求本身（简繁转换参数 / 弹幕来源 / 请求地址），不能用缓存重渲染
+            const fetchKey = () => [window.ede.chConvert, window.ede.useXmlDanmaku, window.ede.customCorsProxy, window.ede.customApiPrefix].join('\u0001');
+            const prevFetchKey = fetchKey();
             window.ede.opacity = parseFloatOfRange(document.getElementById('opacity').value, 0, 1);
             window.localStorage.setItem('danmakuopacity', window.ede.opacity.toString());
             showDebugInfo(`设置弹幕透明度：${window.ede.opacity}`);
@@ -326,10 +401,9 @@
             window.ede.useXmlDanmaku = parseInt(document.querySelector('input[name="useXmlDanmaku"]:checked').value);
             window.localStorage.setItem('useXmlDanmaku', window.ede.useXmlDanmaku);
             showDebugInfo(`是否使用本地xml弹幕：${window.ede.useXmlDanmaku}`);
-            const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value);
-            window.ede.curEpOffsetModified = epOffset !== window.ede.curEpOffset;
-            if (window.ede.curEpOffsetModified) {
-                window.ede.curEpOffset = epOffset;
+            const epOffset = parseFloat(document.getElementById('danmakuOffsetTime').value) || 0;
+            if (epOffset !== window.ede.curEpOffset) {
+                setCurEpOffset(epOffset);
                 showDebugInfo(`设置弹幕偏移时间：${window.ede.curEpOffset}`);
             }
             window.ede.fontFamily = document.getElementById('danmakuFontFamily').value || 'sans-serif';
@@ -342,11 +416,64 @@
             window.ede.customCorsProxy = document.getElementById('customCorsProxy').value;
             window.localStorage.setItem('customCorsProxy', window.ede.customCorsProxy);
             showDebugInfo(`自定义CORS代理：${window.ede.customCorsProxy}`);
+            const prevCustomApiPrefix = window.ede.customApiPrefix;
             window.ede.customApiPrefix = document.getElementById('customApiPrefix').value;
             window.localStorage.setItem('customApiPrefix', window.ede.customApiPrefix);
             showDebugInfo(`自定义API：${window.ede.customApiPrefix}`);
 
-            reloadDanmaku('reload');
+
+            // ===== v2：屏蔽 / 合并设置 =====
+            const formVal = (id, def) => {
+                const el = document.getElementById(id);
+                return el ? el.value : def;
+            };
+            window.ede.blockKeywords = formVal('danmakuBlockKeywords', '');
+            window.ede.blockUsers = formVal('danmakuBlockUsers', '');
+            window.ede.blockColors = formVal('danmakuBlockColors', '');
+            window.localStorage.setItem('danmakuBlockKeywords', window.ede.blockKeywords);
+            window.localStorage.setItem('danmakuBlockUsers', window.ede.blockUsers);
+            window.localStorage.setItem('danmakuBlockColors', window.ede.blockColors);
+            window.ede.blockEnableKeywords = document.getElementById('danmakuBlockEnableKeywords')?.checked ? 1 : 0;
+            window.ede.blockEnableUsers = document.getElementById('danmakuBlockEnableUsers')?.checked ? 1 : 0;
+            window.ede.blockEnableColors = document.getElementById('danmakuBlockEnableColors')?.checked ? 1 : 0;
+            window.localStorage.setItem('danmakuBlockEnableKeywords', window.ede.blockEnableKeywords);
+            window.localStorage.setItem('danmakuBlockEnableUsers', window.ede.blockEnableUsers);
+            window.localStorage.setItem('danmakuBlockEnableColors', window.ede.blockEnableColors);
+            window.ede.mergeSimilar = document.getElementById('danmakuMergeSimilar')?.checked ? 1 : 0;
+            window.ede.mergeThreshold = parseInt(formVal('danmakuMergeThreshold', 85), 10) || 85;
+            window.localStorage.setItem('danmakuMergeSimilar', window.ede.mergeSimilar);
+            window.localStorage.setItem('danmakuMergeThreshold', window.ede.mergeThreshold);
+            window.ede.stripLikeSuffix = document.getElementById('danmakuStripLikeSuffix')?.checked ? 1 : 0;
+            window.localStorage.setItem('danmakuStripLikeSuffix', window.ede.stripLikeSuffix);
+            window.ede.infoHideSeconds = parseInt(formVal('danmakuInfoHideSeconds', 8), 10);
+            if (isNaN(window.ede.infoHideSeconds) || window.ede.infoHideSeconds < 0) {
+                window.ede.infoHideSeconds = 8;
+            }
+            window.localStorage.setItem('danmakuInfoHideSeconds', window.ede.infoHideSeconds);
+            blockRulesCache = { key: null, rules: null };
+            showDebugInfo(
+                `屏蔽规则：关键词 ${parseBlockLines(window.ede.blockKeywords).length} 条 / 发送者 ${parseBlockLines(window.ede.blockUsers).length} 条 / 合并相似弹幕 ${
+                    window.ede.mergeSimilar === 1 ? '开' : '关'
+                }`,
+            );
+
+            // v2（上游 issue #91）：更换弹幕 API 后，旧的番剧/剧集匹配缓存会指向另一个服务端的 id
+            if (prevCustomApiPrefix !== window.ede.customApiPrefix) {
+                const clearedCount = clearEpisodeMappingCache();
+                window.ede.lastRawComments = null;
+                if (clearedCount > 0) {
+                    showDebugInfo(`已切换弹幕 API，清理 ${clearedCount} 条旧匹配缓存`);
+                }
+            }
+
+            if (prevFetchKey !== fetchKey()) {
+                window.ede.lastRawComments = null;
+            }
+
+            // v2：有本地缓存就直接重渲染，省掉一次网络请求
+            if (!rerenderFromCache()) {
+                reloadDanmaku('reload');
+            }
             closeDanmakuSidebar();
         } catch (e) {
             alert(`Invalid input: ${e.message}`);
@@ -357,6 +484,1003 @@
         const cors = window.ede.customCorsProxy.length > 7 ? window.ede.customCorsProxy : corsProxy;
         const api = window.ede.customApiPrefix.length > 7 ? window.ede.customApiPrefix : cors + apiPrefix;
         return api;
+    }
+
+    // =====================================================================
+    // v2 扩展：屏蔽 / 相似弹幕合并 / 来源统计 / 稳定性看门狗 / 御坂网络预设
+    // 说明：本段为整合新增代码，参考了 chen3861229/dd-danmaku 与
+    //       l429609201/dd-danmaku（Emby 版）的屏蔽与合并思路，按 Jellyfin 重写。
+    // =====================================================================
+
+    function lsInt(key, def) {
+        const v = window.localStorage.getItem(key);
+        if (v === null || v === undefined || v === '') {
+            return def;
+        }
+        const n = parseInt(v, 10);
+        return isNaN(n) ? def : n;
+    }
+
+    function lsStr(key, def) {
+        const v = window.localStorage.getItem(key);
+        return v === null || v === undefined ? def : v;
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ---------- 屏蔽规则 ----------
+    let blockRulesCache = { key: null, rules: null };
+
+    function parseBlockLines(text) {
+        return String(text || '')
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0 && !s.startsWith('#'));
+    }
+
+    // 关键词规则：默认按普通文本包含匹配；/正则/flags 或 re:正则 才按正则匹配
+    function getBlockRules() {
+        const key = [
+            window.ede.blockKeywords,
+            window.ede.blockUsers,
+            window.ede.blockColors,
+            window.ede.blockEnableKeywords,
+            window.ede.blockEnableUsers,
+            window.ede.blockEnableColors,
+        ].join('\u0001');
+        if (blockRulesCache.key === key) {
+            return blockRulesCache.rules;
+        }
+        const keywords = [];
+        if (window.ede.blockEnableKeywords === 1) {
+            for (const line of parseBlockLines(window.ede.blockKeywords)) {
+                const m = line.match(/^\/(.+)\/([gimsuy]*)$/);
+                if (m) {
+                    try {
+                        keywords.push({ re: new RegExp(m[1], m[2].replace(/g/g, '')), sub: null, raw: line });
+                        continue;
+                    } catch (err) {
+                        showDebugInfo(`屏蔽正则无效，已按普通文本处理: ${line}`);
+                    }
+                } else if (line.startsWith('re:')) {
+                    try {
+                        keywords.push({ re: new RegExp(line.slice(3)), sub: null, raw: line });
+                        continue;
+                    } catch (err) {
+                        showDebugInfo(`屏蔽正则无效，已按普通文本处理: ${line}`);
+                    }
+                }
+                keywords.push({ re: null, sub: line, raw: line });
+            }
+        }
+        const users = window.ede.blockEnableUsers === 1 ? parseBlockLines(window.ede.blockUsers) : [];
+        const colors = [];
+        if (window.ede.blockEnableColors === 1) {
+            for (const c of String(window.ede.blockColors || '').split(/[\s,;，]+/)) {
+                const t = c.trim().replace(/^#/, '').toLowerCase();
+                if (/^[0-9a-f]{6}$/.test(t)) {
+                    colors.push(t);
+                }
+            }
+        }
+        const rules = { keywords, users, colors };
+        blockRulesCache = { key, rules };
+        return rules;
+    }
+
+    // dandanplay 弹幕 p 字段: time,mode,color,user（御坂网络会把来源写进 user，如 [BiliBili]xxx）
+    function parseCommentMeta(comment) {
+        const parts = String((comment && comment.p) || '').split(',');
+        const colorValue = parseInt(parts[2], 10) || 0;
+        return {
+            time: parseFloat(parts[0]) || 0,
+            modeId: parseInt(parts[1], 10) || 1,
+            color: colorValue.toString(16).padStart(6, '0'),
+            user: parts.length > 3 ? parts[parts.length - 1] : '',
+        };
+    }
+
+    /** 按屏蔽规则过滤原始弹幕，返回 {comments, blocked} */
+    function shieldFilter(comments) {
+        const { keywords, users, colors } = getBlockRules();
+        if (keywords.length === 0 && users.length === 0 && colors.length === 0) {
+            return { comments, blocked: 0 };
+        }
+        const result = [];
+        let blocked = 0;
+        for (const comment of comments) {
+            const text = comment.m || '';
+            const meta = parseCommentMeta(comment);
+            let hit = false;
+            for (const rule of keywords) {
+                if (rule.re) {
+                    rule.re.lastIndex = 0;
+                    if (rule.re.test(text) || rule.re.test(meta.user)) {
+                        hit = true;
+                        break;
+                    }
+                } else if (text.includes(rule.sub) || meta.user.includes(rule.sub)) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) {
+                for (const u of users) {
+                    if (meta.user.includes(u)) {
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+            if (!hit && colors.length > 0 && colors.includes(meta.color)) {
+                hit = true;
+            }
+            if (hit) {
+                blocked++;
+            } else {
+                result.push(comment);
+            }
+        }
+        return { comments: result, blocked };
+    }
+
+    // ---------- 相似弹幕合并 ----------
+    function similarityPercentage(a, b) {
+        if (a === b) {
+            return 100;
+        }
+        if (!a || !b) {
+            return 0;
+        }
+        if (a.length > b.length) {
+            const t = a;
+            a = b;
+            b = t;
+        }
+        let previousRow = Array.from({ length: a.length + 1 }, (_, i) => i);
+        let currentRow = Array(a.length + 1);
+        for (let j = 1; j <= b.length; j++) {
+            currentRow[0] = j;
+            for (let i = 1; i <= a.length; i++) {
+                const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+                currentRow[i] = Math.min(previousRow[i - 1] + substitutionCost, previousRow[i] + 1, currentRow[i - 1] + 1);
+            }
+            const tmp = previousRow;
+            previousRow = currentRow;
+            currentRow = tmp;
+        }
+        const distance = previousRow[a.length];
+        const maxLength = Math.max(a.length, b.length);
+        return Math.max(0, 100 - (distance / maxLength) * 100);
+    }
+
+    function mergeSimilarDanmaku(comments, threshold, timeWindow) {
+        if (!comments || comments.length < 2) {
+            return comments;
+        }
+        const sorted = comments.slice().sort((x, y) => x.time - y.time);
+        const consumed = new Array(sorted.length).fill(false);
+        const merged = [];
+        for (let i = 0; i < sorted.length; i++) {
+            if (consumed[i]) {
+                continue;
+            }
+            const base = Object.assign({}, sorted[i]);
+            let count = 1;
+            for (let j = i + 1; j < sorted.length; j++) {
+                if (consumed[j]) {
+                    continue;
+                }
+                if (sorted[j].time - sorted[i].time > timeWindow) {
+                    break;
+                }
+                if (sorted[j].mode !== sorted[i].mode) {
+                    continue;
+                }
+                // 编辑距离至少是长度差，相似度上限为 短/长；够不到阈值就不必算编辑距离
+                const la = base.text.length;
+                const lb = sorted[j].text.length;
+                if (base.text !== sorted[j].text && (Math.min(la, lb) / Math.max(la, lb)) * 100 < threshold) {
+                    continue;
+                }
+                if (similarityPercentage(base.text, sorted[j].text) >= threshold) {
+                    consumed[j] = true;
+                    count++;
+                }
+            }
+            if (count > 1) {
+                base.text = `${base.text} [x${count}]`;
+            }
+            merged.push(base);
+        }
+        return merged;
+    }
+
+    function maybeMergeSimilar(comments) {
+        if (window.ede.mergeSimilar !== 1) {
+            return comments;
+        }
+        const threshold = Math.min(100, Math.max(50, window.ede.mergeThreshold || 85));
+        try {
+            return mergeSimilarDanmaku(comments, threshold, 2);
+        } catch (err) {
+            showDebugInfo(`相似弹幕合并失败: ${err.message}`);
+            return comments;
+        }
+    }
+
+    // 清理弹幕正文：御坂网络会把 B 站点赞数拼在正文尾部（“开饭开饭 🤍 28”），这里去掉它
+    function cleanDanmakuText(text) {
+        const raw = String(text ?? '');
+        if (window.ede.stripLikeSuffix !== 1) {
+            return raw;
+        }
+        const cleaned = raw.replace(/\s*[🤍❤♥💛💙💚💜🖤🧡]️?\s*\d+\s*$/u, '').trim();
+        return cleaned.length > 0 ? cleaned : raw;
+    }
+
+    // ---------- 剧集匹配 ----------
+    // 从分集标题里抽取集号：兼容「第4话」「S02E04」「4」「4.」等格式
+    function extractEpisodeNumber(title) {
+        const text = String(title || '');
+        let m = text.match(/第\s*(\d+)\s*[话話集]/);
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        m = text.match(/[Ss]\d+\s*[Ee](\d+)/);
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        // 御坂网络里不少分集标题就是裸数字，例如「幼女战记 第二季」的 1、2、3……
+        m = text.trim().match(/^(\d+)(?:\s|$|[.、:：\-])/);
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        return null;
+    }
+
+    /**
+     * 把 Jellyfin 的集号映射到弹幕源的剧集下标。
+     * 旧逻辑假设源站剧集从“第 1 话”开始连续排列，一旦缺集（例如第二季缺第 1 集）后面所有集都会错位。
+     * 这里优先按每集标题里的集号精确匹配，匹配不到才回退到原来的顺序推算。
+     */
+    function matchEpisodeIndex(episodes, targetEp) {
+        const eps = episodes || [];
+        for (let i = 0; i < eps.length; i++) {
+            if (extractEpisodeNumber(eps[i].episodeTitle) === targetEp) {
+                return i;
+            }
+        }
+        const initialEp = extractEpisodeNumber(eps[0] ? eps[0].episodeTitle : '');
+        const initialep = initialEp === null ? 1 : initialEp;
+        showDebugInfo('按标题集号未命中，回退到顺序匹配');
+        return targetEp < initialep ? targetEp - 1 : targetEp - initialep;
+    }
+
+    // ---------- 搜索候选择优（上游 issue #94：御坂网络返回的数组顺序不稳定） ----------
+    function normalizeTitle(text) {
+        return String(text || '')
+            .toLowerCase()
+            .replace(/[\s\u3000]+/g, '')
+            .replace(/[（(【\[][^）)】\]]*[）)】\]]/g, '')
+            .replace(/[!-\/:-@\[-`{-~！-／：-＠［-｀｛-～、-〜“”‘’·…—－_.]/g, '');
+    }
+
+    // 从标题里猜季数：第二季 / 2nd Season / Season 2 / 尾巴上的数字
+    function seasonHint(text, allowTrailingDigit = false) {
+        const t = String(text || '');
+        const cn = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+        let m = t.match(/第\s*([一二三四五六七八九十百\d]+)\s*[季期部]/);
+        if (m) {
+            return cn[m[1]] || parseInt(m[1], 10) || null;
+        }
+        m = t.match(/(?:season|s)\s*(\d+)/i);
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        m = t.match(/(\d+)\s*(?:nd|rd|th|st)\s*season/i);
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        if (allowTrailingDigit) {
+            m = t.trim().match(/(\d+)$/);
+            if (m) {
+                return parseInt(m[1], 10);
+            }
+        }
+        return null;
+    }
+
+    // 标题相似度打分：基础用编辑距离，另加前缀/包含/季数命中奖励
+    function titleMatchScore(query, candidate) {
+        const a = normalizeTitle(query);
+        const b = normalizeTitle(candidate);
+        if (!a || !b) {
+            return 0;
+        }
+        let score = similarityPercentage(a, b);
+        if (a === b) {
+            score += 100;
+        } else if (b.startsWith(a) || a.startsWith(b)) {
+            score += 40;
+        } else if (b.includes(a) || a.includes(b)) {
+            score += 20;
+        }
+        const wanted = seasonHint(query, true);
+        if (wanted !== null) {
+            const got = seasonHint(candidate, false);
+            if (got === wanted) {
+                score += 60;
+            } else if (got !== null) {
+                score -= 60;
+            } else {
+                // 点名了第几季，但候选标题完全没写季数：多半是别季的作品，压一压
+                score -= 40;
+            }
+        }
+        return score;
+    }
+
+    /** 从搜索结果里挑最像当前番剧的那个，返回 {index, score, title} */
+    function pickBestAnime(animes, query) {
+        const list = animes || [];
+        let best = 0;
+        let bestScore = -Infinity;
+        for (let i = 0; i < list.length; i++) {
+            const score = titleMatchScore(query, list[i].animeTitle);
+            if (score > bestScore) {
+                bestScore = score;
+                best = i;
+            }
+        }
+        return { index: best, score: bestScore, title: list[best] ? list[best].animeTitle : '' };
+    }
+
+    // ---------- 换弹幕 API 后清掉旧的匹配缓存（上游 issue #91） ----------
+    function clearEpisodeMappingCache() {
+        const keys = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && (key.startsWith('_episode_id_rel_') || key.startsWith('_anime_id_rel_') || key.startsWith('_anime_name_rel_'))) {
+                keys.push(key);
+            }
+        }
+        keys.forEach((key) => window.localStorage.removeItem(key));
+        return keys.length;
+    }
+
+    // ---------- 来源统计 ----------
+    function danmakuSourceStats(comments) {
+        const stats = { total: 0, bili: 0, gamer: 0, dandan: 0, other: 0 };
+        for (const comment of comments || []) {
+            stats.total++;
+            // 御坂网络写的是小写 [bilibili]/[gamer]，这里统一转小写判断
+            const user = parseCommentMeta(comment).user.toLowerCase();
+            if (user.startsWith('[bilibili]')) {
+                stats.bili++;
+            } else if (user.startsWith('[gamer]')) {
+                stats.gamer++;
+            } else if (user.startsWith('[')) {
+                stats.other++;
+            } else {
+                stats.dandan++;
+            }
+        }
+        return stats;
+    }
+
+    // 御坂网络把错误也包在 HTTP 200 里，用 errorCode 说明原因
+    function describeApiError(code) {
+        const map = {
+            1001: '请求参数错误',
+            1002: '未找到资源',
+            1003: '鉴权失败或配额用尽（检查客户端 token / 每日调用上限）',
+            1004: '请求过于频繁',
+            1005: '服务端内部错误',
+        };
+        return map[code] || '';
+    }
+
+    function formatSourceStats(stats) {
+        if (!stats || stats.total === 0) {
+            return '0 条';
+        }
+        const parts = [];
+        if (stats.bili > 0) {
+            parts.push(`B站 ${stats.bili}`);
+        }
+        if (stats.gamer > 0) {
+            parts.push(`巴哈 ${stats.gamer}`);
+        }
+        if (stats.dandan > 0) {
+            parts.push(`弹弹 ${stats.dandan}`);
+        }
+        if (stats.other > 0) {
+            parts.push(`其他 ${stats.other}`);
+        }
+        return `${stats.total} 条（${parts.join(' / ')}）`;
+    }
+
+    // ---------- 文本对话框（屏蔽规则导入导出用） ----------
+    function createTextareaDialog(title, defaultValue = '', readonly = false) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'dialogOverlay';
+
+            const dialog = document.createElement('div');
+            dialog.className = 'inputDialog danmakuTextDialog';
+            dialog.innerHTML = `
+                <h3 class="dialogTitle">${escapeHtml(title)}</h3>
+                <textarea id="dialogTextarea" ${readonly ? 'readonly' : ''}></textarea>
+                <div class="dialogActions">
+                    <button id="dialogCancel">关闭</button>
+                    <button id="dialogConfirm" ${readonly ? 'style="display:none"' : ''}>确认</button>
+                </div>
+            `;
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            const glassLayer = document.createElement('div');
+            glassLayer.className = 'glassLayer';
+            dialog.appendChild(glassLayer);
+
+            const ta = dialog.querySelector('#dialogTextarea');
+            ta.value = defaultValue ?? '';
+            ta.addEventListener('keydown', (event) => event.stopPropagation(), true);
+            if (readonly) {
+                ta.focus();
+                ta.select();
+            }
+
+            const cleanup = () => overlay.remove();
+            const done = (val) => {
+                cleanup();
+                resolve(val);
+            };
+
+            dialog.querySelector('#dialogCancel').onclick = () => done(readonly ? ta.value : null);
+            dialog.querySelector('#dialogConfirm').onclick = () => {
+                const v = ta.value.trim();
+                done(v || null);
+            };
+
+            if (readonly) {
+                const copyBtn = document.createElement('button');
+                copyBtn.textContent = '复制';
+                copyBtn.onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(ta.value);
+                        showDebugInfo('已复制到剪贴板');
+                    } catch (err) {
+                        ta.select();
+                        try {
+                            document.execCommand('copy');
+                            showDebugInfo('已复制到剪贴板');
+                        } catch (err2) {
+                            showDebugInfo('复制失败，请手动选择复制');
+                        }
+                    }
+                };
+                dialog.querySelector('.dialogActions').prepend(copyBtn);
+            }
+
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    done(readonly ? ta.value : null);
+                }
+            };
+        });
+    }
+
+    function currentBlockRulesFromForm() {
+        const val = (id) => document.getElementById(id)?.value ?? '';
+        const checked = (id) => (document.getElementById(id)?.checked ? 1 : 0);
+        return {
+            version: 2,
+            blockKeywords: val('danmakuBlockKeywords'),
+            blockUsers: val('danmakuBlockUsers'),
+            blockColors: val('danmakuBlockColors'),
+            blockEnableKeywords: checked('danmakuBlockEnableKeywords'),
+            blockEnableUsers: checked('danmakuBlockEnableUsers'),
+            blockEnableColors: checked('danmakuBlockEnableColors'),
+            mergeSimilar: checked('danmakuMergeSimilar'),
+            mergeThreshold: val('danmakuMergeThreshold') || 85,
+        };
+    }
+
+    async function exportBlockRules() {
+        const json = JSON.stringify(currentBlockRulesFromForm(), null, 2);
+        const text = await createTextareaDialog('导出屏蔽规则（可复制保存）', json, true);
+        if (text !== null) {
+            showDebugInfo('屏蔽规则已导出');
+        }
+    }
+
+    async function importBlockRules() {
+        const text = await createTextareaDialog('粘贴屏蔽规则 JSON，然后点确认', '', false);
+        if (!text) {
+            return;
+        }
+        try {
+            const obj = JSON.parse(text);
+            const setVal = (id, v) => {
+                const el = document.getElementById(id);
+                if (el && v !== undefined) {
+                    el.value = v;
+                }
+            };
+            const setChk = (id, v) => {
+                const el = document.getElementById(id);
+                if (el && v !== undefined) {
+                    el.checked = Number(v) === 1;
+                }
+            };
+            setVal('danmakuBlockKeywords', obj.blockKeywords);
+            setVal('danmakuBlockUsers', obj.blockUsers);
+            setVal('danmakuBlockColors', obj.blockColors);
+            setChk('danmakuBlockEnableKeywords', obj.blockEnableKeywords);
+            setChk('danmakuBlockEnableUsers', obj.blockEnableUsers);
+            setChk('danmakuBlockEnableColors', obj.blockEnableColors);
+            setChk('danmakuMergeSimilar', obj.mergeSimilar);
+            setVal('danmakuMergeThreshold', obj.mergeThreshold);
+            showDebugInfo('屏蔽规则已导入（点“保存”后生效）');
+        } catch (err) {
+            showDebugInfo(`导入失败: ${err.message}`);
+        }
+    }
+
+    function clearBlockRules() {
+        ['danmakuBlockKeywords', 'danmakuBlockUsers', 'danmakuBlockColors'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = '';
+            }
+        });
+        showDebugInfo('已清空表单中的屏蔽规则（点“保存”后生效）');
+    }
+
+    // ---------- 全量配置备份 / 恢复（对照 dd-danmaku 的设置导入导出） ----------
+    const BACKUP_KEYS = [
+        'danmakuSwitch',
+        'logSwitch',
+        'danmakuopacity',
+        'danmakuspeed',
+        'danmakusize',
+        'danmakuheight',
+        'danmakuFilter',
+        'danmakuModeFilter',
+        'danmakuDensityLimit',
+        'useAnitOverlap',
+        'chConvert',
+        'useXmlDanmaku',
+        'danmakuFontFamily',
+        'danmakuFontOptions',
+        'customCorsProxy',
+        'customApiPrefix',
+        'danmakuBlockKeywords',
+        'danmakuBlockUsers',
+        'danmakuBlockColors',
+        'danmakuBlockEnableKeywords',
+        'danmakuBlockEnableUsers',
+        'danmakuBlockEnableColors',
+        'danmakuMergeSimilar',
+        'danmakuMergeThreshold',
+        'danmakuStripLikeSuffix',
+        'danmakuXmlFallback',
+        'misakaBase',
+        'misakaToken',
+    ];
+
+    // 运行时状态（弹幕实例、观察器、定时器、当前集信息等），导入设置时不能被覆盖
+    const EDE_RUNTIME_KEYS = new Set([
+        'curEpOffset',
+        'curEpOffsetModified',
+        'curEpOffsetKey',
+        'lastRawComments',
+        'lastRawCommentsItemId',
+        'lastStats',
+        'lastBlocked',
+        'loadingSince',
+        'watchdogTimer',
+        'danmaku',
+        'episode_info',
+        'obResize',
+        'obMutation',
+        'loading',
+    ]);
+
+    function collectSettingsBackup() {
+        const settings = {};
+        for (const key of BACKUP_KEYS) {
+            const value = window.localStorage.getItem(key);
+            if (value !== null) {
+                settings[key] = value;
+            }
+        }
+        return { version: 2, app: 'jellyfin-danmaku-merged', exportedAt: new Date().toISOString(), settings };
+    }
+
+    async function exportAllSettings() {
+        const json = JSON.stringify(collectSettingsBackup(), null, 2);
+        const text = await createTextareaDialog('导出全部弹幕设置（可复制保存）', json, true);
+        if (text !== null) {
+            showDebugInfo('设置已导出');
+        }
+    }
+
+    async function importAllSettings() {
+        const text = await createTextareaDialog('粘贴设置 JSON，然后点确认', '', false);
+        if (!text) {
+            return;
+        }
+        try {
+            const obj = JSON.parse(text);
+            const settings = obj && obj.settings ? obj.settings : obj;
+            if (!settings || typeof settings !== 'object') {
+                throw new Error('JSON 结构不对');
+            }
+            let count = 0;
+            for (const key of BACKUP_KEYS) {
+                if (Object.prototype.hasOwnProperty.call(settings, key)) {
+                    window.localStorage.setItem(key, String(settings[key]));
+                    count++;
+                }
+            }
+            showDebugInfo(`已导入 ${count} 项设置，正在重新加载弹幕`);
+            // 让最新的 localStorage 值生效：直接刷新最省事，但会打断播放，所以这里先同步到内存再重载弹幕
+            const fresh = new EDE();
+            for (const prop of Object.keys(fresh)) {
+                if (!EDE_RUNTIME_KEYS.has(prop)) {
+                    window.ede[prop] = fresh[prop];
+                }
+            }
+            blockRulesCache = { key: null, rules: null };
+            window.ede.lastRawComments = null;
+            reloadDanmaku('reload');
+        } catch (err) {
+            showDebugInfo(`导入失败: ${err.message}`);
+        }
+    }
+
+    // ---------- 稳定性：失败自动重试 / 卡死恢复 / 容器看门狗 ----------
+    let danmakuRetryTimer = null;
+    let danmakuRetryCount = 0;
+
+    function scheduleDanmakuRetry(reason) {
+        if (danmakuRetryTimer || danmakuRetryCount >= 3) {
+            return;
+        }
+        danmakuRetryCount++;
+        showDebugInfo(`弹幕未就位（${reason}），3 秒后自动重试 (${danmakuRetryCount}/3)`);
+        danmakuRetryTimer = setTimeout(() => {
+            danmakuRetryTimer = null;
+            window.ede.loading = false;
+            window.ede.loadingSince = 0;
+            reloadDanmaku('reload');
+        }, 3000);
+    }
+
+    function resetDanmakuRetry() {
+        danmakuRetryCount = 0;
+        if (danmakuRetryTimer) {
+            clearTimeout(danmakuRetryTimer);
+            danmakuRetryTimer = null;
+        }
+    }
+
+    /** 用最近一次拉取的原始弹幕本地重渲染（不重新请求接口） */
+    function rerenderFromCache() {
+        if (!window.ede.lastRawComments || window.ede.lastRawComments.length === 0) {
+            return false;
+        }
+        // 已经换到别的条目：缓存是上一集的，不能拿来渲染
+        if (window.ede.lastRawCommentsItemId !== itemId) {
+            window.ede.lastRawComments = null;
+            return false;
+        }
+        createDanmaku(window.ede.lastRawComments).catch((err) => showDebugInfo(`重新渲染失败: ${err.message}`));
+        return true;
+    }
+
+    let danmakuReattachTries = 0;
+
+    // React 重新渲染可能把弹幕容器摘掉——看门狗负责补挂，避免“库里有弹幕但屏幕上看不到”
+    function startDanmakuWatchdog() {
+        danmakuReattachTries = 0;
+        if (window.ede.watchdogTimer) {
+            clearInterval(window.ede.watchdogTimer);
+        }
+        let ticks = 0;
+        window.ede.watchdogTimer = setInterval(() => {
+            ticks++;
+            if (ticks > 300) {
+                clearInterval(window.ede.watchdogTimer);
+                window.ede.watchdogTimer = null;
+                return;
+            }
+            if (!document.querySelector(mediaQueryStr)) {
+                return;
+            }
+            if (!window.ede.danmaku || !document.getElementById('danmakuWrapper')) {
+                if (danmakuReattachTries < 3 && window.ede.lastRawComments) {
+                    danmakuReattachTries++;
+                    showDebugInfo('弹幕容器/对象丢失，自动重建');
+                    window.ede.loading = false;
+                    rerenderFromCache();
+                }
+            }
+        }, 2000);
+    }
+
+    // ---------- 御坂网络（misaka）预设 ----------
+    function normalizeMisakaPrefix(base, token) {
+        const b = String(base || '').trim().replace(/\/+$/, '');
+        const t = String(token || '').trim().replace(/^\/+|\/+$/g, '');
+        if (!b) {
+            return '';
+        }
+        if (/\/api\/v1\//.test(b)) {
+            return b;
+        }
+        if (!t) {
+            return '';
+        }
+        return `${b}/api/v1/${t}`;
+    }
+
+    function applyMisakaPreset() {
+        const baseEl = document.getElementById('misakaBase');
+        const tokenEl = document.getElementById('misakaToken');
+        if (!baseEl || !tokenEl) {
+            return;
+        }
+        const prefix = normalizeMisakaPrefix(baseEl.value, tokenEl.value);
+        if (!prefix) {
+            showDebugInfo('御坂网络地址或客户端 token 为空');
+            return;
+        }
+        window.ede.misakaBase = baseEl.value.trim();
+        window.ede.misakaToken = tokenEl.value.trim();
+        window.localStorage.setItem('misakaBase', window.ede.misakaBase);
+        window.localStorage.setItem('misakaToken', window.ede.misakaToken);
+        window.ede.customApiPrefix = prefix;
+        window.localStorage.setItem('customApiPrefix', prefix);
+        window.ede.customCorsProxy = '';
+        window.localStorage.setItem('customCorsProxy', '');
+        const apiEl = document.getElementById('customApiPrefix');
+        if (apiEl) {
+            apiEl.value = prefix;
+        }
+        const corsEl = document.getElementById('customCorsProxy');
+        if (corsEl) {
+            corsEl.value = '';
+        }
+        showDebugInfo(`已切换到御坂网络 API：${prefix}`);
+        if (!rerenderFromCache()) {
+            reloadDanmaku('reload');
+        }
+    }
+
+    async function testMisakaConnection() {
+        const prefix = getApiPrefix();
+        // 御坂网络有免鉴权的 /api/health，先探活
+        const base = String(window.ede.customApiPrefix || '').split('/api/v1/')[0];
+        if (base) {
+            try {
+                const health = await makeGetRequest(`${base}/api/health`);
+                const text = await health.text();
+                showDebugInfo(`服务探活：${String(text).slice(0, 120)}`);
+            } catch (err) {
+                showDebugInfo(`服务探活失败: ${err.message}`);
+            }
+        }
+        const item = await getEmbyItemInfo();
+        const name = window.ede.episode_info?.animeTitle || item?.SeriesName || item?.Name || '';
+        if (!name) {
+            showDebugInfo('未能识别当前番剧名，先播放一集再测试');
+            return;
+        }
+        try {
+            const resp = await makeGetRequest(`${prefix}/api/v2/search/episodes?anime=${encodeURIComponent(name)}`);
+            const data = await resp.json();
+            if (data?.success === false) {
+                showDebugInfo(`接口返回错误：errorCode=${data.errorCode ?? '未知'} ${describeApiError(data.errorCode)}`);
+                return;
+            }
+            const n = data?.animes?.length || 0;
+            showDebugInfo(`接口连通，搜索「${name}」命中 ${n} 个结果`);
+            if (n > 0) {
+                showDebugInfo(`首个结果：${data.animes[0].animeTitle}（${data.animes[0].episodes?.length || 0} 集）`);
+            }
+        } catch (err) {
+            showDebugInfo(`接口测试失败: ${err.message}`);
+        }
+    }
+
+    function tryXmlDanmakuFallback() {
+        return getItemId()
+            .then((id) => (id ? getCommentsByPluginApi(id) : null))
+            .then((comments) => {
+                if (comments && comments.length > 0) {
+                    showDebugInfo(`改用 Jellyfin 弹幕插件的弹幕: ${comments.length} 条`);
+                    return createDanmaku(comments).then(() => showDebugInfo('弹幕就位（插件）'));
+                }
+                showDebugInfo('Jellyfin 弹幕插件也没有这一集的弹幕');
+            })
+            .catch((err) => showDebugInfo(`插件弹幕回退失败: ${err.message}`));
+    }
+
+    // ---------- 时间轴微调 / 设置实时生效 ----------
+    function nudgeDanmakuOffset(delta) {
+        const input = document.getElementById('danmakuOffsetTime');
+        const base = input ? parseFloat(input.value) || 0 : window.ede.curEpOffset || 0;
+        const next = Math.round((base + delta) * 10) / 10;
+        if (input) {
+            input.value = next;
+        }
+        setCurEpOffset(next);
+        showDebugInfo(`弹幕偏移调整为 ${next} 秒`);
+        if (!rerenderFromCache()) {
+            reloadDanmaku('reload');
+        }
+    }
+
+    // 偏移按集保存：已知当前集的 key 就立即写入，否则留到 getEpisodeInfo 拿到 key 时再写
+    function setCurEpOffset(offset) {
+        window.ede.curEpOffset = offset;
+        if (window.ede.curEpOffsetKey) {
+            window.localStorage.setItem(window.ede.curEpOffsetKey, offset);
+            window.ede.curEpOffsetModified = false;
+        } else {
+            window.ede.curEpOffsetModified = true;
+        }
+    }
+
+    let liveApplyTimer = null;
+
+    function liveApplyDisplaySettings() {
+        try {
+            const opacityEl = document.getElementById('opacity');
+            const speedEl = document.getElementById('speed');
+            const fontSizeEl = document.getElementById('fontSize');
+            const heightEl = document.getElementById('heightRatio');
+            const densityEl = document.getElementById('danmakuDensityLimit');
+            if (opacityEl) {
+                window.ede.opacity = parseFloatOfRange(opacityEl.value, 0, 1);
+            }
+            if (speedEl) {
+                window.ede.speed = parseFloatOfRange(speedEl.value, 20, 600);
+            }
+            if (fontSizeEl) {
+                window.ede.fontSize = parseFloatOfRange(fontSizeEl.value, 8, 40);
+            }
+            if (heightEl) {
+                window.ede.heightRatio = parseFloatOfRange(heightEl.value, 0, 1);
+            }
+            if (densityEl) {
+                window.ede.danmakuDensityLimit = parseInt(densityEl.value, 10);
+            }
+        } catch (err) {
+            return;
+        }
+        const wrapper = document.getElementById('danmakuWrapper');
+        if (wrapper) {
+            wrapper.style.opacity = window.ede.opacity;
+            wrapper.style.height = `calc(${window.ede.heightRatio * 100}% - 18px)`;
+        }
+        if (liveApplyTimer) {
+            clearTimeout(liveApplyTimer);
+        }
+        liveApplyTimer = setTimeout(() => rerenderFromCache(), 400);
+    }
+    // ===== v2：Danmaku 引擎运行时补丁（移植自 l429609201/dd-danmaku 的 misaka 版）=====
+    // 1) 拖动进度条后弹幕立即恢复（原库恢复期间有几秒空窗）
+    // 2) 倍速切换 / 暂停时不漂移：统一按 media.currentTime 计算位置
+    function buildPatchedDanmakuClass(DanmakuClass) {
+        if (!DanmakuClass || DanmakuClass.__edePatched) {
+            return DanmakuClass;
+        }
+        const OrigDanmaku = DanmakuClass;
+
+        class SeekingPatched extends OrigDanmaku {
+            constructor(opts) {
+                super(opts);
+                if (!this.media || !this.comments || !this._) {
+                    return;
+                }
+                const self = this;
+                this._patchedSeekingTimer = null;
+                this._patchedSeekingHandler = function () {
+                    self._patchedSeekingTimer = null;
+                    if (!self.media || !self.comments || !self._) {
+                        return;
+                    }
+                    // 下界二分：没有匹配项时停在末尾，避免重扫历史弹幕
+                    const targetTime = self.media.currentTime - (self._.duration || 4);
+                    let low = 0;
+                    let high = self.comments.length;
+                    while (low < high) {
+                        const mid = low + Math.floor((high - low) / 2);
+                        if (self.comments[mid].time < targetTime) {
+                            low = mid + 1;
+                        } else {
+                            high = mid;
+                        }
+                    }
+                    self._.position = low;
+                };
+                this._patchedSeekingWrapper = function () {
+                    if (self._patchedSeekingTimer !== null) {
+                        clearTimeout(self._patchedSeekingTimer);
+                    }
+                    self._patchedSeekingTimer = setTimeout(self._patchedSeekingHandler, 0);
+                };
+                this.media.addEventListener('seeking', this._patchedSeekingWrapper);
+            }
+
+            destroy() {
+                clearTimeout(this._patchedSeekingTimer);
+                this._patchedSeekingTimer = null;
+                if (this.media && this._patchedSeekingWrapper) {
+                    this.media.removeEventListener('seeking', this._patchedSeekingWrapper);
+                    this._patchedSeekingWrapper = null;
+                    this._patchedSeekingHandler = null;
+                }
+                return super.destroy();
+            }
+        }
+
+        class TimePatched extends SeekingPatched {
+            constructor(opts) {
+                super(opts);
+                if (
+                    !this.media ||
+                    typeof this._?.engine?.render !== 'function' ||
+                    typeof this._?.listener?.pause !== 'function' ||
+                    typeof this._?.listener?.play !== 'function'
+                ) {
+                    return;
+                }
+                const renderer = this._.engine.render;
+                const running = !this._.paused;
+                // 只重启本实例的帧循环，不发事件、不清空弹幕
+                if (running) {
+                    this._.listener.pause();
+                }
+                this._.engine = Object.assign({}, this._.engine, {
+                    render: (stage, comment) => {
+                        if (comment.mode === 'rtl' || comment.mode === 'ltr') {
+                            // currentTime 已包含倍速，不能再乘 playbackRate
+                            const distance = ((this._.width + comment.width) * (this.media.currentTime - comment.time)) / this._.duration;
+                            comment.x = comment.mode === 'rtl' ? this._.width - distance : distance - comment.width;
+                        }
+                        renderer.call(this, stage, comment);
+                    },
+                });
+                if (running) {
+                    this._.listener.play();
+                }
+            }
+        }
+
+        TimePatched.__edePatched = true;
+        return TimePatched;
+    }
+
+    let patchedDanmakuClass = null;
+
+    function getDanmakuClass() {
+        if (!patchedDanmakuClass) {
+            patchedDanmakuClass = buildPatchedDanmakuClass(typeof Danmaku !== 'undefined' ? Danmaku : window.Danmaku);
+            showDebugInfo('已启用 Danmaku 引擎补丁（进度条恢复 / 倍速不漂移）');
+        }
+        return patchedDanmakuClass;
     }
 
     // 创建弹幕设置侧边栏
@@ -693,6 +1817,10 @@
             <label class="settings-flex-auto">当前弹幕偏移时间:</label>
             <div><input class="settings-flex-grow" id="danmakuOffsetTime" placeholder="秒" value="${window.ede.curEpOffset || 0}" /></div>
         `),
+                htmlToElement(`
+            <label class="settings-flex-auto">匹配信息自动隐藏:</label>
+            <div><input class="settings-flex-grow" id="danmakuInfoHideSeconds" type="number" min="0" max="60" step="1" value="${window.ede.infoHideSeconds}" placeholder="秒（0=常显）" /></div>
+        `),
             ],
             style: [
                 htmlToElement(`
@@ -744,6 +1872,51 @@
                 <label for="filterRoll">滚动</label></div>
         `),
             ],
+            block: [
+                htmlToElement(`
+            <label class="settings-flex-auto">屏蔽关键词/正则:</label>
+            <div class="danmaku-block-enable"><input type="checkbox" id="danmakuBlockEnableKeywords" ${window.ede.blockEnableKeywords === 1 ? 'checked' : ''} /><label for="danmakuBlockEnableKeywords">启用</label></div>
+            <div class="danmaku-block-input"><textarea id="danmakuBlockKeywords" spellcheck="false" placeholder="每行一条：# 开头为注释；普通文本按“包含”匹配；/正则/flags 或 re:正则 按正则匹配">${escapeHtml(window.ede.blockKeywords)}</textarea></div>
+        `),
+                htmlToElement(`
+            <label class="settings-flex-auto">屏蔽发送者:</label>
+            <div class="danmaku-block-enable"><input type="checkbox" id="danmakuBlockEnableUsers" ${window.ede.blockEnableUsers === 1 ? 'checked' : ''} /><label for="danmakuBlockEnableUsers">启用</label></div>
+            <div class="danmaku-block-input"><textarea id="danmakuBlockUsers" spellcheck="false" placeholder="按发送者匹配（包含即屏蔽），例如 [BiliBili] 或某个用户名">${escapeHtml(window.ede.blockUsers)}</textarea></div>
+        `),
+                htmlToElement(`
+            <label class="settings-flex-auto">屏蔽颜色:</label>
+            <div class="danmaku-block-enable"><input type="checkbox" id="danmakuBlockEnableColors" ${window.ede.blockEnableColors === 1 ? 'checked' : ''} /><label for="danmakuBlockEnableColors">启用</label></div>
+            <div class="danmaku-block-input"><input id="danmakuBlockColors" placeholder="颜色值，逗号分隔，如 ff0000,#00ff00" value="${escapeHtml(window.ede.blockColors)}" /></div>
+        `),
+                htmlToElement(`
+            <label class="settings-flex-auto">正文清理:</label>
+            <div class="danmaku-block-enable"><input type="checkbox" id="danmakuStripLikeSuffix" ${window.ede.stripLikeSuffix === 1 ? 'checked' : ''} /><label for="danmakuStripLikeSuffix">去掉点赞数</label></div>
+            <div class="danmaku-block-input"><span class="danmakuHint">去掉 B 站弹幕正文尾部的“🤍 28”这类点赞数（御坂网络默认会拼上去）</span></div>
+        `),
+                htmlToElement(`
+            <label class="settings-flex-auto">合并相似弹幕:</label>
+            <div class="danmaku-block-enable"><input type="checkbox" id="danmakuMergeSimilar" ${window.ede.mergeSimilar === 1 ? 'checked' : ''} /><label for="danmakuMergeSimilar">启用</label></div>
+            <div class="danmaku-block-input"><input id="danmakuMergeThreshold" type="number" min="50" max="100" step="1" value="${window.ede.mergeThreshold}" placeholder="相似度阈值 50-100" /></div>
+        `),
+                (() => {
+                    const item = document.createElement('div');
+                    item.className = 'controlItem controlCard';
+                    item.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">屏蔽规则导入 / 导出</div>
+                        <div class="controlDescription">导出一段 JSON，换设备时导入回来</div>
+                    </div>
+                </div>
+                <div class="danmaku-block-actions">
+                    <button type="button" id="danmakuBlockExport">导出</button>
+                    <button type="button" id="danmakuBlockImport">导入</button>
+                    <button type="button" id="danmakuBlockClear">清空</button>
+                </div>
+            `;
+                    return item;
+                })(),
+            ],
         };
 
         // 创建控制功能卡片
@@ -765,6 +1938,7 @@
             { id: 'style', title: '显示样式', items: categories.style },
             { id: 'display', title: '显示设置', items: categories.display },
             { id: 'filter', title: '过滤设置', items: categories.filter },
+            { id: 'block', title: '屏蔽', items: categories.block },
         ];
 
         // 先清空容器的旧内容（除了tabsContainer）
@@ -851,6 +2025,82 @@
         document.getElementById('danmakuOffsetTime').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('customCorsProxy').addEventListener('keydown', (event) => event.stopPropagation(), true);
         document.getElementById('customApiPrefix').addEventListener('keydown', (event) => event.stopPropagation(), true);
+
+        // ===== v2：新增控件事件绑定 =====
+        ['danmakuBlockKeywords', 'danmakuBlockUsers', 'danmakuBlockColors', 'danmakuMergeThreshold', 'misakaBase', 'misakaToken'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', (event) => event.stopPropagation(), true);
+            }
+        });
+        const blockExportBtn = document.getElementById('danmakuBlockExport');
+        if (blockExportBtn) {
+            blockExportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exportBlockRules();
+            });
+        }
+        const blockImportBtn = document.getElementById('danmakuBlockImport');
+        if (blockImportBtn) {
+            blockImportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                importBlockRules();
+            });
+        }
+        const blockClearBtn = document.getElementById('danmakuBlockClear');
+        if (blockClearBtn) {
+            blockClearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                clearBlockRules();
+            });
+        }
+        const misakaApplyBtn = document.getElementById('misakaApply');
+        if (misakaApplyBtn) {
+            misakaApplyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                applyMisakaPreset();
+            });
+        }
+        const misakaTestBtn = document.getElementById('misakaTest');
+        if (misakaTestBtn) {
+            misakaTestBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                testMisakaConnection();
+            });
+        }
+        const settingsExportBtn = document.getElementById('danmakuSettingsExport');
+        if (settingsExportBtn) {
+            settingsExportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exportAllSettings();
+            });
+        }
+        const settingsImportBtn = document.getElementById('danmakuSettingsImport');
+        if (settingsImportBtn) {
+            settingsImportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                importAllSettings();
+            });
+        }
+        // 拖完滑块立即生效（本地重渲染，不重新请求接口）
+        ['opacity', 'speed', 'fontSize', 'heightRatio', 'danmakuDensityLimit'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => liveApplyDisplaySettings());
+            }
+        });
+        document.querySelectorAll('.settingItem').forEach((el) => {
+            if (el.querySelector('textarea, .danmaku-block-input')) {
+                el.classList.add('danmaku-block-item');
+            }
+        });
         
         // 初始化显示默认标签内容
         if (activeTabId) {
@@ -1065,6 +2315,129 @@
             controlItems.push(customCorsProxy);
         }
 
+        // ===== v2：御坂网络（misaka）一键配置 =====
+        {
+            const misakaItem = document.createElement('div');
+            misakaItem.className = 'controlItem controlCard danmakuMisakaCard';
+            misakaItem.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">御坂网络 (misaka) 一键配置</div>
+                        <div class="controlDescription">填服务地址与客户端 token，自动写入上面的 API 字段</div>
+                    </div>
+                </div>
+                <div class="danmakuMisakaRow">
+                    <input id="misakaBase" placeholder="http://192.168.1.10:7768" value="${escapeHtml(window.ede.misakaBase)}" />
+                    <input id="misakaToken" placeholder="客户端 token（misaka 网页端里的调用令牌）" value="${escapeHtml(window.ede.misakaToken)}" />
+                </div>
+                <div class="danmaku-block-actions">
+                    <button type="button" id="misakaApply">应用</button>
+                    <button type="button" id="misakaTest">测试接口</button>
+                </div>
+            `;
+            controlItems.push(misakaItem);
+        }
+
+        // ===== v2：重新加载弹幕（“库里明明有却不显示”时先点这里） =====
+        {
+            const reloadItem = document.createElement('div');
+            reloadItem.className = 'controlItem controlCard danmakuReloadCard';
+            reloadItem.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">重新加载弹幕</div>
+                        <div class="controlDescription">强制重新匹配并拉取当前这一集的弹幕</div>
+                    </div>
+                </div>
+                <div class="danmaku-block-actions">
+                    <button type="button" id="danmakuForceReload">重载</button>
+                </div>
+            `;
+            reloadItem.querySelector('#danmakuForceReload').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                resetDanmakuRetry();
+                window.ede.loading = false;
+                window.ede.loadingSince = 0;
+                showDebugInfo('手动重新加载弹幕');
+                reloadDanmaku('reload');
+            });
+            controlItems.push(reloadItem);
+        }
+
+        // ===== v2：时间轴微调（按集记忆） =====
+        {
+            const offsetItem = document.createElement('div');
+            offsetItem.className = 'controlItem controlCard danmakuOffsetCard';
+            offsetItem.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">弹幕时间轴微调</div>
+                        <div class="controlDescription">提前/延后若干秒，按当前这一集记忆</div>
+                    </div>
+                </div>
+                <div class="danmaku-offset-buttons">
+                    <button type="button" data-offset="-1">-1s</button>
+                    <button type="button" data-offset="-0.5">-0.5s</button>
+                    <button type="button" data-offset="0.5">+0.5s</button>
+                    <button type="button" data-offset="1">+1s</button>
+                </div>
+            `;
+            offsetItem.querySelectorAll('button[data-offset]').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nudgeDanmakuOffset(parseFloat(btn.dataset.offset));
+                });
+            });
+            controlItems.push(offsetItem);
+        }
+
+        // ===== v2：全量设置备份 / 恢复 =====
+        {
+            const backupItem = document.createElement('div');
+            backupItem.className = 'controlItem controlCard danmakuBackupCard';
+            backupItem.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">设置备份 / 恢复</div>
+                        <div class="controlDescription">把弹幕样式、过滤、API 等全部设置导出成 JSON</div>
+                    </div>
+                </div>
+                <div class="danmaku-block-actions">
+                    <button type="button" id="danmakuSettingsExport">导出</button>
+                    <button type="button" id="danmakuSettingsImport">导入</button>
+                </div>
+            `;
+            controlItems.push(backupItem);
+        }
+
+        // ===== v2：在线搜索失败时回退到 Jellyfin 弹幕插件 =====
+        {
+            const fallbackItem = document.createElement('div');
+            fallbackItem.className = 'controlItem controlCard danmakuXmlFallbackCard';
+            fallbackItem.innerHTML = `
+                <div class="controlInfo">
+                    <div class="controlText">
+                        <div class="controlTitle">插件弹幕回退</div>
+                        <div class="controlDescription">在线搜索没结果时，改用 Jellyfin 弹幕插件的弹幕</div>
+                    </div>
+                </div>
+                <label class="modernSwitch">
+                    <input type="checkbox" ${window.ede.xmlFallback === 1 ? 'checked' : ''}>
+                    <span class="modernSlider"></span>
+                </label>
+            `;
+            const fallbackCheckbox = fallbackItem.querySelector('input[type="checkbox"]');
+            fallbackCheckbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                window.ede.xmlFallback = fallbackCheckbox.checked ? 1 : 0;
+                window.localStorage.setItem('danmakuXmlFallback', window.ede.xmlFallback);
+                showDebugInfo(`插件弹幕回退：${window.ede.xmlFallback === 1 ? '开' : '关'}`);
+            });
+            controlItems.push(fallbackItem);
+        }
+
         return controlItems.length > 0 ? controlItems : null;
     }
 
@@ -1232,7 +2605,14 @@
         span.style.borderRadius = '.3em';
         span.style.maxHeight = '50%';
         window.ede.logSwitch == 1 ? (span.style.display = 'block') : (span.style.display = 'none');
-        _container.appendChild(span);
+        // v2：没有可见的 video-osd 容器时不要再抛错（抛了 initUI 会每 200ms 抛一次，等于初始化不了）
+        if (_container) {
+            _container.appendChild(span);
+        } else if (document.getElementById('reactRoot')) {
+            document.getElementById('reactRoot').appendChild(span);
+        } else {
+            document.body.appendChild(span);
+        }
 
         showDebugInfo('UI初始化完成');
         reloadDanmaku('init');
@@ -1462,17 +2842,31 @@
 
     async function getEmbyItemInfo() {
         let playingInfo = null;
+        // v2：原本是死循环——itemId 拿不到时会永远每 200ms 轮询一次（issue #72 的表现之一）
+        const deadline = Date.now() + 30000;
         while (!playingInfo) {
+            if (Date.now() > deadline) {
+                showDebugInfo('获取播放信息超时，可用“重新加载弹幕”重试');
+                return null;
+            }
             await new Promise((resolve) => setTimeout(resolve, 200));
             if (isNewJellyfin) {
-                // params: userId, itemId
-                playingInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), itemId);
+                if (!itemId) {
+                    continue;
+                }
+                try {
+                    // params: userId, itemId
+                    playingInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), itemId);
+                } catch (err) {
+                    showDebugInfo(`获取播放信息失败: ${err.message}`);
+                }
             } else {
-                let sessionInfo = await ApiClient.getSessions({
+                const sessionInfo = await ApiClient.getSessions({
                     userId: ApiClient.getCurrentUserId(),
                     deviceId: ApiClient.deviceId(),
                 });
-                if (!sessionInfo[0].NowPlayingItem) {
+                // v2：PR #38 里那处空值保护——Session 分支下 sessionInfo 可能是空的
+                if (!sessionInfo || !sessionInfo[0] || !sessionInfo[0].NowPlayingItem) {
                     await new Promise((resolve) => setTimeout(resolve, 150));
                     continue;
                 }
@@ -1531,12 +2925,20 @@
             if (animeName == null || animeName == '') {
                 return null;
             }
+            // v2：御坂网络把 @HELP/@QLHC/@SXDM 之类的指令藏在搜索关键词里，直接拦截
+            if (animeName.trim().startsWith('@')) {
+                showDebugInfo('搜索关键词不能以 @ 开头（可能是服务端指令）');
+                return null;
+            }
         }
         const _episode_key_offset = _episode_key + '_offset';
         if (window.ede.curEpOffsetModified) {
             window.localStorage.setItem(_episode_key_offset, window.ede.curEpOffset);
+            window.ede.curEpOffsetModified = false;
         }
-        window.ede.curEpOffset = window.localStorage.getItem(_episode_key_offset) || 0;
+        // localStorage 取出来是字符串，不转成数字的话 time + curEpOffset 会变成字符串拼接
+        window.ede.curEpOffset = parseFloat(window.localStorage.getItem(_episode_key_offset)) || 0;
+        window.ede.curEpOffsetKey = _episode_key_offset;
 
         let searchUrl = getApiPrefix() + '/api/v2/search/episodes?anime=' + animeName;
         let animaInfo = await makeGetRequest(searchUrl)
@@ -1545,6 +2947,15 @@
                 showDebugInfo(`查询失败: ${error.message}`);
                 return null;
             });
+        // v2：御坂网络的错误藏在 HTTP 200 的 body 里
+        if (animaInfo && animaInfo.success === false) {
+            showDebugInfo(`搜索接口返回错误：errorCode=${animaInfo.errorCode ?? '未知'} ${describeApiError(animaInfo.errorCode)}`);
+            return null;
+        }
+        if (!animaInfo || !Array.isArray(animaInfo.animes)) {
+            showDebugInfo('弹幕查询无结果');
+            return null;
+        }
         if (animaInfo.animes.length == 0) {
             const seriesInfo = await ApiClient.getItem(ApiClient.getCurrentUserId(), item.SeriesId || item.Id);
             animeName = seriesInfo.OriginalTitle;
@@ -1571,6 +2982,11 @@
                     selecAnime_id = index + 1;
                 }
             }
+        } else if (animaInfo.animes.length > 1 && is_auto) {
+            // v2（上游 issue #94）：御坂网络返回的候选顺序不稳定，按标题相似度挑最像的
+            const best = pickBestAnime(animaInfo.animes, animeName);
+            selecAnime_id = best.index + 1;
+            showDebugInfo(`按标题相似度选择: ${best.title}（${Math.round(best.score)} 分）`);
         }
         if (!is_auto) {
             let anime_lists_str = list2string(animaInfo);
@@ -1604,10 +3020,14 @@
             episode = selectedEpisodeIndex;
         } else {
             selecAnime_id = parseInt(selecAnime_id) - 1;
-            let initialTitle = animaInfo.animes[selecAnime_id].episodes[0].episodeTitle;
-            const match = initialTitle.match(/第(\d+)话/);
-            const initialep = match ? parseInt(match[1]) : 1;
-            episode = parseInt(episode) < initialep ? parseInt(episode) - 1 : parseInt(episode) - initialep;
+            const eps = (animaInfo.animes[selecAnime_id].episodes || []).slice().sort((x, y) => {
+                const nx = extractEpisodeNumber(x.episodeTitle);
+                const ny = extractEpisodeNumber(y.episodeTitle);
+                return (nx === null ? 9999 : nx) - (ny === null ? 9999 : ny);
+            });
+            const targetEp = parseInt(episode, 10) || 1;
+            // v2：优先按每集标题里的集号精确匹配，避免源站缺集时整体错位
+            episode = matchEpisodeIndex(eps, targetEp);
         }
 
         if (episode + 1 > animaInfo.animes[selecAnime_id].episodes.length) {
@@ -1631,9 +3051,29 @@
         const url_related = getApiPrefix() + '/api/v2/related/' + episodeId;
         const url_ext = getApiPrefix() + '/api/v2/extcomment?chConvert=' + window.ede.chConvert + '&url=';
         try {
-            let response = await makeGetRequest(url_all);
+            // v2：首次失败自动重试一次（网络抖动 / 服务端限速时很常见）
+            let response = null;
+            let lastError = null;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    response = await makeGetRequest(url_all);
+                    break;
+                } catch (err) {
+                    lastError = err;
+                    showDebugInfo(`获取弹幕失败(${attempt + 1}/2): ${err.message}`);
+                    await new Promise((resolve) => setTimeout(resolve, 800));
+                }
+            }
+            if (!response) {
+                throw lastError || new Error('获取弹幕失败');
+            }
             let data = await response.json();
-            const matchBili = /^\[BiliBili\]/;
+            // v2：御坂网络把错误也包成 HTTP 200，必须读 body 里的 success/errorCode
+            if (data && data.success === false) {
+                showDebugInfo(`弹幕接口返回错误：errorCode=${data.errorCode ?? '未知'} ${describeApiError(data.errorCode)}`);
+                return null;
+            }
+            const matchBili = /^\[bilibili\]/i;
             let hasBili = false;
             if ((danmakuFilter & 1) !== 1) {
                 for (const c of data.comments) {
@@ -1643,10 +3083,18 @@
                     }
                 }
             }
-            let comments = data.comments;
+            let comments = data.comments || [];
             try{
                 response = await makeGetRequest(url_related);
-                data = await response.json();
+                // v2：御坂网络没有 /related 接口，未知路径会返回 HTML（HTTP 200），
+                //     这里解析失败只提示一次，不影响主弹幕
+                const relatedText = await response.text();
+                try {
+                    data = JSON.parse(relatedText);
+                } catch (parseErr) {
+                    showDebugInfo('当前 API 没有 related 接口，跳过第三方弹幕源（御坂网络在服务端合并源）');
+                    data = null;
+                }
                 showDebugInfo('第三方弹幕源个数：' + (data?.relateds?.length || '0'));
 
                 if (data?.relateds?.length > 0) {
@@ -1749,6 +3197,12 @@
     }
 
     async function createDanmaku(comments) {
+        if (comments && comments.length > 0) {
+            // v2：缓存原始弹幕，改设置或容器被 React 摘掉时可以本地重渲染
+            window.ede.lastRawComments = comments;
+            window.ede.lastRawCommentsItemId = itemId;
+            window.ede.lastStats = danmakuSourceStats(comments);
+        }
         if (!window.obVideo) {
             window.obVideo = new MutationObserver((mutationList, _observer) => {
                 for (let mutationRecord of mutationList) {
@@ -1794,12 +3248,24 @@
         }
 
         const waitForMediaContainer = async () => {
+            const deadline = Date.now() + 15000;
             while (!document.querySelector(mediaContainerQueryStr)?.children.length) {
+                if (Date.now() > deadline) {
+                    throw new Error('等待播放器容器超时');
+                }
                 await new Promise((resolve) => setTimeout(resolve, 200));
             }
         };
 
-        await waitForMediaContainer();
+        // v2：超时后释放 loading 并排队重试，不再无限等待
+        try {
+            await waitForMediaContainer();
+        } catch (err) {
+            showDebugInfo(err.message);
+            window.ede.loading = false;
+            scheduleDanmakuRetry(err.message);
+            return;
+        }
 
         let _container = null;
         document.querySelectorAll(mediaContainerQueryStr).forEach((element) => {
@@ -1808,13 +3274,24 @@
             }
         });
         if (!_container) {
-            showDebugInfo('未找到播放器');
+            showDebugInfo('未找到播放器容器');
+            window.ede.loading = false;
+            scheduleDanmakuRetry('未找到播放器容器');
             return;
         }
 
         let _comments = preProcessDanmaku(comments, _container.offsetWidth, _container.offsetHeight);
 
         showDebugInfo(`弹幕加载成功: ${_comments.length}`);
+        if (window.ede.lastBlocked > 0) {
+            showDebugInfo(`屏蔽规则过滤: ${window.ede.lastBlocked} 条`);
+        }
+        if (window.ede.lastStats) {
+            showDebugInfo(`弹幕来源统计: ${formatSourceStats(window.ede.lastStats)}`);
+        }
+        if (window.ede.episode_info) {
+            displayDanmakuInfo(window.ede.episode_info);
+        }
         showDebugInfo(`弹幕透明度：${window.ede.opacity}`);
         showDebugInfo(`弹幕速度：${window.ede.speed}`);
         showDebugInfo(`弹幕高度比例：${window.ede.heightRatio}`);
@@ -1831,6 +3308,8 @@
         let _media = document.querySelector(mediaQueryStr);
         if (!_media) {
             showDebugInfo('未找到video');
+            window.ede.loading = false;
+            scheduleDanmakuRetry('未找到video');
             return;
         }
 
@@ -1855,7 +3334,7 @@
             finalComments = _comments;
         }
 
-        window.ede.danmaku = new Danmaku({
+        window.ede.danmaku = new (getDanmakuClass())({
             container: wrapper,
             media: _media,
             comments: finalComments,
@@ -1864,6 +3343,10 @@
         });
 
         window.ede.danmakuSwitch === 1 ? window.ede.danmaku.show() : window.ede.danmaku.hide();
+
+        // v2：重置重试计数并启动容器看门狗
+        resetDanmakuRetry();
+        startDanmakuWatchdog();
 
         const resizeObserverCallback = () => {
             if (window.ede.danmaku) {
@@ -1902,17 +3385,40 @@
             infoContainer = document.createElement('div');
             infoContainer.id = 'danmakuInfoTitle';
             infoContainer.className = 'pageTitle';
-            document.querySelector('div.skinHeader').appendChild(infoContainer);
+            // v2：新版 React 客户端没有 div.skinHeader，找得到就挂上去，找不到就挂到 body，避免整条链路报错
+            const infoHeader = document.querySelector('div.skinHeader') || document.querySelector('.skinHeader') || document.body;
+            infoHeader.appendChild(infoContainer);
         }
-        infoContainer.innerText = `弹幕匹配信息：${info.animeTitle} - ${info.episodeTitle}`;
+        const statsText = window.ede.lastStats ? ` | ${formatSourceStats(window.ede.lastStats)}` : '';
+        infoContainer.innerText = `弹幕匹配信息：${info.animeTitle} - ${info.episodeTitle}${statsText}`;
+        // v2（上游 issue #98）：匹配信息不再永久挡在左上角，N 秒后自动淡出，0 表示常显
+        if (infoContainer._hideTimer) {
+            clearTimeout(infoContainer._hideTimer);
+        }
+        infoContainer.style.transition = 'opacity 0.8s ease';
+        infoContainer.style.opacity = '1';
+        const hideSeconds = window.ede.infoHideSeconds;
+        if (hideSeconds > 0) {
+            infoContainer._hideTimer = setTimeout(() => {
+                infoContainer.style.opacity = '0';
+                infoContainer._hideTimer = null;
+            }, hideSeconds * 1000);
+        }
     }
 
     function reloadDanmaku(type = 'check') {
         if (window.ede.loading) {
-            showDebugInfo('正在重新加载');
-            return;
+            // v2：loading 超过 20 秒视为卡死（旧版会一直卡住，只能刷新页面）
+            if (window.ede.loadingSince && Date.now() - window.ede.loadingSince > 20000) {
+                showDebugInfo('检测到弹幕加载卡死，已强制重置');
+                window.ede.loading = false;
+            } else {
+                showDebugInfo('正在重新加载');
+                return;
+            }
         }
         window.ede.loading = true;
+        window.ede.loadingSince = Date.now();
         if (window.ede.useXmlDanmaku === 1) {
             getItemId()
                 .then((itemId) => {
@@ -1981,13 +3487,18 @@
                         }),
                     ),
                 (msg) => {
-                    if (msg) {
+                    if (msg && msg !== '当前播放视频未变动') {
                         showDebugInfo(msg);
+                        // v2：在线搜索无结果时，用 Jellyfin 弹幕插件（后端就是御坂网络）的弹幕兜底
+                        if (window.ede.xmlFallback === 1 && type !== 'search') {
+                            return tryXmlDanmakuFallback();
+                        }
                     }
                 },
             )
             .then(() => {
                 window.ede.loading = false;
+                window.ede.loadingSince = 0;
                 const danmakuCtr = document.getElementById('danmakuCtr');
                 if (danmakuCtr && danmakuCtr.style && danmakuCtr.style.opacity !== '1') {
                     danmakuCtr.style.opacity = 1;
@@ -1998,14 +3509,21 @@
     function preProcessDanmaku(all_cmts, containerWidth, containerHeight) {
         const { fontSize, fontOptions, fontFamily, speed, heightRatio, danmakuFilter, danmakuModeFilter, danmakuDensityLimit, curEpOffset } = window.ede;
 
+        // v2：先按屏蔽规则过滤原始弹幕（关键词 / 正则 / 发送者 / 颜色）
+        const shieldResult = shieldFilter(all_cmts);
+        all_cmts = shieldResult.comments;
+        window.ede.lastBlocked = shieldResult.blocked;
+
         // 来源过滤规则
+        // v2：来源标签大小写不敏感——御坂网络写的是小写 [bilibili]/[gamer]，
+        //     旧代码用 startsWith('[BiliBili]') 判断，指向御坂网络时过滤开关其实一直没生效
         const disableBilibili = (danmakuFilter & 1) === 1;
         const disableGamer = (danmakuFilter & 2) === 2;
         const disableDandan = (danmakuFilter & 4) === 4;
         const disableOther = (danmakuFilter & 8) === 8;
 
         const dandanRegex = disableDandan ? /^(?!\[)|^.{0,3}\]/ : null;
-        const otherRegex = disableOther ? /^\[(?!(BiliBili|Gamer)).{3,}\]/ : null;
+        const otherRegex = disableOther ? /^\[(?!(bilibili|gamer)).{3,}\]/i : null;
 
         // 模式过滤规则
         let enabledModes = new Set([1, 4, 5, 6]);
@@ -2045,10 +3563,11 @@
             const modeId = parseInt(parts[1], 10);
             const user = parts[3];
 
-            // 来源过滤
+            // 来源过滤（v2：小写来源标签同样能匹配）
+            const userLower = String(user || '').toLowerCase();
             if (
-                (disableBilibili && user.startsWith('[BiliBili]')) ||
-                (disableGamer && user.startsWith('[Gamer]')) ||
+                (disableBilibili && userLower.startsWith('[bilibili]')) ||
+                (disableGamer && userLower.startsWith('[gamer]')) ||
                 (dandanRegex && dandanRegex.test(user)) ||
                 (otherRegex && otherRegex.test(user))
             ) {
@@ -2084,7 +3603,7 @@
             const color = colorValue.toString(16).padStart(6, '0');
 
             resultComments.push({
-                text: comment.m,
+                text: cleanDanmakuText(comment.m),
                 mode,
                 time: time + curEpOffset,
                 style: {
@@ -2096,7 +3615,7 @@
             });
         }
 
-        return resultComments;
+        return maybeMergeSimilar(resultComments);
     }
 
     const widthCache = new Map();
@@ -2299,21 +3818,9 @@
             (async () => {
                 isNewJellyfin = compareVersions(ApiClient?._appVersion, '10.10.0') >= 0;
                 // showDebugInfo(`isNewJellyfin: ${isNewJellyfin}`);
-                if (isNewJellyfin) {
-                    let retry = 0;
-                    while (!itemId) {
-                        await new Promise((resolve) => setTimeout(resolve, 200));
-                        retry++;
-                        if (retry > 10) {
-                            throw new Error('获取itemId失败');
-                        }
-                    }
-                } else {
-                    while (!(await ApiClient.getSessions())) {
-                        await new Promise((resolve) => setTimeout(resolve, 200));
-                    }
-                }
-
+                // v2（上游 issue #72）：UI/监听轮询先无条件注册。
+                // 旧版把这两行放在“等 itemId”之后，而等 itemId 失败时会 throw，
+                // 结果是脚本加载了却没有任何按钮、控制台也不报错。
                 setInterval(() => {
                     initUI();
                 }, check_interval);
@@ -2321,6 +3828,20 @@
                 setInterval(() => {
                     initListener();
                 }, check_interval);
+
+                // 新版前端不用在这里等 itemId：getEmbyItemInfo 自己会等（有超时）
+                if (!isNewJellyfin) {
+                    // v2：非新版前端同样不要死循环
+                    let retry = 0;
+                    while (retry < 50) {
+                        const sessions = await ApiClient.getSessions().catch(() => null);
+                        if (sessions) {
+                            break;
+                        }
+                        await new Promise((resolve) => setTimeout(resolve, 200));
+                        retry++;
+                    }
+                }
             })();
         }
     });
@@ -3764,6 +5285,117 @@
                 font-size: 12px;
             }
         }
+
+    /* ===== v2：屏蔽设置 / 控制卡片 ===== */
+    .settingItem.danmaku-block-item {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .danmaku-block-input {
+        flex: 1 1 100%;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .danmaku-block-input textarea {
+        width: 100%;
+        min-height: 84px;
+        box-sizing: border-box;
+        resize: vertical;
+        padding: 8px 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: inherit;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        font-family: Consolas, Monaco, monospace;
+    }
+
+    .danmaku-block-input input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .danmaku-block-enable {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .danmaku-block-actions,
+    .danmaku-offset-buttons {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .danmakuHint {
+        display: block;
+        font-size: 12px;
+        opacity: 0.7;
+        line-height: 1.4;
+    }
+
+    .danmaku-block-actions button,
+    .danmaku-offset-buttons button,
+    .danmaku-card-button {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
+        cursor: pointer;
+    }
+
+    .danmaku-block-actions button:hover,
+    .danmaku-offset-buttons button:hover,
+    .danmaku-card-button:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    .danmakuMisakaRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        margin-top: 6px;
+    }
+
+    .danmakuMisakaRow input {
+        flex: 1 1 45%;
+        min-width: 120px;
+        padding: 6px 8px;
+        font-size: 12px;
+        color: inherit;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+    }
+
+    .danmakuTextDialog {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 90vw;
+        width: 520px;
+    }
+
+    .danmakuTextDialog textarea {
+        width: 100%;
+        min-height: 180px;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-family: Consolas, Monaco, monospace;
+        color: inherit;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+    }
     `;
     document.head.appendChild(style);
 })();
