@@ -79,6 +79,7 @@ export class DanmakuEngine {
         } else {
             this.instance.hide();
         }
+        this.backfillInFlight(config.media);
 
         // 5. ResizeObserver（debounced 100ms）
         this.setupResizeObserver(config.container);
@@ -144,10 +145,34 @@ export class DanmakuEngine {
             height: `max(0px, calc(${config.heightRatio * 100}% - 18px))`,
             opacity: String(config.opacity),
             pointerEvents: 'none',
-            zIndex: '1',
         });
 
         return wrapper;
+    }
+
+    /**
+     * 播放中重建引擎时，danmaku 库会 seek 到当前时间，跳过最近一个滚动周期内"飞行中"的弹幕，
+     * 导致调整设置时画面先清空 1~2 秒。把读取位置回退一个周期，库会按已经过的时间把它们画在半路上。
+     * 依赖 danmaku@2 的内部字段 `_`，字段缺失时静默跳过。
+     */
+    private backfillInFlight(media: HTMLMediaElement): void {
+        const instance = this.instance as unknown as {
+            comments?: { time: number }[];
+            _?: { position?: number; duration?: number; paused?: boolean };
+        } | null;
+        const internal = instance?._;
+        const comments = instance?.comments;
+        if (!internal || !comments || internal.paused || typeof internal.position !== 'number' || typeof internal.duration !== 'number') return;
+
+        const since = media.currentTime - internal.duration;
+        let low = 0;
+        let high = comments.length;
+        while (low < high) {
+            const mid = (low + high) >> 1;
+            if (comments[mid].time < since) low = mid + 1;
+            else high = mid;
+        }
+        internal.position = Math.min(internal.position, low);
     }
 
     private mountWrapper(container: HTMLElement): void {
