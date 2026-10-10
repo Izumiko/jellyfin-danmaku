@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "mkdir -p public && cp ede.js public/ede.user.js",
+  "buildCommand": "npm run build:all && cp dist/jellyfin-danmaku.user.js dist/ede.user.js",
+  "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/ede.user.js",
+      "source": "/(.*)\\.js",
       "headers": [
         {
           "key": "Cache-Control",
