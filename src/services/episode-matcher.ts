@@ -1,6 +1,8 @@
 import { searchEpisodes, getAnimeById } from './dandanplay/client';
 import { Storage, episodeScope } from '../core/storage';
 import { logger } from '../core/logger';
+import { eventBus } from '../core/event-bus';
+import { extractEpisodeNumber, pickBestAnime } from './title-match';
 import type { AnimeInfo, EpisodeInfo, JellyfinItem, ChConvertMode } from '../types/index';
 
 export interface EpisodeMatcherDeps {
@@ -16,18 +18,22 @@ function jellyfinEpisodeNumber(item: JellyfinItem): number {
 }
 
 /**
- * 在不了解偏移时的兜底选择：优先匹配 episodeNumber，再退化到标题中的「第N话/集」。
+ * 在不了解偏移时选择剧集：
+ * 1. episodeNumber 字段精确匹配
+ * 2. 标题里的集号精确匹配（第N话 / SxxExx / 裸数字）——源站缺集时不会整体错位
+ * 3. 以首集集号为起点顺序推算（ede.js 原逻辑）
  */
-function selectEpisodeIndex(anime: AnimeInfo, indexNumber?: number): number {
+export function selectEpisodeIndex(anime: AnimeInfo, indexNumber?: number): number {
     const numeric = indexNumber && indexNumber > 0 ? Math.floor(indexNumber) : 1;
 
     const byNumber = anime.episodes.findIndex((episode) => Number(episode.episodeNumber) === numeric);
     if (byNumber >= 0) return byNumber;
 
-    const match = anime.episodes[0]?.episodeTitle.match(/第(\d+)[话集]/);
-    const initialEp = match ? parseInt(match[1], 10) : 1;
-    const episode = numeric < initialEp ? numeric : numeric - initialEp + 1;
-    return episode - 1;
+    const byTitle = anime.episodes.findIndex((episode) => extractEpisodeNumber(episode.episodeTitle) === numeric);
+    if (byTitle >= 0) return byTitle;
+
+    const initialEp = extractEpisodeNumber(anime.episodes[0]?.episodeTitle) ?? 1;
+    return numeric < initialEp ? numeric - 1 : numeric - initialEp;
 }
 
 /**
@@ -92,30 +98,43 @@ export class EpisodeMatcher {
                 if (input === null) {
                     return null;
                 }
+                // 御坂网络等服务端把 @HELP / @QLHC 之类的指令藏在搜索关键词里，不能当番剧名发出去
+                if (input.trim().startsWith('@')) {
+                    logger.warn('matcher', 'Search keyword must not start with "@" (reserved for server commands)');
+                    eventBus.emit('ui:toast', { message: '搜索关键词不能以 @ 开头（会被当作服务端指令）', tone: 'error' });
+                    return null;
+                }
                 animeName = input;
             }
 
             logger.info('matcher', `Searching for: ${animeName}`);
 
+            let searchedName = animeName;
             let searchResult = await searchEpisodes(this.deps.apiPrefix, animeName);
             if (!searchResult.animes || searchResult.animes.length === 0) {
                 const originalTitle =
                     (await this.deps.getSeriesOriginalTitle?.(item)) || item.OriginalTitle;
                 if (originalTitle && originalTitle !== animeName) {
                     logger.info('matcher', `Retrying with series OriginalTitle: ${originalTitle}`);
+                    searchedName = originalTitle;
                     searchResult = await searchEpisodes(this.deps.apiPrefix, originalTitle);
                 }
             }
 
             if (!searchResult.animes || searchResult.animes.length === 0) {
                 logger.warn('matcher', 'No anime found');
+                if (mode === 'manual') eventBus.emit('ui:toast', { message: `没有找到「${searchedName}」`, tone: 'error' });
                 return null;
             }
 
             let selectedAnime = searchResult.animes[0];
-            if (remembered) {
-                const found = searchResult.animes.find((a) => a.animeId === remembered.animeId);
-                if (found) selectedAnime = found;
+            const found = remembered && searchResult.animes.find((a) => a.animeId === remembered.animeId);
+            if (found) {
+                selectedAnime = found;
+            } else if (searchResult.animes.length > 1) {
+                const best = pickBestAnime(searchResult.animes, searchedName);
+                selectedAnime = searchResult.animes[best.index];
+                logger.info('matcher', `Picked by title similarity: ${selectedAnime.animeTitle} (${Math.round(best.score)})`);
             }
 
             let episodeIndex: number;

@@ -180,6 +180,29 @@ describe('EpisodeMatcher', () => {
             expect(searchEpisodes).not.toHaveBeenCalled();
         });
 
+        it('rejects manual keywords starting with @ (server commands) without searching', async () => {
+            dialogs.showInputDialog.mockResolvedValue('@QLHC');
+            const result = await matcher.match(createJellyfinItem(), 'manual');
+            expect(result).toBeNull();
+            expect(searchEpisodes).not.toHaveBeenCalled();
+        });
+
+        it('auto-picks the most similar title when there are several results', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
+            vi.mocked(Storage.getSeasonAnime).mockResolvedValue(null);
+            vi.mocked(searchEpisodes).mockResolvedValue({
+                hasMore: false,
+                errorCode: 0,
+                errorMessage: '',
+                animes: [
+                    { animeId: 1, animeTitle: 'Test Anime Series 剧场版', type: 'movie', episodes: [{ episodeId: 11, episodeTitle: '1' }] },
+                    { animeId: 2, animeTitle: 'Test Anime Series', type: 'tvseries', episodes: [{ episodeId: 21, episodeTitle: '第1话' }] },
+                ],
+            });
+            const result = await matcher.match(createJellyfinItem({ IndexNumber: 1, ParentIndexNumber: 1 }));
+            expect(result?.episodeId).toBe(21);
+        });
+
         it('appends season number when ParentIndexNumber > 1', async () => {
             vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
             vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));

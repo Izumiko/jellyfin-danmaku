@@ -2,6 +2,25 @@ import { get, post } from '../http';
 import { logger } from '../../core/logger';
 import type { SearchResponse, BangumiResponse, AnimeInfo, DanDanPlayComment, RelatedSource, RawComment, ChConvertMode } from '../../types/index';
 
+/** 御坂网络等第三方 API 把错误包在 HTTP 200 的 body 里，用 errorCode 说明原因 */
+const API_ERROR_HINTS: Record<number, string> = {
+    1001: '请求参数错误',
+    1002: '未找到资源',
+    1003: '鉴权失败或配额用尽（检查客户端 token / 每日调用上限）',
+    1004: '请求过于频繁',
+    1005: '服务端内部错误',
+};
+
+/** 检查业务层错误：errorCode 非 0 或 success === false 时抛出可读的错误 */
+function assertApiOk(response: { errorCode?: number; errorMessage?: string; success?: boolean } | string | null | undefined, api: string): void {
+    if (!response || typeof response !== 'object') return;
+    const failed = (typeof response.errorCode === 'number' && response.errorCode !== 0) || response.success === false;
+    if (!failed) return;
+    const code = response.errorCode;
+    const detail = response.errorMessage || (code !== undefined ? API_ERROR_HINTS[code] : '') || '';
+    throw new Error(detail ? `${detail}${code !== undefined ? `（${api} errorCode ${code}）` : ''}` : `DanDanPlay ${api} API error: ${code ?? 'unknown'}`);
+}
+
 /**
  * 搜索剧集
  */
@@ -15,9 +34,7 @@ export async function searchEpisodes(apiPrefix: string, animeName: string, optio
         signal: options?.signal,
     });
 
-    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay search API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'search');
 
     logger.info('dandanplay', `Found ${response.animes?.length || 0} anime results for "${animeName}"`);
     return response;
@@ -37,9 +54,7 @@ export async function getAnimeById(apiPrefix: string, animeId: number, options?:
         signal: options?.signal,
     });
 
-    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay bangumi API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'bangumi');
 
     const anime = response.bangumi;
     if (!anime?.episodes?.length) {
@@ -71,9 +86,7 @@ export async function getComments(
         signal: options?.signal,
     });
 
-    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay comment API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'comment');
 
     const comments = response.comments || [];
     logger.info('dandanplay', `Fetched ${comments.length} comments for episode ${episodeId}`);
@@ -94,9 +107,7 @@ export async function getRelatedSources(apiPrefix: string, episodeId: number, op
         signal: options?.signal,
     });
 
-    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay related API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'related');
 
     const sources = response.relateds || [];
     logger.info('dandanplay', `Found ${sources.length} related sources for episode ${episodeId}`);
@@ -119,9 +130,7 @@ export async function getExtComments(apiPrefix: string, sourceUrl: string, confi
         signal: options?.signal,
     });
 
-    if (typeof response.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay extcomment API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'extcomment');
 
     const comments = response.comments || [];
     logger.info('dandanplay', `Fetched ${comments.length} ext comments from ${sourceUrl}`);
@@ -161,9 +170,7 @@ export async function postComment(
         },
     );
 
-    if (typeof response?.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay comment API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'comment');
 
     logger.info('dandanplay', 'Comment posted successfully');
 }
@@ -189,9 +196,7 @@ export async function postRelatedSource(apiPrefix: string, episodeId: number, ur
         },
     );
 
-    if (typeof response?.errorCode === 'number' && response.errorCode !== 0) {
-        throw new Error(response.errorMessage || `DanDanPlay related-source API error: ${response.errorCode}`);
-    }
+    assertApiOk(response, 'related-source');
 
     logger.info('dandanplay', 'Related source posted successfully');
 }
