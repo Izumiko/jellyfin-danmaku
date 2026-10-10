@@ -12,7 +12,7 @@ IMAGE="mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
 [ -f "$WORK/episode-id" ] || { echo "请先运行 tools/e2e/setup.sh" >&2; exit 1; }
 [ -f "$ROOT/dist/jellyfin-danmaku.user.js" ] || (cd "$ROOT" && npm run build:userscript)
 
-cp "$ROOT/tools/e2e/shot.mjs" "$WORK/shot.mjs"
+cp "${SHOT_SCRIPT:-$ROOT/tools/e2e/shot.mjs}" "$WORK/shot.mjs"
 docker run --rm --network jfdm-e2e --user "$(id -u):$(id -g)" -e HOME=/work \
     -e EPISODE_ID="$(cat "$WORK/episode-id")" -e MOCK="${MOCK:-}" -e THEME="${THEME:-}" -e TAG="${TAG:-}" \
     -v "$WORK:/work" -v "$ROOT/dist:/dist:ro" -w /work "$IMAGE" \

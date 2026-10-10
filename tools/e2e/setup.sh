@@ -11,6 +11,9 @@ PORT="${E2E_PORT:-18096}"
 SERIES="葬送的芙莉莲"
 J="http://127.0.0.1:${PORT}"
 
+# Jellyfin 刚启动的几秒内，健康检查通过后紧接着的请求仍可能被重置，所有请求统一重试
+api() { curl --silent --retry 5 --retry-delay 1 --retry-all-errors "$@"; }
+
 mkdir -p "$WORK/config" "$WORK/cache" "$WORK/media/$SERIES/Season 1"
 
 docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
@@ -26,7 +29,7 @@ for _ in $(seq 1 90); do
     curl -sf "$J/System/Info/Public" >/dev/null && break
     sleep 2
 done
-curl -s "$J/System/Info/Public"; echo
+api "$J/System/Info/Public"; echo
 
 # 注：Jellyfin 返回的 JSON 字段大小写（PascalCase/camelCase）不固定，下面的解析都兼容两种写法。
 
@@ -41,21 +44,21 @@ fi
 
 H='Content-Type: application/json'
 AUTH='MediaBrowser Client="e2e", Device="cli", DeviceId="e2e-cli", Version="1.0"'
-if curl -s "$J/System/Info/Public" | grep -qi '"startupWizardCompleted":false'; then
-    curl -sf -X POST "$J/Startup/Configuration" -H "$H" -d '{"UICulture":"zh-CN","MetadataCountryCode":"CN","PreferredMetadataLanguage":"zh"}'
-    curl -sf "$J/Startup/User" >/dev/null
-    curl -sf -X POST "$J/Startup/User" -H "$H" -d '{"Name":"test","Password":"test"}'
-    curl -sf -X POST "$J/Startup/RemoteAccess" -H "$H" -d '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
-    curl -sf -X POST "$J/Startup/Complete"
+if api "$J/System/Info/Public" | grep -qi '"startupWizardCompleted":false'; then
+    api -f -X POST "$J/Startup/Configuration" -H "$H" -d '{"UICulture":"zh-CN","MetadataCountryCode":"CN","PreferredMetadataLanguage":"zh"}'
+    api -f "$J/Startup/User" >/dev/null
+    api -f -X POST "$J/Startup/User" -H "$H" -d '{"Name":"test","Password":"test"}'
+    api -f -X POST "$J/Startup/RemoteAccess" -H "$H" -d '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
+    api -f -X POST "$J/Startup/Complete"
 fi
 
-TOKEN=$(curl -sf -X POST "$J/Users/AuthenticateByName" -H "$H" -H "Authorization: $AUTH" -d '{"Username":"test","Pw":"test"}' |
+TOKEN=$(api -f -X POST "$J/Users/AuthenticateByName" -H "$H" -H "Authorization: $AUTH" -d '{"Username":"test","Pw":"test"}' |
     python3 -c 'import sys,json;d=json.load(sys.stdin);print(d.get("AccessToken") or d.get("accessToken"))')
 AUTHT="$AUTH, Token=\"$TOKEN\""
 
-if ! curl -sf "$J/Library/VirtualFolders" -H "Authorization: $AUTHT" | grep -qi '"Name":"Anime"'; then
+if ! api -f "$J/Library/VirtualFolders" -H "Authorization: $AUTHT" | grep -qi '"Name":"Anime"'; then
     # 关闭元数据下载器，剧集信息只来自文件夹/文件名，测试结果稳定
-    curl -sf -X POST "$J/Library/VirtualFolders?name=Anime&collectionType=tvshows&refreshLibrary=true" -H "$H" -H "Authorization: $AUTHT" \
+    api -f -X POST "$J/Library/VirtualFolders?name=Anime&collectionType=tvshows&refreshLibrary=true" -H "$H" -H "Authorization: $AUTHT" \
         -d '{"LibraryOptions":{"PathInfos":[{"Path":"/media"}],"EnableRealtimeMonitor":false,"TypeOptions":[{"Type":"Series","MetadataFetchers":[],"ImageFetchers":[]},{"Type":"Season","MetadataFetchers":[],"ImageFetchers":[]},{"Type":"Episode","MetadataFetchers":[],"ImageFetchers":[]}]}}'
 fi
 
@@ -64,9 +67,9 @@ echo "等待媒体库扫描…"
 EPISODE_ID=""
 for i in $(seq 1 30); do
     if [ $((i % 5)) -eq 1 ]; then
-        curl -sf -X POST "$J/Library/Refresh" -H "Authorization: $AUTHT" || true
+        api -f -X POST "$J/Library/Refresh" -H "Authorization: $AUTHT" || true
     fi
-    EPISODE_ID=$(curl -sf "$J/Items?Recursive=true&IncludeItemTypes=Episode" -H "Authorization: $AUTHT" |
+    EPISODE_ID=$(api -f "$J/Items?Recursive=true&IncludeItemTypes=Episode" -H "Authorization: $AUTHT" |
         python3 -c 'import sys,json;d=json.load(sys.stdin);items=d.get("Items") or d.get("items") or [];print((items[0].get("Id") or items[0].get("id")) if items else "")')
     [ -n "$EPISODE_ID" ] && break
     sleep 2
