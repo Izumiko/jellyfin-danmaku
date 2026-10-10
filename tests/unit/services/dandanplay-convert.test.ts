@@ -25,8 +25,14 @@ describe('convertDanDanPlayComment', () => {
         });
 
         expect(raw.time).toBe(0);
-        expect(raw.modeId).toBe(1);
+        // 未知模式原样保留，由 filterByMode 丢弃
+        expect(raw.modeId).toBe(999);
         expect(raw.color).toBe(0xffffff);
+    });
+
+    it('falls back to scroll mode only when mode is not a number', () => {
+        const raw = convertDanDanPlayComment({ cid: 4, p: '1,x,255,u', m: 'm' });
+        expect(raw.modeId).toBe(1);
     });
 
     it('does not wrap user with [DanDanPlay]', () => {

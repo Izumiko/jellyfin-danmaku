@@ -205,7 +205,8 @@ export function convertDanDanPlayComment(comment: DanDanPlayComment): RawComment
     const parsedMode = Number.parseInt(parts[1] ?? '', 10);
     const parsedColor = Number.parseInt(parts[2] ?? '', 10);
 
-    const modeId = [1, 4, 5, 6].includes(parsedMode) ? parsedMode : 1;
+    // 保留未知模式（如 B 站高级弹幕 7），交由模式过滤丢弃，与 ede.js 一致；仅非法值回退为滚动。
+    const modeId = Number.isFinite(parsedMode) ? parsedMode : 1;
     const color = Number.isFinite(parsedColor)
         ? Math.max(0, Math.min(0xffffff, parsedColor))
         : 0xffffff;

@@ -92,7 +92,8 @@ export function filterByMode(comments: RawComment[], filter: ModeFilter): RawCom
             case 4: // bottom
                 return filter.bottom;
             default:
-                return true;
+                // ede.js 只渲染 1/4/5/6 四种模式，其余（逆向、高级、代码弹幕等）一律丢弃
+                return false;
         }
     });
 }

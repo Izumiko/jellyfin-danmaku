@@ -127,6 +127,16 @@ describe('processor', () => {
             expect(result[1].modeId).toBe(5);
         });
 
+        it('should drop modes ede.js never renders', () => {
+            const comments: RawComment[] = [
+                { time: 1, modeId: 1, color: 0, text: 'scroll' },
+                { time: 1, modeId: 7, color: 0, text: 'advanced' },
+                { time: 1, modeId: 2, color: 0, text: 'bili-scroll' },
+            ];
+            const result = filterByMode(comments, { scroll: true, top: true, bottom: true });
+            expect(result.map((c) => c.text)).toEqual(['scroll']);
+        });
+
         it('should filter top mode (5)', () => {
             const comments = [
                 createComment({ modeId: 1 }),
