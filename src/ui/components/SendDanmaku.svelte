@@ -227,6 +227,7 @@
     }
 
     .dialog-panel {
+        font-family: var(--danmaku-font);
         width: min(460px, 90vw);
         padding: 20px;
         box-sizing: border-box;

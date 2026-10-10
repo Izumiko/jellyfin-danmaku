@@ -49,6 +49,7 @@ describe('DanmakuRuntime', () => {
 
     beforeEach(() => {
         eventBus.clear();
+        danmakuState.hydrate();
         danmakuState.isNewJellyfin = false;
         danmakuState.itemId = '';
         danmakuState.loading = false;
@@ -292,19 +293,52 @@ describe('DanmakuRuntime', () => {
         await runtime.load('refresh');
 
         expect(hooks.engine.destroy).not.toHaveBeenCalled();
-        expect(document.getElementById('danmakuInfoTitle')?.textContent).toBe('弹幕匹配：A - E1');
+        expect(danmakuState.episodeInfo).toEqual(episode);
     });
 
-    it('applies visibility events without rebuilding the engine', async () => {
+    it('applies visibility and opacity instantly without rebuilding the engine', async () => {
+        const setOpacity = vi.fn();
+        hooks.engine.setOpacity = setOpacity;
         await runtime.start();
         vi.mocked(hooks.engine.init).mockClear();
 
-        eventBus.emit('danmaku:visibility', { visible: false });
-        eventBus.emit('danmaku:visibility', { visible: true });
+        danmakuState.update({ danmakuSwitch: false });
+        danmakuState.update({ danmakuSwitch: true });
+        danmakuState.update({ opacity: 0.4 });
 
         expect(hooks.engine.hide).toHaveBeenCalledTimes(1);
         expect(hooks.engine.show).toHaveBeenCalledTimes(1);
+        expect(setOpacity).toHaveBeenCalledWith(0.4);
+        await new Promise((resolve) => setTimeout(resolve, 300));
         expect(hooks.engine.init).not.toHaveBeenCalled();
+    });
+
+    it('rebuilds from cached comments (no network) for style and filter changes, debounced', async () => {
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+        vi.mocked(hooks.fetcher.fetch).mockClear();
+
+        danmakuState.update({ fontSize: 30 });
+        danmakuState.update({ fontSize: 32 });
+        danmakuState.update({ sourceFilter: { bilibili: false, gamer: true, dandanplay: true, other: true } });
+
+        await vi.waitFor(() => expect(hooks.engine.init).toHaveBeenCalledTimes(1));
+        expect(hooks.engine.init).toHaveBeenCalledWith(expect.anything(), comments);
+        expect(hooks.fetcher.fetch).not.toHaveBeenCalled();
+    });
+
+    it('refetches when a network-affecting setting changes', async () => {
+        await runtime.start();
+        vi.mocked(hooks.fetcher.fetch).mockClear();
+
+        danmakuState.update({ chConvert: 1 });
+
+        await vi.waitFor(() => expect(hooks.fetcher.fetch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    });
+
+    it('persists settings immediately', () => {
+        danmakuState.update({ speed: 320 });
+        expect(JSON.parse(localStorage.getItem('jellyfin_danmaku_config')!).speed).toBe(320);
     });
 
     it('posts a danmaku and emits it locally at current playback time', async () => {
@@ -331,12 +365,21 @@ describe('DanmakuRuntime', () => {
         );
     });
 
-    it('shows match title after load and removes it on destroy', async () => {
+    it('announces the match with a toast and records loaded counts', async () => {
+        const toasts: string[] = [];
+        eventBus.on('ui:toast', ({ message }) => toasts.push(message));
         await runtime.start();
-        const el = document.getElementById('danmakuInfoTitle');
-        expect(el?.textContent).toBe('弹幕匹配：A - E1');
-        runtime.destroy();
-        expect(document.getElementById('danmakuInfoTitle')).toBeNull();
+        expect(toasts).toContain('A - E1 · 1 条弹幕');
+        expect(danmakuState.loadedSource).toBe('online');
+        expect(danmakuState.loadedCount).toBe(1);
+    });
+
+    it('hints manual search when the initial match fails', async () => {
+        const toasts: string[] = [];
+        eventBus.on('ui:toast', ({ message }) => toasts.push(message));
+        vi.mocked(hooks.matcher.match).mockResolvedValue(null);
+        await runtime.start();
+        expect(toasts).toEqual(['未匹配到弹幕，可在弹幕设置中手动搜索']);
     });
 
     it('applies inherited episode offset before engine init', async () => {
@@ -346,11 +389,10 @@ describe('DanmakuRuntime', () => {
         expect(danmakuState.curEpOffset).toBe(2.5);
     });
 
-    it('persists current offset on settings-changed', async () => {
+    it('saves the offset for the current episode as soon as it changes', async () => {
         await runtime.start();
-        danmakuState.curEpOffset = 4;
-        await runtime.load('settings-changed');
-        await expect(Storage.getEpisodeOffset('s', 1)).resolves.toBe(4);
+        danmakuState.update({ curEpOffset: 4 });
+        await vi.waitFor(() => expect(Storage.getEpisodeOffset('s', 1)).resolves.toBe(4));
     });
 
     it('submits danmaku on the server timeline when an episode offset is set', async () => {

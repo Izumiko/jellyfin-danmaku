@@ -1,4 +1,4 @@
-import { mount, unmount } from 'svelte';
+import { mount, unmount, type Component } from 'svelte';
 import { detectJellyfinVersion, waitForApiClient } from './services/jellyfin/client';
 import { interceptPlaybackInfo } from './services/jellyfin/interceptor';
 import { danmakuState } from './core/state.svelte';
@@ -12,6 +12,9 @@ import DanmakuToggle from './ui/components/DanmakuToggle.svelte';
 import SendDanmaku from './ui/components/SendDanmaku.svelte';
 import Sidebar from './ui/components/Sidebar.svelte';
 import DebugOverlay from './ui/components/DebugOverlay.svelte';
+import Snackbar from './ui/components/Snackbar.svelte';
+
+type MountedApp = { app: ReturnType<typeof mount>; target: HTMLElement };
 
 /**
  * 全局插件状态
@@ -19,17 +22,28 @@ import DebugOverlay from './ui/components/DebugOverlay.svelte';
 let pluginActive = false;
 let runtime: DanmakuRuntime | null = null;
 let menuInjectionCleanup: (() => void) | null = null;
-let sidebarOpen = false;
-let sidebarApp: ReturnType<typeof mount> | null = null;
-let sidebarContainer: HTMLDivElement | null = null;
+let sidebar: MountedApp | null = null;
 let controlsContainer: HTMLDivElement | null = null;
-let toggleApp: ReturnType<typeof mount> | null = null;
-let toggleContainer: HTMLDivElement | null = null;
-let sendApp: ReturnType<typeof mount> | null = null;
-let sendContainer: HTMLDivElement | null = null;
-let debugApp: ReturnType<typeof mount> | null = null;
-let debugContainer: HTMLDivElement | null = null;
+/** 随播放器创建/销毁的 Svelte 组件 */
+let playerApps: MountedApp[] = [];
 let playerInitGeneration = 0;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 与 svelte mount() 的泛型约束保持一致
+function mountApp<Props extends Record<string, any>>(component: Component<Props>, parent: HTMLElement, props: Props, style: Partial<CSSStyleDeclaration> = {}): MountedApp {
+    const target = document.createElement('div');
+    Object.assign(target.style, style);
+    parent.appendChild(target);
+    return { app: mount(component, { target, props }), target };
+}
+
+function unmountApp({ app, target }: MountedApp): void {
+    try {
+        unmount(app);
+    } catch {
+        // ignore cleanup errors
+    }
+    target.remove();
+}
 
 /**
  * 主入口 - 监听播放器生命周期
@@ -64,6 +78,7 @@ export async function bootstrap() {
 
         // 5. 注入 Jellyfin 菜单（全局只需一次）
         menuInjectionCleanup = setupMenuInjection();
+        disposables.add(eventBus.on('settings:open', () => openSidebar()));
 
         logger.info('bootstrap', 'Bootstrap completed, watching for video player');
     } catch (error) {
@@ -165,33 +180,13 @@ async function initPlayer() {
             throw new Error('Unable to mount danmaku controls');
         }
 
-        toggleContainer = document.createElement('div');
-        toggleContainer.style.display = 'contents';
-        controlsContainer.appendChild(toggleContainer);
-
-        toggleApp = mount(DanmakuToggle, {
-            target: toggleContainer,
-        });
-
-        sendContainer = document.createElement('div');
-        sendContainer.style.display = 'contents';
-        controlsContainer.appendChild(sendContainer);
-
-        sendApp = mount(SendDanmaku, {
-            target: sendContainer,
-        });
-
-        debugContainer = document.createElement('div');
-        debugContainer.style.position = 'fixed';
-        debugContainer.style.zIndex = '2';
-        debugContainer.style.right = '16px';
-        debugContainer.style.top = '72px';
-        debugContainer.style.pointerEvents = 'none';
-        document.body.appendChild(debugContainer);
-
-        debugApp = mount(DebugOverlay, {
-            target: debugContainer,
-        });
+        // display: contents 让按钮直接参与 Jellyfin 控制栏的 flex 布局
+        playerApps.push(
+            mountApp(DanmakuToggle, controlsContainer, {}, { display: 'contents' }),
+            mountApp(SendDanmaku, controlsContainer, {}, { display: 'contents' }),
+            mountApp(DebugOverlay, document.body, {}, { position: 'fixed', zIndex: '2', right: '16px', top: '72px', pointerEvents: 'none' }),
+            mountApp(Snackbar, document.body, {}),
+        );
 
         runtime = new DanmakuRuntime();
         await runtime.start();
@@ -218,54 +213,19 @@ function cleanupPlayer() {
     runtime = null;
 
     // 清理 UI
-    if (toggleApp) {
-        try {
-            unmount(toggleApp);
-        } catch {
-            // ignore cleanup errors
-        }
-        toggleApp = null;
-    }
-    if (toggleContainer) {
-        toggleContainer.remove();
-        toggleContainer = null;
-    }
-
-    if (sendApp) {
-        try {
-            unmount(sendApp);
-        } catch {
-            // ignore cleanup errors
-        }
-        sendApp = null;
-    }
-    if (sendContainer) {
-        sendContainer.remove();
-        sendContainer = null;
-    }
-    if (controlsContainer) {
-        controlsContainer.remove();
-        controlsContainer = null;
-    }
-
-    if (debugApp) {
-        try {
-            unmount(debugApp);
-        } catch {
-            // ignore cleanup errors
-        }
-        debugApp = null;
-    }
-    if (debugContainer) {
-        debugContainer.remove();
-        debugContainer = null;
-    }
+    playerApps.forEach(unmountApp);
+    playerApps = [];
+    controlsContainer?.remove();
+    controlsContainer = null;
 
     closeSidebar();
 
     // 重置状态
     danmakuState.loading = false;
     danmakuState.episodeInfo = null;
+    danmakuState.loadedSource = null;
+    danmakuState.loadedCount = 0;
+    danmakuState.visibleCount = 0;
 
     pluginActive = false;
 }
@@ -332,51 +292,15 @@ function injectSettingsMenuItem(actionSheet: Element) {
 }
 
 function closeSidebar() {
-    if (sidebarApp) {
-        try {
-            unmount(sidebarApp);
-        } catch {
-            /* ignore */
-        }
-        sidebarApp = null;
-    }
-    sidebarContainer?.remove();
-    sidebarContainer = null;
-    sidebarOpen = false;
+    if (!sidebar) return;
+    unmountApp(sidebar);
+    sidebar = null;
 }
 
 /**
- * 打开设置侧边栏
+ * 打开设置侧边栏。设置即时生效并自动保存，无需保存/取消。
  */
 function openSidebar() {
-    if (sidebarOpen || !pluginActive) return;
-
-    sidebarContainer = document.createElement('div');
-    document.body.appendChild(sidebarContainer);
-
-    // 偏移是当前剧集的运行时值（存于 IndexedDB），hydrate() 读到的是全局配置里的旧值，取消时需单独恢复。
-    const offsetBeforeEdit = danmakuState.curEpOffset;
-
-    sidebarApp = mount(Sidebar, {
-        target: sidebarContainer,
-        props: {
-            open: true,
-            onSave: () => {
-                const offset = Number(danmakuState.curEpOffset);
-                danmakuState.curEpOffset = Number.isFinite(offset) ? offset : 0;
-                danmakuState.persist();
-                closeSidebar();
-                eventBus.emit('danmaku:reload', { reason: 'settings-changed' });
-            },
-            onCancel: () => {
-                danmakuState.hydrate();
-                danmakuState.curEpOffset = offsetBeforeEdit;
-                eventBus.emit('danmaku:visibility', { visible: danmakuState.danmakuSwitch });
-                logger.setEnabled(danmakuState.logSwitch);
-                closeSidebar();
-            },
-        },
-    });
-
-    sidebarOpen = true;
+    if (sidebar || !pluginActive) return;
+    sidebar = mountApp(Sidebar, document.body, { onClose: closeSidebar });
 }

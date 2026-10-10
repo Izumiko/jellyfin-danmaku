@@ -26,7 +26,7 @@ export class DanmakuEngine {
      * 初始化引擎
      * 如果已有实例，先销毁旧实例
      */
-    init(config: EngineConfig, rawComments: RawComment[]): void {
+    init(config: EngineConfig, rawComments: RawComment[]): number {
         this.destroy();
 
         logger.debug('engine', 'Initializing danmaku engine', {
@@ -87,6 +87,12 @@ export class DanmakuEngine {
         this.setupMediaObserver(config.media);
 
         logger.info('engine', `Danmaku engine initialized with ${finalComments.length} comments`);
+        return finalComments.length;
+    }
+
+    /** 透明度只影响容器样式，无需重建 */
+    setOpacity(opacity: number): void {
+        if (this.wrapper) this.wrapper.style.opacity = String(opacity);
     }
 
     show(): void {

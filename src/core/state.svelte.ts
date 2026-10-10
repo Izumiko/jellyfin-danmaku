@@ -1,5 +1,7 @@
 import { Storage } from './storage';
 import { API_DEFAULTS, DEFAULT_CONFIG } from './config';
+import { eventBus } from './event-bus';
+import { logger } from './logger';
 import type { DanmakuConfig, EpisodeInfo } from '../types/index';
 
 /**
@@ -33,6 +35,11 @@ class DanmakuState {
     itemId = $state('');
     ddplayLoggedIn = $state(false);
     ddplayUserName = $state('');
+    /** 当前加载的弹幕来源与数量（供设置面板展示） */
+    loadedSource = $state<'online' | 'local' | null>(null);
+    loadedCount = $state(0);
+    /** 经过过滤/密度/防重叠后实际交给引擎的条数 */
+    visibleCount = $state(0);
 
     constructor() {
         this.hydrate();
@@ -68,6 +75,19 @@ class DanmakuState {
      */
     persist(): void {
         Storage.saveConfig(this.toConfig());
+    }
+
+    /**
+     * 修改设置：立即写入状态并持久化，然后通知运行时按影响范围应用。
+     * 所有 UI 改动都应走这里，不要直接给字段赋值。
+     */
+    update(patch: Partial<DanmakuConfig>): void {
+        const keys = Object.keys(patch) as (keyof DanmakuConfig)[];
+        if (keys.length === 0) return;
+        Object.assign(this, patch);
+        this.persist();
+        if (keys.includes('logSwitch')) logger.setEnabled(this.logSwitch);
+        eventBus.emit('settings:changed', { keys });
     }
 
     /**

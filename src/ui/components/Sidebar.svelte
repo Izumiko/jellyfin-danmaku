@@ -1,41 +1,69 @@
+<script lang="ts" module>
+    type TabId = 'video' | 'display' | 'filter' | 'more';
+    // 同一页面会话内记住上次打开的标签页
+    let lastTab: TabId = 'video';
+</script>
+
 <script lang="ts">
     import { onMount } from 'svelte';
     import '../styles/variables.css';
-    import '../styles/base.css';
     import { danmakuState } from '../../core/state.svelte';
-    import { logger } from '../../core/logger';
     import { eventBus } from '../../core/event-bus';
+    import { DEFAULT_CONFIG, DISPLAY_KEYS, FILTER_KEYS } from '../../core/config';
     import { showInputDialog } from '../dialogs';
+    import type { DanmakuConfig } from '../../types/index';
+    import SwitchRow from './controls/SwitchRow.svelte';
+    import SliderField from './controls/SliderField.svelte';
+    import TextField from './controls/TextField.svelte';
+    import SegmentedField from './controls/SegmentedField.svelte';
+    import ChipGroup from './controls/ChipGroup.svelte';
 
-    let {
-        open = $bindable(false),
-        onSave = () => {},
-        onCancel = () => {},
-    } = $props<{
-        open: boolean;
-        onSave: () => void;
-        onCancel: () => void;
-    }>();
+    let { onClose }: { onClose: () => void } = $props();
 
-    let activeTab = $state('control');
+    const tabs: { id: TabId; label: string }[] = [
+        { id: 'video', label: '当前视频' },
+        { id: 'display', label: '显示' },
+        { id: 'filter', label: '过滤' },
+        { id: 'more', label: '更多' },
+    ];
+
+    let activeTab = $state<TabId>(lastTab);
+    let panelEl = $state<HTMLElement | undefined>();
     let account = $state('');
     let password = $state('');
     let loginPending = $state(false);
     let loginMessage = $state('');
 
-    onMount(() => {
-        return eventBus.on('auth:login-result', ({ success }) => {
-            loginPending = false;
-            if (success) {
-                password = '';
-                loginMessage = '登录成功';
-            } else {
-                loginMessage = '登录失败，请检查账号、密码或网络';
-            }
-        });
-    });
+    const update = (patch: Partial<DanmakuConfig>) => danmakuState.update(patch);
+    const percent = (v: number) => `${Math.round(v * 100)}%`;
 
-    function handleLogin() {
+    function selectTab(id: TabId) {
+        activeTab = id;
+        lastTab = id;
+    }
+
+    function resetKeys(keys: readonly (keyof DanmakuConfig)[]) {
+        const patch: Partial<DanmakuConfig> = {};
+        for (const key of keys) {
+            const value = DEFAULT_CONFIG[key];
+            (patch as Record<string, unknown>)[key] = typeof value === 'object' ? { ...value } : value;
+        }
+        update(patch);
+    }
+
+    function setOffset(value: number) {
+        if (!Number.isFinite(value)) return;
+        // 保留一位小数，避免 0.1 步进累计出浮点误差
+        update({ curEpOffset: Math.round(value * 10) / 10 });
+    }
+
+    async function handleAddSource() {
+        const url = await showInputDialog('增加弹幕源', '如 B 站视频或番剧播放页链接', '');
+        if (url) eventBus.emit('danmaku:add-source', { url });
+    }
+
+    function handleLogin(e: SubmitEvent) {
+        e.preventDefault();
         if (loginPending) return;
         if (!account.trim() || !password) {
             loginMessage = '请输入账号和密码';
@@ -47,17 +75,17 @@
     }
 
     function handleLogout() {
-        loginPending = false;
         loginMessage = '';
         password = '';
         eventBus.emit('auth:logout', undefined);
     }
 
-    function stopHotkeys(e: KeyboardEvent) {
+    // 面板内按键不传给 Jellyfin 播放器热键（空格暂停、方向键快进等）
+    function isolateKeys(e: KeyboardEvent) {
         e.stopPropagation();
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !document.querySelector('[role="dialog"][aria-modal="true"]')) {
             e.preventDefault();
-            onCancel();
+            onClose();
         }
     }
 
@@ -65,602 +93,505 @@
         e.stopPropagation();
     }
 
-    async function handleAddSource() {
-        const url = await showInputDialog('增加弹幕源', '弹幕源 URL', '');
-        if (!url) return;
-        eventBus.emit('danmaku:add-source', { url });
-    }
-
-    function handleBackdropClick() {
-        onCancel();
-    }
-
-    function handleKeydown(e: KeyboardEvent) {
-        if (e.key === 'Escape') {
-            if (document.querySelector('[role="dialog"]')) return;
-            onCancel();
-        }
-    }
-
-    function handleSave() {
-        // 同步 logger 状态
-        logger.setEnabled(danmakuState.logSwitch);
-        onSave();
-    }
-
-    const tabs = [
-        { id: 'control', label: '控制功能' },
-        { id: 'style', label: '显示样式' },
-        { id: 'display', label: '显示设置' },
-        { id: 'filter', label: '过滤设置' },
-    ];
+    onMount(() => {
+        panelEl?.focus();
+        return eventBus.on('auth:login-result', ({ success }) => {
+            loginPending = false;
+            if (success) {
+                password = '';
+                loginMessage = '';
+            } else {
+                loginMessage = '登录失败，请检查账号、密码或网络';
+            }
+        });
+    });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<!-- 透明遮罩：点击面板外关闭，同时避免误触暂停视频；不压暗画面以便实时预览 -->
+<div class="backdrop" role="presentation" onclick={onClose} onpointerdown={stopPlayerGestures}></div>
 
-{#if open}
-    <!-- 背景遮罩 -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="sidebar-backdrop" onclick={handleBackdropClick}></div>
+<div
+    class="panel"
+    role="dialog"
+    aria-label="弹幕设置"
+    tabindex="-1"
+    bind:this={panelEl}
+    onkeydown={isolateKeys}
+    onpointerdown={stopPlayerGestures}
+    onpointermove={stopPlayerGestures}
+    onpointerup={stopPlayerGestures}
+    onmousedown={stopPlayerGestures}
+    onmousemove={stopPlayerGestures}
+    onmouseup={stopPlayerGestures}
+    ontouchstart={stopPlayerGestures}
+    ontouchmove={stopPlayerGestures}
+    onwheel={stopPlayerGestures}
+    onclick={stopPlayerGestures}
+>
+    <header>
+        <h2>弹幕设置</h2>
+        <button type="button" class="icon-button" aria-label="关闭" title="关闭" onclick={onClose}>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                <path fill="currentColor" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
+        </button>
+    </header>
 
-    <!-- 侧边栏面板 -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-        class="sidebar-panel"
-        onpointerdown={stopPlayerGestures}
-        onpointermove={stopPlayerGestures}
-        onpointerup={stopPlayerGestures}
-        onmousedown={stopPlayerGestures}
-        onmousemove={stopPlayerGestures}
-        onmouseup={stopPlayerGestures}
-        ontouchstart={stopPlayerGestures}
-        ontouchmove={stopPlayerGestures}
-        onwheel={stopPlayerGestures}
-        onkeydown={stopHotkeys}
-    >
-        <header class="sidebar-header">
-            <h2>弹幕设置</h2>
-            <div class="header-actions">
-                <button class="btn-save" onclick={handleSave}>保存</button>
-                <button class="btn-cancel" onclick={onCancel}>取消</button>
-            </div>
-        </header>
-
-        <div class="tabs-header">
-            {#each tabs as tab (tab.id)}
-                <button class="tab-btn" class:active={activeTab === tab.id} onclick={() => (activeTab = tab.id)} type="button">
-                    {tab.label}
-                </button>
-            {/each}
-        </div>
-
-        <div class="sidebar-content">
-            {#if activeTab === 'control'}
-                <div class="setting-section">
-                    <h3>控制功能</h3>
-
-                    <div class="setting-item">
-                        <div class="switch-label">
-                            <span>弹幕显示</span>
-                            <label class="modern-switch">
-                                <input
-                                    type="checkbox"
-                                    bind:checked={danmakuState.danmakuSwitch}
-                                    onchange={() =>
-                                        eventBus.emit('danmaku:visibility', {
-                                            visible: danmakuState.danmakuSwitch,
-                                        })}
-                                />
-                                <span class="modern-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <div class="switch-label">
-                            <span>日志显示</span>
-                            <label class="modern-switch">
-                                <input
-                                    type="checkbox"
-                                    bind:checked={danmakuState.logSwitch}
-                                    onchange={() => logger.setEnabled(danmakuState.logSwitch)}
-                                />
-                                <span class="modern-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <button class="action-btn" onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}> 搜索弹幕 </button>
-                    </div>
-
-                    <div class="setting-item">
-                        <button class="action-btn" type="button" onclick={handleAddSource}>增加弹幕源</button>
-                    </div>
-
-                    <div class="setting-item">
-                        {#if danmakuState.ddplayLoggedIn}
-                            <span>已登录：{danmakuState.ddplayUserName}</span>
-                            <button class="action-btn" type="button" onclick={handleLogout}>登出</button>
-                        {:else}
-                            <label>
-                                账号:
-                                <input class="setting-input" bind:value={account} onkeydown={stopHotkeys} />
-                            </label>
-                            <label>
-                                密码:
-                                <input class="setting-input" type="password" bind:value={password} onkeydown={stopHotkeys} />
-                            </label>
-                            <button class="action-btn" type="button" disabled={loginPending} onclick={handleLogin}>
-                                {loginPending ? '登录中…' : '登录'}
-                            </button>
-                        {/if}
-                        {#if loginMessage}
-                            <div class:login-error={!danmakuState.ddplayLoggedIn} class="login-message">{loginMessage}</div>
-                        {/if}
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            CORS 代理:
-                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customCorsProxy} onkeydown={stopHotkeys} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            API 地址:
-                            <input type="text" class="setting-input" placeholder="留空使用默认" bind:value={danmakuState.customApiPrefix} onkeydown={stopHotkeys} />
-                        </label>
-                    </div>
-                </div>
-            {/if}
-
-            {#if activeTab === 'style'}
-                <div class="setting-section">
-                    <h3>显示样式</h3>
-
-                    <div class="setting-item">
-                        <label>
-                            透明度: {danmakuState.opacity}
-                            <input type="range" min="0" max="1" step="0.1" bind:value={danmakuState.opacity} onpointerdown={stopPlayerGestures} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            弹幕速度: {danmakuState.speed}
-                            <input type="range" min="20" max="600" step="10" bind:value={danmakuState.speed} onpointerdown={stopPlayerGestures} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            字体大小: {danmakuState.fontSize}px
-                            <input type="range" min="8" max="80" step="1" bind:value={danmakuState.fontSize} onpointerdown={stopPlayerGestures} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            显示区域比例: {danmakuState.heightRatio}
-                            <input type="range" min="0" max="1" step="0.05" bind:value={danmakuState.heightRatio} onpointerdown={stopPlayerGestures} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            字体:
-                            <input type="text" class="setting-input" bind:value={danmakuState.fontFamily} />
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            字体选项:
-                            <input type="text" class="setting-input" placeholder="如 bold" bind:value={danmakuState.fontOptions} />
-                        </label>
-                    </div>
-                </div>
-            {/if}
-
-            {#if activeTab === 'display'}
-                <div class="setting-section">
-                    <h3>显示设置</h3>
-
-                    <div class="setting-item">
-                        <label>
-                            弹幕密度限制:
-                            <select bind:value={danmakuState.densityLimit}>
-                                <option value={0}>无限制</option>
-                                <option value={1}>低</option>
-                                <option value={2}>中</option>
-                                <option value={3}>高</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <div class="switch-label">
-                            <span>弹幕防重叠</span>
-                            <label class="modern-switch">
-                                <input type="checkbox" bind:checked={danmakuState.useAntiOverlap} />
-                                <span class="modern-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            简繁转换:
-                            <select bind:value={danmakuState.chConvert}>
-                                <option value={0}>不转换</option>
-                                <option value={1}>简体</option>
-                                <option value={2}>繁体</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <div class="setting-item">
-                        <div class="switch-label">
-                            <span>使用本地 XML 弹幕</span>
-                            <label class="modern-switch">
-                                <input type="checkbox" bind:checked={danmakuState.useXmlDanmaku} />
-                                <span class="modern-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>
-                            弹幕偏移时间 (秒):
-                            <input type="number" class="setting-input" step="0.1" bind:value={danmakuState.curEpOffset} />
-                        </label>
-                    </div>
-                </div>
-            {/if}
-
-            {#if activeTab === 'filter'}
-                <div class="setting-section">
-                    <h3>过滤设置</h3>
-
-                    <div class="setting-item">
-                        <span class="group-label">来源过滤:</span>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.bilibili} />
-                                Bilibili
-                            </label>
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.gamer} />
-                                巴哈姆特
-                            </label>
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.dandanplay} />
-                                弹弹Play
-                            </label>
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.sourceFilter.other} />
-                                其他
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <span class="group-label">模式过滤:</span>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.modeFilter.scroll} />
-                                滚动
-                            </label>
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.modeFilter.top} />
-                                顶部
-                            </label>
-                            <label>
-                                <input type="checkbox" bind:checked={danmakuState.modeFilter.bottom} />
-                                底部
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            {/if}
-        </div>
+    <div class="tabs" role="tablist">
+        {#each tabs as tab (tab.id)}
+            <button type="button" role="tab" aria-selected={activeTab === tab.id} class:active={activeTab === tab.id} onclick={() => selectTab(tab.id)}>
+                {tab.label}
+            </button>
+        {/each}
     </div>
-{/if}
+
+    <div class="content" role="tabpanel">
+        {#if activeTab === 'video'}
+            <section class="card">
+                {#if danmakuState.loading}
+                    <div class="card-title">正在加载弹幕…</div>
+                {:else if danmakuState.loadedSource === 'online' && danmakuState.episodeInfo}
+                    <div class="card-title">{danmakuState.episodeInfo.animeTitle}</div>
+                    <div class="card-subtitle">{danmakuState.episodeInfo.episodeTitle}</div>
+                {:else if danmakuState.loadedSource === 'local'}
+                    <div class="card-title">本地 XML 弹幕</div>
+                    <div class="card-subtitle">来自 Jellyfin 弹幕插件</div>
+                {:else}
+                    <div class="card-title">尚未匹配到弹幕</div>
+                    <div class="card-subtitle">可手动搜索番剧，或直接增加弹幕源</div>
+                {/if}
+                {#if danmakuState.loadedSource && !danmakuState.loading}
+                    <div class="card-meta">共 {danmakuState.loadedCount} 条 · 当前显示 {danmakuState.visibleCount} 条</div>
+                {/if}
+                <div class="card-actions">
+                    <button type="button" class="button contained" onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}>
+                        手动匹配
+                    </button>
+                    <button type="button" class="button outlined" onclick={handleAddSource}>增加弹幕源</button>
+                </div>
+            </section>
+
+            <h3>时间偏移</h3>
+            <p class="hint">仅对当前这一集生效，后续未单独设置的集数会沿用。正数表示弹幕延后出现。</p>
+            <div class="offset">
+                <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset - 1)}>−1s</button>
+                <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset - 0.1)}>−0.1</button>
+                <label class="offset-value">
+                    <input
+                        type="number"
+                        step="0.1"
+                        value={danmakuState.curEpOffset}
+                        aria-label="偏移秒数"
+                        onchange={(e) => setOffset(Number(e.currentTarget.value))}
+                    />
+                    <span>秒</span>
+                </label>
+                <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset + 0.1)}>+0.1</button>
+                <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset + 1)}>+1s</button>
+            </div>
+            {#if danmakuState.curEpOffset !== 0}
+                <button type="button" class="button text" onclick={() => setOffset(0)}>归零</button>
+            {/if}
+        {/if}
+
+        {#if activeTab === 'display'}
+            <SwitchRow label="显示弹幕" checked={danmakuState.danmakuSwitch} onchange={(v) => update({ danmakuSwitch: v })} />
+            <SliderField label="不透明度" value={danmakuState.opacity} min={0} max={1} step={0.05} format={percent} oninput={(v) => update({ opacity: v })} />
+            <SliderField label="字号" value={danmakuState.fontSize} min={8} max={80} step={1} format={(v) => `${v}px`} oninput={(v) => update({ fontSize: v })} />
+            <SliderField label="滚动速度" value={danmakuState.speed} min={20} max={600} step={10} format={(v) => `${v}px/s`} oninput={(v) => update({ speed: v })} />
+            <SliderField label="显示区域" value={danmakuState.heightRatio} min={0} max={1} step={0.05} format={percent} oninput={(v) => update({ heightRatio: v })} />
+            <SegmentedField
+                label="密度限制"
+                value={danmakuState.densityLimit}
+                options={[
+                    { value: 0, label: '不限制' },
+                    { value: 1, label: '宽松' },
+                    { value: 2, label: '适中' },
+                    { value: 3, label: '严格' },
+                ]}
+                onchange={(v) => update({ densityLimit: v })}
+            />
+            <SwitchRow
+                label="防重叠"
+                description="丢弃会与已有弹幕重叠的弹幕"
+                checked={danmakuState.useAntiOverlap}
+                onchange={(v) => update({ useAntiOverlap: v })}
+            />
+            <TextField label="字体" value={danmakuState.fontFamily} placeholder="sans-serif" onchange={(v) => update({ fontFamily: v.trim() || DEFAULT_CONFIG.fontFamily })} />
+            <TextField label="字体选项" value={danmakuState.fontOptions} placeholder="如 bold、italic" onchange={(v) => update({ fontOptions: v.trim() })} />
+            <div class="footer-actions">
+                <button type="button" class="button text" onclick={() => resetKeys(DISPLAY_KEYS)}>恢复默认</button>
+            </div>
+        {/if}
+
+        {#if activeTab === 'filter'}
+            <ChipGroup
+                label="弹幕来源"
+                description="取消选择即屏蔽该来源"
+                items={[
+                    { key: 'bilibili', label: 'B站' },
+                    { key: 'gamer', label: '巴哈姆特' },
+                    { key: 'dandanplay', label: '弹弹Play' },
+                    { key: 'other', label: '其他' },
+                ]}
+                values={danmakuState.sourceFilter}
+                onchange={(v) => update({ sourceFilter: v })}
+            />
+            <ChipGroup
+                label="弹幕类型"
+                items={[
+                    { key: 'scroll', label: '滚动' },
+                    { key: 'top', label: '顶部' },
+                    { key: 'bottom', label: '底部' },
+                ]}
+                values={danmakuState.modeFilter}
+                onchange={(v) => update({ modeFilter: v })}
+            />
+            <div class="footer-actions">
+                <button type="button" class="button text" onclick={() => resetKeys(FILTER_KEYS)}>恢复默认</button>
+            </div>
+        {/if}
+
+        {#if activeTab === 'more'}
+            <h3>弹弹Play 账号</h3>
+            {#if danmakuState.ddplayLoggedIn}
+                <div class="account">
+                    <span>已登录{danmakuState.ddplayUserName ? `：${danmakuState.ddplayUserName}` : ''}</span>
+                    <button type="button" class="button text" onclick={handleLogout}>退出登录</button>
+                </div>
+            {:else}
+                <form onsubmit={handleLogin}>
+                    <p class="hint">登录后可发送弹幕，增加的弹幕源也会提交给弹弹Play。</p>
+                    <TextField label="账号" value={account} autocomplete="username" oninput={(v) => (account = v)} />
+                    <TextField label="密码" type="password" value={password} autocomplete="current-password" oninput={(v) => (password = v)} />
+                    {#if loginMessage}<p class="error">{loginMessage}</p>{/if}
+                    <button type="submit" class="button contained" disabled={loginPending}>{loginPending ? '登录中…' : '登录'}</button>
+                </form>
+            {/if}
+
+            <h3>弹幕源</h3>
+            <SegmentedField
+                label="简繁转换"
+                value={danmakuState.chConvert}
+                options={[
+                    { value: 0, label: '原文' },
+                    { value: 1, label: '简体' },
+                    { value: 2, label: '繁体' },
+                ]}
+                onchange={(v) => update({ chConvert: v })}
+            />
+            <SwitchRow
+                label="优先使用本地 XML 弹幕"
+                description="需要 Jellyfin 弹幕插件（jellyfin-plugin-danmu）"
+                checked={danmakuState.useXmlDanmaku}
+                onchange={(v) => update({ useXmlDanmaku: v })}
+            />
+            <TextField
+                label="CORS 代理"
+                value={danmakuState.customCorsProxy}
+                placeholder="留空使用默认"
+                type="url"
+                onchange={(v) => update({ customCorsProxy: v.trim() })}
+            />
+            <TextField
+                label="API 地址"
+                value={danmakuState.customApiPrefix}
+                placeholder="留空使用弹弹Play"
+                type="url"
+                helper="可填第三方弹幕库，如御坂网络：http://host:port/api/<Token>"
+                onchange={(v) => update({ customApiPrefix: v.trim() })}
+            />
+
+            <h3>调试</h3>
+            <SwitchRow label="显示日志" checked={danmakuState.logSwitch} onchange={(v) => update({ logSwitch: v })} />
+        {/if}
+    </div>
+</div>
 
 <style>
-    .sidebar-backdrop {
+    .backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
         z-index: 9998;
-        animation: fadeIn 0.3s;
+        background: transparent;
     }
 
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
-    }
-
-    .sidebar-panel {
+    .panel {
         position: fixed;
         top: 0;
         right: 0;
         bottom: 0;
-        width: min(450px, 90vw);
-        background: var(--danmaku-bg);
-        backdrop-filter: blur(10px);
         z-index: 9999;
         display: flex;
         flex-direction: column;
+        width: min(360px, 100vw);
+        box-sizing: border-box;
+        background: rgb(var(--danmaku-bg-channel) / 0.96);
         color: var(--danmaku-text);
-        animation: slideIn 0.3s ease;
+        font-family: var(--danmaku-font);
+        box-shadow: var(--danmaku-shadow);
+        outline: none;
+        animation: slide-in 225ms cubic-bezier(0, 0, 0.2, 1);
     }
 
-    @keyframes slideIn {
+    @keyframes slide-in {
         from {
             transform: translateX(100%);
         }
-        to {
-            transform: translateX(0);
+    }
+
+    /* 窄屏：改为底部抽屉，保留上方画面可见 */
+    @media (max-width: 600px) {
+        .panel {
+            top: auto;
+            left: 0;
+            width: 100%;
+            height: min(70vh, 560px);
+            border-radius: 12px 12px 0 0;
+            animation-name: slide-up;
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+            }
         }
     }
 
-    .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid var(--danmaku-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .panel :global(*) {
+        box-sizing: border-box;
     }
 
-    .sidebar-header h2 {
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 8px 0 20px;
+    }
+
+    h2 {
         margin: 0;
-        font-size: 20px;
+        font-size: 1.25rem;
         font-weight: 500;
     }
 
-    .header-actions {
-        display: flex;
-        gap: 10px;
-    }
-
-    .header-actions button {
-        padding: 8px 16px;
+    .icon-button {
+        display: inline-flex;
+        padding: 8px;
         border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .btn-save {
-        background: var(--danmaku-primary);
-        color: white;
-    }
-
-    .btn-save:hover {
-        background: #0090c0;
-    }
-
-    .btn-cancel {
+        border-radius: 50%;
         background: transparent;
         color: var(--danmaku-text);
-        border: 1px solid var(--danmaku-border);
+        cursor: pointer;
     }
 
-    .btn-cancel:hover {
+    .icon-button:hover {
         background: var(--danmaku-hover);
     }
 
-    .tabs-header {
+    .tabs {
         display: flex;
+        padding: 0 8px;
         border-bottom: 1px solid var(--danmaku-border);
-        padding: 0 20px;
     }
 
-    .tab-btn {
-        padding: 12px 16px;
-        background: transparent;
+    .tabs button {
+        flex: 1;
+        min-width: 0;
+        padding: 12px 8px;
         border: none;
         border-bottom: 2px solid transparent;
-        color: var(--danmaku-text);
+        background: transparent;
+        color: var(--danmaku-text-secondary);
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
         cursor: pointer;
-        font-size: 14px;
-        opacity: 0.7;
-        transition: all 0.2s;
+        transition: color 150ms, border-color 150ms;
     }
 
-    .tab-btn:hover {
-        opacity: 1;
+    .tabs button:hover {
+        background: var(--danmaku-hover);
     }
 
-    .tab-btn.active {
-        opacity: 1;
+    .tabs button.active {
+        color: var(--danmaku-primary);
         border-bottom-color: var(--danmaku-primary);
     }
 
-    .sidebar-content {
+    .content {
         flex: 1;
         overflow-y: auto;
-        padding: 20px;
+        overscroll-behavior: contain;
+        padding: 12px 20px 24px;
     }
 
-    .setting-section {
-        margin-bottom: 24px;
-    }
-
-    .setting-section h3 {
-        margin: 0 0 16px 0;
-        font-size: 16px;
+    h3 {
+        margin: 20px 0 4px;
+        font-size: 0.8rem;
         font-weight: 500;
         color: var(--danmaku-primary);
     }
 
-    .setting-item {
-        margin-bottom: 16px;
+    h3:first-child {
+        margin-top: 4px;
     }
 
-    .setting-item label,
-    .group-label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 14px;
+    .hint {
+        margin: 0 0 8px;
+        font-size: 0.8rem;
+        color: var(--danmaku-text-secondary);
+        line-height: 1.5;
     }
 
-    .setting-item input[type='range'] {
-        width: 100%;
-        height: 6px;
-        border-radius: 3px;
-        background: var(--danmaku-border);
-        outline: none;
-        appearance: none;
-        -webkit-appearance: none;
+    .error {
+        margin: 4px 0 8px;
+        font-size: 0.85rem;
+        color: var(--danmaku-error);
     }
 
-    .setting-item input[type='range']::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: var(--danmaku-primary);
-        cursor: pointer;
-    }
-
-    .setting-input {
-        width: 100%;
-        padding: 8px 12px;
-        background: rgba(255, 255, 255, 0.1);
+    .card {
+        padding: 16px;
         border: 1px solid var(--danmaku-border);
-        border-radius: 4px;
-        color: var(--danmaku-text);
-        font-size: 14px;
+        border-radius: var(--danmaku-radius);
     }
 
-    .setting-input:focus {
-        outline: none;
-        border-color: var(--danmaku-primary);
+    .card-title {
+        font-size: 1rem;
+        font-weight: 500;
+        overflow-wrap: anywhere;
     }
 
-    select {
-        width: 100%;
-        padding: 8px 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid var(--danmaku-border);
-        border-radius: 4px;
-        color: var(--danmaku-text);
-        font-size: 14px;
+    .card-subtitle {
+        margin-top: 2px;
+        font-size: 0.85rem;
+        color: var(--danmaku-text-secondary);
+        overflow-wrap: anywhere;
     }
 
-    .switch-label {
-        display: flex !important;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .modern-switch {
-        position: relative;
-        display: inline-block;
-        width: 44px;
-        height: 24px;
-    }
-
-    .modern-switch input {
-        position: absolute;
-        z-index: 2;
-        opacity: 0;
-        inset: 0;
-        margin: 0;
-        cursor: pointer;
-        width: 100%;
-        height: 100%;
-    }
-
-    .modern-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(255, 255, 255, 0.2);
-        transition: 0.3s;
-        border-radius: 24px;
-    }
-
-    .modern-slider:before {
-        position: absolute;
-        content: '';
-        height: 18px;
-        width: 18px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: 0.3s;
-        border-radius: 50%;
-    }
-
-    .modern-switch input:checked + .modern-slider {
-        background-color: var(--danmaku-primary);
-    }
-
-    .modern-switch input:checked + .modern-slider:before {
-        transform: translateX(20px);
-    }
-
-    .checkbox-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .checkbox-group label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-
-    .checkbox-group input[type='checkbox'] {
-        width: 16px;
-        height: 16px;
-        accent-color: var(--danmaku-primary);
-    }
-
-    .action-btn {
-        width: 100%;
-        padding: 10px;
-        background: var(--danmaku-primary);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background 0.2s;
-    }
-
-    .action-btn:hover {
-        background: #0090c0;
-    }
-
-    .login-message {
+    .card-meta {
         margin-top: 8px;
-        font-size: 13px;
-        opacity: 0.85;
+        font-size: 0.8rem;
+        color: var(--danmaku-text-secondary);
+        font-variant-numeric: tabular-nums;
     }
 
-    .login-error {
-        color: #ff8a80;
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
     }
 
-    .action-btn:disabled {
-        opacity: 0.55;
+    .card-actions .button {
+        flex: 1;
+    }
+
+    .button {
+        min-height: 36px;
+        padding: 6px 16px;
+        border-radius: var(--danmaku-radius);
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 150ms, box-shadow 150ms;
+    }
+
+    .button:disabled {
+        opacity: 0.5;
         cursor: default;
+    }
+
+    .button.contained {
+        border: none;
+        background: var(--danmaku-primary);
+        color: var(--danmaku-on-primary);
+        box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 1px 5px rgba(0, 0, 0, 0.12);
+    }
+
+    .button.contained:hover:not(:disabled) {
+        background: var(--jf-palette-primary-dark, #00729a);
+    }
+
+    .button.outlined {
+        border: 1px solid rgb(var(--danmaku-primary-channel) / 0.5);
+        background: transparent;
+        color: var(--danmaku-primary);
+    }
+
+    .button.outlined:hover,
+    .button.text:hover {
+        background: rgb(var(--danmaku-primary-channel) / 0.08);
+    }
+
+    .button.text {
+        border: none;
+        background: transparent;
+        color: var(--danmaku-primary);
+        padding: 6px 8px;
+    }
+
+    .button.small {
+        min-height: 32px;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .button:focus-visible {
+        outline: 2px solid var(--danmaku-primary);
+        outline-offset: 2px;
+    }
+
+    .offset {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .offset-value {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        padding: 0 8px;
+        border-radius: var(--danmaku-radius);
+        background: var(--danmaku-input-bg);
+    }
+
+    .offset-value input {
+        width: 100%;
+        min-width: 0;
+        height: 32px;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--danmaku-text);
+        font: inherit;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .offset-value span {
+        font-size: 0.8rem;
+        color: var(--danmaku-text-secondary);
+    }
+
+    .footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+    }
+
+    .account {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0;
+    }
+
+    form .button {
+        width: 100%;
+        margin-top: 4px;
     }
 </style>

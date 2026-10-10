@@ -22,6 +22,10 @@ export const DEFAULT_CONFIG: DanmakuConfig = {
     customApiPrefix: '',
 };
 
+/** 「恢复默认」按分组重置的配置项 */
+export const DISPLAY_KEYS = ['opacity', 'speed', 'fontSize', 'heightRatio', 'fontFamily', 'fontOptions', 'densityLimit', 'useAntiOverlap'] as const;
+export const FILTER_KEYS = ['sourceFilter', 'modeFilter'] as const;
+
 /** 配置值合法范围 */
 export const CONFIG_CONSTRAINTS = {
     opacity: { min: 0, max: 1 },

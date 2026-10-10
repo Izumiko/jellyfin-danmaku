@@ -1,3 +1,5 @@
+import type { DanmakuConfig } from '../types/index';
+
 type EventMap = {
     /** 请求重新加载弹幕 */
     'danmaku:reload': { reason: 'init' | 'search' | 'refresh' | 'settings-changed' };
@@ -11,10 +13,10 @@ type EventMap = {
     'media:removed': undefined;
     /** 设置侧边栏打开请求 */
     'settings:open': undefined;
-    /** 设置已保存 */
-    'settings:saved': undefined;
-    /** 即时切换弹幕可见性 */
-    'danmaku:visibility': { visible: boolean };
+    /** 设置项已修改（已持久化），运行时按影响范围即时应用 */
+    'settings:changed': { keys: (keyof DanmakuConfig)[] };
+    /** 轻提示（Snackbar） */
+    'ui:toast': { message: string; tone?: 'info' | 'error' };
     /** 增加弹幕源 */
     'danmaku:add-source': { url: string };
     /** 发送弹幕 */

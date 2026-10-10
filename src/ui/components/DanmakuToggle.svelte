@@ -5,13 +5,17 @@
 
     let useFontAwesome = $state(false);
 
-    const icon = $derived(danmakuState.danmakuSwitch ? 'comment' : 'comments_disabled');
-    const title = $derived(danmakuState.danmakuSwitch ? '关闭弹幕' : '开启弹幕');
-    const iconClass = $derived(
+    const toggleTitle = $derived(danmakuState.danmakuSwitch ? '关闭弹幕' : '开启弹幕');
+    const toggleIcon = $derived(
         useFontAwesome
-            ? `xlargePaperIconButton material-icons ${danmakuState.danmakuSwitch ? 'fa-comment' : 'fa-comment-slash'}`
-            : `xlargePaperIconButton material-icons ${icon}`,
+            ? danmakuState.danmakuSwitch
+                ? 'fa-comment'
+                : 'fa-comment-slash'
+            : danmakuState.danmakuSwitch
+              ? 'comment'
+              : 'comments_disabled',
     );
+    const settingsIcon = $derived(useFontAwesome ? 'fa-sliders' : 'tune');
 
     onMount(() => {
         const sample = document.querySelector('.material-icons');
@@ -21,20 +25,20 @@
     });
 
     function toggle() {
-        danmakuState.danmakuSwitch = !danmakuState.danmakuSwitch;
-        danmakuState.persist();
-
-        eventBus.emit('danmaku:visibility', { visible: danmakuState.danmakuSwitch });
+        danmakuState.update({ danmakuSwitch: !danmakuState.danmakuSwitch });
     }
 </script>
 
+<button type="button" class="paper-icon-button-light autoSize" is="paper-icon-button-light" title={toggleTitle} aria-label={toggleTitle} onclick={toggle}>
+    <span class="xlargePaperIconButton material-icons {toggleIcon}" aria-hidden="true"></span>
+</button>
 <button
     type="button"
     class="paper-icon-button-light autoSize"
     is="paper-icon-button-light"
-    {title}
-    aria-label={title}
-    onclick={toggle}
+    title="弹幕设置"
+    aria-label="弹幕设置"
+    onclick={() => eventBus.emit('settings:open', undefined)}
 >
-    <span class={iconClass} aria-hidden="true"></span>
+    <span class="xlargePaperIconButton material-icons {settingsIcon}" aria-hidden="true"></span>
 </button>
