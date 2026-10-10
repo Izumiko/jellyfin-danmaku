@@ -352,4 +352,49 @@ describe('DanmakuRuntime', () => {
         await runtime.load('settings-changed');
         await expect(Storage.getEpisodeOffset('s', 1)).resolves.toBe(4);
     });
+
+    it('submits danmaku on the server timeline when an episode offset is set', async () => {
+        hooks.auth.isLoggedIn = true;
+        hooks.auth.token = 'tok';
+        await Storage.setEpisodeOffset('s', 1, 3);
+        const media = hooks.getMedia();
+        if (media.video) media.video.currentTime = 10;
+
+        await runtime.start();
+        eventBus.emit('danmaku:send', { text: 'hi', mode: 1, color: 0xffffff });
+        await vi.waitFor(() => expect(hooks.postComment).toHaveBeenCalled());
+
+        expect(vi.mocked(hooks.postComment!).mock.calls[0][2]).toMatchObject({ time: 7 });
+        expect(hooks.engine.emit).toHaveBeenCalledWith(expect.objectContaining({ time: 10 }));
+    });
+
+    it('adds a source on top of local XML danmaku without posting related', async () => {
+        danmakuState.useXmlDanmaku = true;
+        hooks.auth.isLoggedIn = true;
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([{ time: 1, modeId: 1, color: 0, text: 'local' }]);
+        vi.mocked(hooks.getExtComments!).mockResolvedValue([{ cid: 2, p: '2,1,16777215,u', m: 'ext' }]);
+
+        await runtime.start();
+        vi.mocked(hooks.engine.init).mockClear();
+        await runtime.addSource('https://example.com/video');
+
+        expect(hooks.engine.init).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.arrayContaining([
+                expect.objectContaining({ text: 'local' }),
+                expect.objectContaining({ text: 'ext' }),
+            ]),
+        );
+        expect(hooks.postRelatedSource).not.toHaveBeenCalled();
+    });
+
+    it('does not reload local XML on refresh for the same item', async () => {
+        danmakuState.useXmlDanmaku = true;
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([{ time: 1, modeId: 1, color: 0, text: 'local' }]);
+
+        await runtime.start();
+        await runtime.load('refresh');
+
+        expect(hooks.getLocalComments).toHaveBeenCalledTimes(1);
+    });
 });

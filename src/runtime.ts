@@ -94,6 +94,7 @@ export class DanmakuRuntime {
     private controller: AbortController | null = null;
     private destroyed = false;
     private lastEpisodeId: number | null = null;
+    private lastLocalItemId: string | null = null;
     private rawComments: RawComment[] = [];
 
     constructor(hooks: Partial<DanmakuRuntimeHooks> = {}) {
@@ -203,6 +204,8 @@ export class DanmakuRuntime {
             // ede.js 的本地 XML 路径不依赖 DanDanPlay 匹配：
             // 先用 Jellyfin ItemId 直接取本地弹幕，只有无数据/失败才回退在线匹配。
             if (danmakuState.useXmlDanmaku && reason !== 'search') {
+                // 转码播放时 seek 也会改写 video.src；同一条目的本地弹幕无需重复下载重建。
+                if (reason === 'refresh' && this.lastLocalItemId === item.Id) return;
                 try {
                     const localComments = await this.hooks.getLocalComments(item.Id, { signal });
                     if (this.destroyed || signal.aborted) return;
@@ -221,6 +224,7 @@ export class DanmakuRuntime {
                         }
 
                         if (inited) {
+                            this.lastLocalItemId = item.Id;
                             eventBus.emit('danmaku:loaded', {
                                 count: localComments.length,
                                 source: 'local',
@@ -252,6 +256,7 @@ export class DanmakuRuntime {
             if (this.destroyed || signal.aborted) return;
 
             this.rawComments = fetched;
+            this.lastLocalItemId = null;
             danmakuState.episodeInfo = episode;
 
             let inited = this.initEngine(fetched);
@@ -277,24 +282,24 @@ export class DanmakuRuntime {
 
     async addSource(url: string): Promise<void> {
         if (this.destroyed) return;
-        if (this.lastEpisodeId == null) {
-            logger.warn('runtime', 'No episode loaded');
-            return;
-        }
 
+        // 与 ede.js 一致：无论是否已匹配（如正在使用本地 XML）都可以追加弹幕源；
+        // 只有提交关联源给弹弹Play 才需要 episodeId。
         const episodeId = this.lastEpisodeId;
+        const localItemId = this.lastLocalItemId;
 
         try {
             const ext = await this.hooks.getExtComments(danmakuState.effectiveApiPrefix, url, { chConvert: danmakuState.chConvert });
-            if (this.destroyed || this.lastEpisodeId !== episodeId) return;
+            if (this.destroyed || this.lastEpisodeId !== episodeId || this.lastLocalItemId !== localItemId) return;
             this.rawComments = [...this.rawComments, ...ext.map(convertDanDanPlayComment)];
             this.initEngine(this.rawComments);
+            logger.info('runtime', `Added ${ext.length} comments from source`);
 
-            if (this.hooks.auth.isLoggedIn) {
+            if (episodeId != null && this.hooks.auth.isLoggedIn) {
                 try {
                     await this.hooks.postRelatedSource(
                         danmakuState.effectiveApiPrefix,
-                        this.lastEpisodeId,
+                        episodeId,
                         url,
                         this.hooks.auth.token,
                     );
@@ -336,7 +341,11 @@ export class DanmakuRuntime {
             return;
         }
 
-        const time = media.video.currentTime;
+        // 屏幕上的弹幕时间 = 服务端时间 + 当前集偏移，因此提交时要换算回服务端时间轴，
+        // 否则设置了偏移后，自己发的弹幕在其他客户端会错位。
+        const displayTime = media.video.currentTime;
+        const offset = danmakuState.curEpOffset || 0;
+        const time = Math.max(0, displayTime - offset);
         try {
             await this.hooks.postComment(
                 danmakuState.effectiveApiPrefix,
@@ -358,7 +367,7 @@ export class DanmakuRuntime {
                     fontSize: danmakuState.fontSize,
                     fontFamily: danmakuState.fontFamily,
                     fontOptions: danmakuState.fontOptions,
-                    timeOffset: 0,
+                    timeOffset: offset,
                 }),
             );
 
@@ -376,14 +385,6 @@ export class DanmakuRuntime {
     private logout(): void {
         this.hooks.auth.logout();
         this.syncAuthState();
-    }
-
-    private clearPlayback(): void {
-        hideMatchTitle();
-        this.hooks.engine.destroy();
-        this.lastEpisodeId = null;
-        this.rawComments = [];
-        danmakuState.episodeInfo = null;
     }
 
     private syncAuthApiPrefix(): void {
