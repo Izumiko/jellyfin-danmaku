@@ -1,0 +1,24 @@
+{
+  "name": "ddplay-worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ddplay_worker.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.8.1",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.8.1",
+  "type": "module",
+  "devDependencies": {
+    "wrangler": "^4.143.0"
+  }
+}
