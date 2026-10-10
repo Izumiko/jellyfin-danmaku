@@ -4,6 +4,31 @@
 > 基线：`jellyfin/ede.js`（3769 行）→ `typescript/src/**`  
 > 2026-10-10 审查轮次已执行全部自动化检查，详见下节。
 
+## 2026-10-11 同步 ede.js v1.62.0（PR #101 及后续修复 1b0b6e6、9967db0）
+
+| v1.62 改动 | TypeScript 实现 | 状态 |
+|---|---|---|
+| 屏蔽：关键词/正则/发送者/颜色，独立开关 | `danmaku/shield.ts` + 「屏蔽」标签页 | 已实现 |
+| 相似弹幕合并（Levenshtein + 长度剪枝） | `danmaku/merge.ts` | 已实现 |
+| 去掉点赞数后缀（兼容 ❤️ 变体选择符） | `stripLikeSuffix` | 已实现 |
+| 来源统计 | `sourceStats` → 当前视频卡片 | 已实现 |
+| 来源标签大小写不敏感（misaka 小写） | `classifySource` | 已修复 |
+| 集号按标题精确匹配（第N话/SxxExx/裸数字） | `title-match.ts` / `selectEpisodeIndex` | 已实现（在原数组中定位，避免 ede.js 排序后下标错位） |
+| 搜索结果择优（#94） | `pickBestAnime` | 已实现 |
+| `@` 开头关键词拦截 | `EpisodeMatcher` | 已实现 |
+| 换 API 清理匹配缓存（#91） | `Storage.clearEpisodeMappings` | 已实现（保留逐集偏移） |
+| 插件弹幕回退 | Runtime `xmlFallback` | 已实现（手动搜索不回退） |
+| 御坂网络一键配置 + 探活/试搜 | `services/misaka.ts` + 「更多」 | 已实现 |
+| 设置备份/恢复 | `core/backup.ts` | 已实现，可导入 ede.js 备份 |
+| 重新加载 / 时间轴微调 | 当前视频卡片 | 已实现（微调为 ±0.1s/±1s） |
+| 引擎补丁：seek 立即恢复、倍速不漂移、开关补回飞行弹幕 | `DanmakuEngine` | 已实现，Docker 实机截图验证 |
+| itemId 从 XHR/fetch/loadstart 的 PlaybackInfo/stream/m3u8 获取 | `interceptor.ts` | 已实现 |
+| 换集后不用旧缓存重渲染 | `rawCommentsAreCurrent` | 已实现 |
+| 容器看门狗 | Runtime watchdog | 已实现（每次加载最多重建 3 次） |
+| #24 / #38 / #72、等待死循环、loading 卡死、偏移字符串拼接、改设置区分重拉/重渲染 | — | 早已覆盖 |
+| 匹配信息自动隐藏（#98） | 提示条 + 面板常驻 | 设计不同，无需移植 |
+| v1.62 新增 localStorage 键迁移 | `legacyConfigFrom` | 已实现 |
+
 ## 2026-10-10 审查与修复
 
 本轮已执行完整验证：`vitest`（149 通过）、`typecheck`、`svelte-check`（0 错误）、`lint`、`build:all` 全部通过。修复内容：
