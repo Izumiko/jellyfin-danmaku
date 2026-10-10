@@ -1,6 +1,7 @@
 import { mount, unmount } from 'svelte';
 import InputDialog from './components/InputDialog.svelte';
 import SelectDialog from './components/SelectDialog.svelte';
+import TextDialog from './components/TextDialog.svelte';
 
 function mountDialog<T>(component: Parameters<typeof mount>[0], props: Record<string, unknown>): Promise<T | null> {
     return new Promise((resolve) => {
@@ -39,4 +40,9 @@ export async function showInputDialog(title: string, placeholder: string, defaul
 
 export function showSelectDialog(title: string, options: string[], defaultIndex = 0): Promise<number | null> {
     return mountDialog<number>(SelectDialog as Parameters<typeof mount>[0], { title, options, defaultIndex });
+}
+
+/** 多行文本对话框：readonly 时为导出（带复制，关闭返回 null），否则返回粘贴的文本 */
+export function showTextDialog(title: string, defaultValue = '', readonly = false): Promise<string | null> {
+    return mountDialog<string>(TextDialog as Parameters<typeof mount>[0], { title, defaultValue, readonly });
 }

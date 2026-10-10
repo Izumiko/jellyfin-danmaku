@@ -1,5 +1,5 @@
 <script lang="ts" module>
-    type TabId = 'video' | 'display' | 'filter' | 'more';
+    type TabId = 'video' | 'display' | 'filter' | 'block' | 'more';
     // 同一页面会话内记住上次打开的标签页
     let lastTab: TabId = 'video';
 </script>
@@ -9,14 +9,18 @@
     import '../styles/variables.css';
     import { danmakuState } from '../../core/state.svelte';
     import { eventBus } from '../../core/event-bus';
-    import { DEFAULT_CONFIG, DISPLAY_KEYS, FILTER_KEYS } from '../../core/config';
-    import { showInputDialog } from '../dialogs';
-    import type { DanmakuConfig } from '../../types/index';
+    import { BLOCK_KEYS, DEFAULT_CONFIG, DISPLAY_KEYS, FILTER_KEYS } from '../../core/config';
+    import { exportSettings, parseSettingsBackup } from '../../core/backup';
+    import { parseRuleLines } from '../../danmaku/shield';
+    import { buildMisakaPrefix, splitMisakaPrefix, testApiConnection } from '../../services/misaka';
+    import { showInputDialog, showTextDialog } from '../dialogs';
+    import type { DanmakuConfig, SourceStats } from '../../types/index';
     import SwitchRow from './controls/SwitchRow.svelte';
     import SliderField from './controls/SliderField.svelte';
     import TextField from './controls/TextField.svelte';
     import SegmentedField from './controls/SegmentedField.svelte';
     import ChipGroup from './controls/ChipGroup.svelte';
+    import TextAreaField from './controls/TextAreaField.svelte';
 
     let { onClose }: { onClose: () => void } = $props();
 
@@ -24,6 +28,7 @@
         { id: 'video', label: '当前视频' },
         { id: 'display', label: '显示' },
         { id: 'filter', label: '过滤' },
+        { id: 'block', label: '屏蔽' },
         { id: 'more', label: '更多' },
     ];
 
@@ -33,6 +38,12 @@
     let password = $state('');
     let loginPending = $state(false);
     let loginMessage = $state('');
+    const misakaInitial = splitMisakaPrefix(danmakuState.customApiPrefix);
+    let misakaBase = $state(misakaInitial?.base ?? '');
+    let misakaToken = $state(misakaInitial?.token ?? '');
+    let apiTestLines = $state<string[]>([]);
+    let apiTesting = $state(false);
+    let backupMessage = $state('');
 
     const update = (patch: Partial<DanmakuConfig>) => danmakuState.update(patch);
     const percent = (v: number) => `${Math.round(v * 100)}%`;
@@ -49,6 +60,56 @@
             (patch as Record<string, unknown>)[key] = typeof value === 'object' ? { ...value } : value;
         }
         update(patch);
+    }
+
+    function formatStats(stats: SourceStats | null): string {
+        if (!stats) return '';
+        const parts = [
+            [stats.bilibili, 'B站'],
+            [stats.gamer, '巴哈'],
+            [stats.dandanplay, '弹弹'],
+            [stats.other, '其他'],
+        ]
+            .filter(([count]) => (count as number) > 0)
+            .map(([count, label]) => `${label} ${count}`);
+        return parts.join(' / ');
+    }
+
+    function applyMisaka() {
+        const prefix = buildMisakaPrefix(misakaBase, misakaToken);
+        if (!prefix) {
+            apiTestLines = ['请填写服务地址和客户端 token'];
+            return;
+        }
+        // 御坂网络自身处理跨域，不经过默认 CORS 代理
+        update({ customApiPrefix: prefix, customCorsProxy: '' });
+        apiTestLines = [`已切换到 ${prefix}`];
+    }
+
+    async function testApi() {
+        apiTesting = true;
+        apiTestLines = ['测试中…'];
+        try {
+            apiTestLines = await testApiConnection(danmakuState.effectiveApiPrefix, danmakuState.episodeInfo?.animeTitle || danmakuState.currentTitle);
+        } finally {
+            apiTesting = false;
+        }
+    }
+
+    async function exportAll() {
+        await showTextDialog('导出全部弹幕设置', exportSettings(danmakuState.toConfig()), true);
+    }
+
+    async function importAll() {
+        const text = await showTextDialog('粘贴设置 JSON（也支持 ede.js 导出的备份）');
+        if (!text) return;
+        try {
+            const settings = parseSettingsBackup(text);
+            update(settings);
+            backupMessage = `已导入 ${Object.keys(settings).length} 项设置`;
+        } catch (error) {
+            backupMessage = `导入失败：${error instanceof Error ? error.message : String(error)}`;
+        }
     }
 
     function setOffset(value: number) {
@@ -165,7 +226,12 @@
                     <div class="card-subtitle">可手动搜索番剧，或直接增加弹幕源</div>
                 {/if}
                 {#if danmakuState.loadedSource && !danmakuState.loading}
-                    <div class="card-meta">共 {danmakuState.loadedCount} 条 · 当前显示 {danmakuState.visibleCount} 条</div>
+                    <div class="card-meta">
+                        共 {danmakuState.loadedCount} 条 · 当前显示 {danmakuState.visibleCount} 条{danmakuState.blockedCount > 0 ? ` · 已屏蔽 ${danmakuState.blockedCount} 条` : ''}
+                    </div>
+                    {#if formatStats(danmakuState.sourceStats)}
+                        <div class="card-meta">{formatStats(danmakuState.sourceStats)}</div>
+                    {/if}
                 {/if}
                 <div class="card-actions">
                     {#if danmakuState.loadError && !danmakuState.loading}
@@ -180,6 +246,9 @@
                     </button>
                     <button type="button" class="button outlined" onclick={handleAddSource}>增加弹幕源</button>
                 </div>
+                {#if danmakuState.loadedSource && !danmakuState.loading}
+                    <button type="button" class="button text reload" onclick={() => eventBus.emit('danmaku:reload', { reason: 'reload' })}>重新加载</button>
+                {/if}
             </section>
 
             <h3>时间偏移</h3>
@@ -263,6 +332,54 @@
             </div>
         {/if}
 
+        {#if activeTab === 'block'}
+            <p class="hint">每行一条规则，# 开头为注释。关键词按「包含」匹配，同时匹配正文和发送者；写成 /正则/i 或 re:正则 按正则匹配。</p>
+            <SwitchRow label="屏蔽关键词" description="{parseRuleLines(danmakuState.blockKeywords).length} 条规则" checked={danmakuState.blockEnableKeywords} onchange={(v) => update({ blockEnableKeywords: v })} />
+            <TextAreaField
+                label="关键词 / 正则"
+                value={danmakuState.blockKeywords}
+                placeholder="剧透&#10;/^前方高能/"
+                disabled={!danmakuState.blockEnableKeywords}
+                onchange={(v) => update({ blockKeywords: v })}
+            />
+            <SwitchRow label="屏蔽发送者" description="{parseRuleLines(danmakuState.blockUsers).length} 条规则" checked={danmakuState.blockEnableUsers} onchange={(v) => update({ blockEnableUsers: v })} />
+            <TextAreaField
+                label="发送者（包含即屏蔽）"
+                value={danmakuState.blockUsers}
+                placeholder="[BiliBili]&#10;某个用户 id"
+                rows={2}
+                disabled={!danmakuState.blockEnableUsers}
+                onchange={(v) => update({ blockUsers: v })}
+            />
+            <SwitchRow label="屏蔽颜色" checked={danmakuState.blockEnableColors} onchange={(v) => update({ blockEnableColors: v })} />
+            {#if danmakuState.blockEnableColors}
+                <TextField label="颜色（逗号分隔）" value={danmakuState.blockColors} placeholder="ff0000, #00ff00" onchange={(v) => update({ blockColors: v })} />
+            {/if}
+
+            <h3>整理</h3>
+            <SwitchRow
+                label="去掉点赞数"
+                description="去掉第三方 API 拼在正文尾部的「🤍 28」"
+                checked={danmakuState.stripLikeSuffix}
+                onchange={(v) => update({ stripLikeSuffix: v })}
+            />
+            <SwitchRow
+                label="合并相似弹幕"
+                description="2 秒内相似的弹幕合并为一条并标注 [xN]"
+                checked={danmakuState.mergeSimilar}
+                onchange={(v) => update({ mergeSimilar: v })}
+            />
+            {#if danmakuState.mergeSimilar}
+                <SliderField label="相似度阈值" value={danmakuState.mergeThreshold} min={50} max={100} step={1} format={(v) => `${v}%`} oninput={(v) => update({ mergeThreshold: v })} />
+            {/if}
+            {#if danmakuState.blockedCount > 0}
+                <p class="hint">当前已屏蔽 {danmakuState.blockedCount} 条</p>
+            {/if}
+            <div class="footer-actions">
+                <button type="button" class="button text" onclick={() => resetKeys(BLOCK_KEYS)}>恢复默认</button>
+            </div>
+        {/if}
+
         {#if activeTab === 'more'}
             <h3>弹弹Play 账号</h3>
             {#if danmakuState.ddplayLoggedIn}
@@ -297,6 +414,14 @@
                 checked={danmakuState.useXmlDanmaku}
                 onchange={(v) => update({ useXmlDanmaku: v })}
             />
+            {#if !danmakuState.useXmlDanmaku}
+                <SwitchRow
+                    label="匹配失败时使用插件弹幕"
+                    description="在线搜索没有结果时，改用 Jellyfin 弹幕插件的弹幕"
+                    checked={danmakuState.xmlFallback}
+                    onchange={(v) => update({ xmlFallback: v })}
+                />
+            {/if}
             <TextField
                 label="CORS 代理"
                 value={danmakuState.customCorsProxy}
@@ -309,9 +434,30 @@
                 value={danmakuState.customApiPrefix}
                 placeholder="留空使用弹弹Play"
                 type="url"
-                helper="可填第三方弹幕库，如御坂网络：http://host:port/api/<Token>"
+                helper="可填第三方弹幕库，如御坂网络：http://host:port/api/v1/<Token>"
                 onchange={(v) => update({ customApiPrefix: v.trim() })}
             />
+
+            <h3>御坂网络（misaka_danmu_server）</h3>
+            <TextField label="服务地址" value={misakaBase} placeholder="http://192.168.1.10:7768" type="url" oninput={(v) => (misakaBase = v)} />
+            <TextField label="客户端 token" value={misakaToken} placeholder="misaka 网页端里的调用令牌" oninput={(v) => (misakaToken = v)} />
+            <div class="row-actions">
+                <button type="button" class="button outlined" onclick={applyMisaka}>应用</button>
+                <button type="button" class="button outlined" disabled={apiTesting} onclick={testApi}>测试连接</button>
+            </div>
+            {#if apiTestLines.length}
+                <div class="test-result">
+                    {#each apiTestLines as line, i (i)}<div>{line}</div>{/each}
+                </div>
+            {/if}
+
+            <h3>设置备份</h3>
+            <p class="hint">导出全部设置（含屏蔽规则与 API）为 JSON，换设备时导入。也可以导入 ede.js 导出的备份。</p>
+            <div class="row-actions">
+                <button type="button" class="button outlined" onclick={exportAll}>导出</button>
+                <button type="button" class="button outlined" onclick={importAll}>导入</button>
+            </div>
+            {#if backupMessage}<p class="hint">{backupMessage}</p>{/if}
 
             <h3>调试</h3>
             <SwitchRow label="显示日志" checked={danmakuState.logSwitch} onchange={(v) => update({ logSwitch: v })} />
@@ -593,6 +739,30 @@
     .offset-value span {
         font-size: 0.8rem;
         color: var(--danmaku-text-secondary);
+    }
+
+    .reload {
+        margin-top: 6px;
+    }
+
+    .row-actions {
+        display: flex;
+        gap: 8px;
+        margin: 4px 0 8px;
+    }
+
+    .row-actions .button {
+        flex: 1;
+    }
+
+    .test-result {
+        padding: 8px 12px;
+        border-radius: var(--danmaku-radius);
+        background: var(--danmaku-input-bg);
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: var(--danmaku-text-secondary);
+        overflow-wrap: anywhere;
     }
 
     .footer-actions {
