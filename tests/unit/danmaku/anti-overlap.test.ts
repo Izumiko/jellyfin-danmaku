@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { antiOverlapFilter, filterOverlappedScroll, filterOverlappedFixed } from '@/danmaku/anti-overlap';
-import { textMeasurer } from '@/danmaku/text-measure';
 import type { ProcessedComment, AntiOverlapConfig } from '@/types/index';
 
 const config: AntiOverlapConfig = {
@@ -40,10 +39,7 @@ describe('anti-overlap', () => {
 
     describe('filterOverlappedScroll', () => {
         it('should keep non-overlapping scroll comments', () => {
-            const comments = [
-                createProcessedComment({ time: 0, text: 'a' }),
-                createProcessedComment({ time: 10, text: 'b' }),
-            ];
+            const comments = [createProcessedComment({ time: 0, text: 'a' }), createProcessedComment({ time: 10, text: 'b' })];
 
             const result = filterOverlappedScroll(comments, config, 'rtl');
             expect(result).toHaveLength(2);
@@ -51,10 +47,7 @@ describe('anti-overlap', () => {
 
         it('should filter overlapping comments on same track', () => {
             // Two comments at very close times should overlap
-            const comments = [
-                createProcessedComment({ time: 0, text: 'a' }),
-                createProcessedComment({ time: 0.1, text: 'b' }),
-            ];
+            const comments = [createProcessedComment({ time: 0, text: 'a' }), createProcessedComment({ time: 0.1, text: 'b' })];
 
             const result = filterOverlappedScroll(comments, config, 'rtl');
             // First one should be kept, second should be filtered
@@ -64,10 +57,7 @@ describe('anti-overlap', () => {
 
     describe('filterOverlappedFixed', () => {
         it('should keep non-overlapping fixed comments', () => {
-            const comments = [
-                createProcessedComment({ mode: 'top', time: 0 }),
-                createProcessedComment({ mode: 'top', time: 10 }),
-            ];
+            const comments = [createProcessedComment({ mode: 'top', time: 0 }), createProcessedComment({ mode: 'top', time: 10 })];
 
             const result = filterOverlappedFixed(comments, config);
             expect(result).toHaveLength(2);
@@ -79,10 +69,7 @@ describe('anti-overlap', () => {
                 ...config,
                 containerHeight: 30, // Only 1 track with fontSize 18
             };
-            const comments = [
-                createProcessedComment({ mode: 'top', time: 0, text: 'a' }),
-                createProcessedComment({ mode: 'top', time: 0, text: 'b' }),
-            ];
+            const comments = [createProcessedComment({ mode: 'top', time: 0, text: 'a' }), createProcessedComment({ mode: 'top', time: 0, text: 'b' })];
 
             const result = filterOverlappedFixed(comments, smallConfig);
             expect(result.length).toBeLessThanOrEqual(1);

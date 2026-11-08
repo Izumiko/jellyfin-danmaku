@@ -20,7 +20,7 @@ import type { DanmakuConfig, EngineConfig, ProcessedComment, RawComment } from '
 export type LoadReason = 'init' | 'search' | 'refresh' | 'reload' | 'settings-changed';
 
 /** 需要重新请求网络的设置 */
-const REFETCH_KEYS: readonly (keyof DanmakuConfig)[] = ['chConvert', 'customCorsProxy', 'customApiPrefix', 'useXmlDanmaku'];
+const REFETCH_KEYS: readonly (keyof DanmakuConfig)[] = ['chConvert', 'customCorsProxy', 'customApiPrefix', 'useXmlDanmaku', 'xmlFallback'];
 /** 只需用已缓存的原始弹幕重新处理、重建引擎的设置 */
 const REPROCESS_KEYS: readonly (keyof DanmakuConfig)[] = [
     'fontSize',
@@ -39,6 +39,9 @@ const WATCHDOG_INTERVAL_MS = 2000;
 const WATCHDOG_MAX_REMOUNTS = 3;
 const REPROCESS_DELAY_MS = 200;
 const REFETCH_DELAY_MS = 600;
+/** 播放器容器/video 尚未就绪时的自动重试 */
+const INIT_RETRY_DELAY_MS = 3000;
+const INIT_RETRY_MAX = 3;
 
 export type RuntimeMedia = {
     video: HTMLVideoElement | null;
@@ -144,6 +147,10 @@ export class DanmakuRuntime {
     private reprocessTimer: ReturnType<typeof setTimeout> | undefined;
     private refetchTimer: ReturnType<typeof setTimeout> | undefined;
     private watchdogTimer: ReturnType<typeof setInterval> | undefined;
+    private initRetryTimer: ReturnType<typeof setTimeout> | undefined;
+    private initRetryCount = 0;
+    private pendingSource: 'online' | 'local' | null = null;
+    private pendingEpisodeId: number | null = null;
     private remounts = 0;
     /** rawComments 所属的 Jellyfin 条目 */
     private rawItemId: string | null = null;
@@ -211,8 +218,12 @@ export class DanmakuRuntime {
         this.unsubscribers = [];
         clearTimeout(this.reprocessTimer);
         clearTimeout(this.refetchTimer);
+        clearTimeout(this.initRetryTimer);
+        this.initRetryTimer = undefined;
         clearInterval(this.watchdogTimer);
         this.engineReady = false;
+        this.pendingSource = null;
+        this.pendingEpisodeId = null;
         this.hooks.engine.destroy();
     }
 
@@ -263,6 +274,76 @@ export class DanmakuRuntime {
         return !current || !this.rawItemId || this.rawItemId.replace(/-/g, '').toLowerCase() === current;
     }
 
+    private clearInitRetryTimer(): void {
+        if (this.initRetryTimer !== undefined) {
+            clearTimeout(this.initRetryTimer);
+            this.initRetryTimer = undefined;
+        }
+    }
+
+    private resetInitRetry(): void {
+        this.clearInitRetryTimer();
+        this.initRetryCount = 0;
+    }
+
+    /**
+     * 播放器容器/video 未就绪时排队重试。ede.js 同样会在等待超时后重试 3 次；
+     * 没有这段逻辑时，容器晚出现会让用户看到“库里有弹幕但屏幕不显示”，且没有提示。
+     */
+    private scheduleInitRetry(reason: string): void {
+        if (this.destroyed || this.initRetryTimer !== undefined) return;
+
+        if (this.initRetryCount >= INIT_RETRY_MAX) {
+            const message = `${reason}，自动重试已用尽，请点击重试`;
+            danmakuState.loadError = message;
+            this.toast(`弹幕未就绪：${message}`, 'error');
+            logger.error('runtime', `Danmaku init retry exhausted: ${reason}`);
+            eventBus.emit('danmaku:error', { error: new Error(message), source: 'init' });
+            return;
+        }
+
+        this.initRetryCount += 1;
+        danmakuState.loadError = `${reason}，3 秒后自动重试（${this.initRetryCount}/${INIT_RETRY_MAX}）`;
+        logger.warn('runtime', `Danmaku not mounted yet (${reason}); retry ${this.initRetryCount}/${INIT_RETRY_MAX}`);
+
+        this.initRetryTimer = setTimeout(() => {
+            this.initRetryTimer = undefined;
+            this.retryInit();
+        }, INIT_RETRY_DELAY_MS);
+    }
+
+    /** 重试使用已经拉取到的原始弹幕，不重新请求网络，避免“增加弹幕源”的临时数据丢失 */
+    private retryInit(): void {
+        if (this.destroyed || this.rawComments.length === 0) return;
+        if (!this.rawCommentsAreCurrent()) return;
+
+        if (!this.initEngine(this.rawComments)) {
+            this.scheduleInitRetry('播放器容器未就绪');
+            return;
+        }
+
+        const source = this.pendingSource ?? 'online';
+        if (source === 'online' && this.pendingEpisodeId != null) {
+            this.lastEpisodeId = this.pendingEpisodeId;
+        } else if (source === 'local') {
+            this.lastEpisodeId = null;
+            if (this.rawItemId) this.lastLocalItemId = this.rawItemId;
+        }
+        this.markLoaded(source, this.rawComments);
+        this.toast(source === 'local' ? `已加载本地弹幕 · ${this.rawComments.length} 条` : `弹幕已就绪 · ${this.rawComments.length} 条`);
+    }
+
+    /** 引擎真正初始化成功后才更新面板状态并发出 loaded 事件 */
+    private markLoaded(source: 'online' | 'local', comments: RawComment[]): void {
+        danmakuState.loadError = null;
+        danmakuState.loadedSource = source;
+        danmakuState.loadedCount = comments.length;
+        danmakuState.sourceStats = sourceStats(comments);
+        this.startWatchdog();
+        this.resetInitRetry();
+        eventBus.emit('danmaku:loaded', { count: comments.length, source });
+    }
+
     private toast(message: string, tone: 'info' | 'error' = 'info'): void {
         eventBus.emit('ui:toast', { message, tone });
     }
@@ -270,6 +351,8 @@ export class DanmakuRuntime {
     async load(reason: LoadReason): Promise<void> {
         if (this.destroyed) return;
 
+        this.resetInitRetry();
+        this.pendingEpisodeId = null;
         this.controller?.abort();
         const controller = new AbortController();
         this.controller = controller;
@@ -312,7 +395,11 @@ export class DanmakuRuntime {
                 // 转码播放时 seek 也会改写 video.src；同一条目的本地弹幕无需重复下载重建。
                 if (reason === 'refresh' && this.lastLocalItemId === item.Id) return;
                 const local = await this.tryLoadLocal(item.Id, signal);
-                if (local !== 'empty') return;
+                if (local === 'aborted' || local === 'loaded') return;
+                if (local === 'failed') {
+                    this.scheduleInitRetry('播放器容器未就绪');
+                    return;
+                }
                 logger.info('runtime', 'Local XML unavailable or empty; falling back to online');
             }
 
@@ -323,7 +410,11 @@ export class DanmakuRuntime {
                 // 在线匹配失败时改用 Jellyfin 弹幕插件的弹幕兜底（手动搜索取消/无结果时不回退）
                 if (danmakuState.xmlFallback && !danmakuState.useXmlDanmaku && reason !== 'search') {
                     const local = await this.tryLoadLocal(item.Id, signal);
-                    if (local !== 'empty') return;
+                    if (local === 'aborted' || local === 'loaded') return;
+                    if (local === 'failed') {
+                        this.scheduleInitRetry('播放器容器未就绪');
+                        return;
+                    }
                 }
                 if (reason === 'init') this.toast('未匹配到弹幕，可在弹幕设置中手动搜索');
                 return;
@@ -338,13 +429,15 @@ export class DanmakuRuntime {
 
             this.lastLocalItemId = null;
             danmakuState.episodeInfo = episode;
+            this.pendingEpisodeId = episode.episodeId;
             const inited = await this.showComments(fetched, item.Id, 'online', signal);
             if (inited === null) return;
-            if (inited) {
-                this.lastEpisodeId = episode.episodeId;
-                this.toast(`${episode.animeTitle} - ${episode.episodeTitle} · ${fetched.length} 条弹幕`);
+            if (!inited) {
+                this.scheduleInitRetry('播放器容器未就绪');
+                return;
             }
-            eventBus.emit('danmaku:loaded', { count: fetched.length, source: 'online' });
+            this.lastEpisodeId = episode.episodeId;
+            this.toast(`${episode.animeTitle} - ${episode.episodeTitle} · ${fetched.length} 条弹幕`);
         } catch (error) {
             if (this.isCancelled(error, signal)) return;
             logger.error('runtime', 'Failed to load danmaku', error);
@@ -360,23 +453,23 @@ export class DanmakuRuntime {
 
     /**
      * 读取 Jellyfin 弹幕插件提供的本地 XML 弹幕并显示。
-     * @returns loaded 已显示；empty 没有数据或接口不可用；aborted 已取消
+     * @returns loaded 已显示；empty 没有数据或接口不可用；failed 有数据但容器未就绪；aborted 已取消
      */
-    private async tryLoadLocal(jellyfinItemId: string, signal: AbortSignal): Promise<'loaded' | 'empty' | 'aborted'> {
+    private async tryLoadLocal(jellyfinItemId: string, signal: AbortSignal): Promise<'loaded' | 'empty' | 'failed' | 'aborted'> {
         try {
             const comments = await this.hooks.getLocalComments(jellyfinItemId, { signal });
             if (this.destroyed || signal.aborted) return 'aborted';
             if (comments.length === 0) return 'empty';
 
             this.lastEpisodeId = null;
+            this.pendingEpisodeId = null;
             danmakuState.episodeInfo = null;
             const inited = await this.showComments(comments, jellyfinItemId, 'local', signal);
             if (inited === null) return 'aborted';
-            if (inited) {
-                this.lastLocalItemId = jellyfinItemId;
-                this.toast(`已加载本地弹幕 · ${comments.length} 条`);
-                eventBus.emit('danmaku:loaded', { count: comments.length, source: 'local' });
-            }
+            if (!inited) return 'failed';
+
+            this.lastLocalItemId = jellyfinItemId;
+            this.toast(`已加载本地弹幕 · ${comments.length} 条`);
             return 'loaded';
         } catch (error) {
             if (this.isCancelled(error, signal)) return 'aborted';
@@ -392,6 +485,7 @@ export class DanmakuRuntime {
     private async showComments(comments: RawComment[], jellyfinItemId: string, source: 'online' | 'local', signal: AbortSignal): Promise<boolean | null> {
         this.rawComments = comments;
         this.rawItemId = jellyfinItemId;
+        this.pendingSource = source;
 
         let inited = this.initEngine(comments);
         for (let i = 0; !inited && i < 10; i++) {
@@ -400,10 +494,7 @@ export class DanmakuRuntime {
             inited = this.initEngine(comments);
         }
         if (inited) {
-            danmakuState.loadedSource = source;
-            danmakuState.loadedCount = comments.length;
-            danmakuState.sourceStats = sourceStats(comments);
-            this.startWatchdog();
+            this.markLoaded(source, comments);
         }
         return inited;
     }
@@ -437,20 +528,17 @@ export class DanmakuRuntime {
             const ext = await this.hooks.getExtComments(danmakuState.effectiveApiPrefix, url, { chConvert: danmakuState.chConvert });
             if (this.destroyed || this.lastEpisodeId !== episodeId || this.lastLocalItemId !== localItemId) return;
             this.rawComments = [...this.rawComments, ...ext.map(convertDanDanPlayComment)];
-            this.initEngine(this.rawComments);
-            danmakuState.loadedCount = this.rawComments.length;
-            danmakuState.sourceStats = sourceStats(this.rawComments);
+            if (!this.initEngine(this.rawComments)) {
+                this.scheduleInitRetry('播放器容器未就绪');
+                return;
+            }
+            this.markLoaded(this.pendingSource ?? 'online', this.rawComments);
             logger.info('runtime', `Added ${ext.length} comments from source`);
             this.toast(`已增加 ${ext.length} 条弹幕`);
 
             if (episodeId != null && this.hooks.auth.isLoggedIn) {
                 try {
-                    await this.hooks.postRelatedSource(
-                        danmakuState.effectiveApiPrefix,
-                        episodeId,
-                        url,
-                        this.hooks.auth.token,
-                    );
+                    await this.hooks.postRelatedSource(danmakuState.effectiveApiPrefix, episodeId, url, this.hooks.auth.token);
                 } catch (error) {
                     // 本地追加已经成功，related 提交失败不应把整个“增加弹幕源”视为失败。
                     logger.warn('runtime', 'Source loaded, but failed to post related source', error);
@@ -496,12 +584,7 @@ export class DanmakuRuntime {
         const offset = danmakuState.curEpOffset || 0;
         const time = Math.max(0, displayTime - offset);
         try {
-            await this.hooks.postComment(
-                danmakuState.effectiveApiPrefix,
-                this.lastEpisodeId,
-                { text: message, time, mode, color },
-                this.hooks.auth.token,
-            );
+            await this.hooks.postComment(danmakuState.effectiveApiPrefix, this.lastEpisodeId, { text: message, time, mode, color }, this.hooks.auth.token);
 
             const raw: RawComment = {
                 time,
@@ -512,6 +595,7 @@ export class DanmakuRuntime {
             };
             this.rawComments = [...this.rawComments, raw];
             danmakuState.loadedCount = this.rawComments.length;
+            danmakuState.sourceStats = sourceStats(this.rawComments);
             this.hooks.engine.emit(
                 formatComment(raw, {
                     fontSize: danmakuState.fontSize,

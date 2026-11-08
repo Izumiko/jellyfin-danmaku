@@ -37,10 +37,7 @@ describe('DanDanPlayAuth', () => {
     });
 
     it('clears an already expired saved session without renewing it', async () => {
-        localStorage.setItem(
-            'jellyfin_danmaku_ddplay_status',
-            JSON.stringify({ isLogin: true, token: 'expired', tokenExpire: Date.now() - 1000 }),
-        );
+        localStorage.setItem('jellyfin_danmaku_ddplay_status', JSON.stringify({ isLogin: true, token: 'expired', tokenExpire: Date.now() - 1000 }));
 
         const auth = new DanDanPlayAuth('https://api.example.com');
         await auth.refreshIfNeeded();
@@ -52,10 +49,7 @@ describe('DanDanPlayAuth', () => {
 
     it('renews with GET /login/renew', async () => {
         const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-        localStorage.setItem(
-            'jellyfin_danmaku_ddplay_status',
-            JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }),
-        );
+        localStorage.setItem('jellyfin_danmaku_ddplay_status', JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }));
         vi.mocked(get).mockResolvedValue({
             errorCode: 0,
             token: 'new',
@@ -74,10 +68,7 @@ describe('DanDanPlayAuth', () => {
     });
 
     it('logs out when renew returns errorCode not 0', async () => {
-        localStorage.setItem(
-            'jellyfin_danmaku_ddplay_status',
-            JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }),
-        );
+        localStorage.setItem('jellyfin_danmaku_ddplay_status', JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }));
         vi.mocked(get).mockResolvedValue({
             errorCode: 1,
             errorMessage: 'nope',
@@ -90,10 +81,7 @@ describe('DanDanPlayAuth', () => {
     });
 
     it('keeps a still-valid session when renew fails on the network', async () => {
-        localStorage.setItem(
-            'jellyfin_danmaku_ddplay_status',
-            JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }),
-        );
+        localStorage.setItem('jellyfin_danmaku_ddplay_status', JSON.stringify({ isLogin: true, token: 'old', tokenExpire: Date.now() + 2 * 86400000 }));
         vi.mocked(get).mockRejectedValue(new Error('network down'));
         const auth = new DanDanPlayAuth('https://api.example.com');
         await auth.refreshIfNeeded();

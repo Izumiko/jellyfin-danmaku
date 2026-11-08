@@ -55,6 +55,11 @@ describe('DanmakuRuntime', () => {
         danmakuState.itemId = '';
         danmakuState.loading = false;
         danmakuState.episodeInfo = null;
+        danmakuState.loadedSource = null;
+        danmakuState.loadedCount = 0;
+        danmakuState.sourceStats = null;
+        danmakuState.loadError = null;
+        danmakuState.blockedCount = 0;
         danmakuState.curEpOffset = 0;
         danmakuState.useXmlDanmaku = false;
         const header = document.createElement('div');
@@ -94,17 +99,12 @@ describe('DanmakuRuntime', () => {
 
     it('loads local XML before attempting DanDanPlay matching', async () => {
         danmakuState.useXmlDanmaku = true;
-        const localComments: RawComment[] = [
-            { time: 3, modeId: 1, color: 0xffffff, text: 'local' },
-        ];
+        const localComments: RawComment[] = [{ time: 3, modeId: 1, color: 0xffffff, text: 'local' }];
         vi.mocked(hooks.getLocalComments!).mockResolvedValue(localComments);
 
         await runtime.start();
 
-        expect(hooks.getLocalComments).toHaveBeenCalledWith(
-            'i1',
-            expect.objectContaining({ signal: expect.any(AbortSignal) }),
-        );
+        expect(hooks.getLocalComments).toHaveBeenCalledWith('i1', expect.objectContaining({ signal: expect.any(AbortSignal) }));
         expect(hooks.matcher.match).not.toHaveBeenCalled();
         expect(hooks.fetcher.fetch).not.toHaveBeenCalled();
         expect(hooks.engine.init).toHaveBeenCalledWith(expect.anything(), localComments);
@@ -172,10 +172,7 @@ describe('DanmakuRuntime', () => {
         });
         expect(hooks.engine.init).toHaveBeenCalledWith(
             expect.anything(),
-            expect.arrayContaining([
-                comments[0],
-                expect.objectContaining({ time: 2, modeId: 1, color: 16777215, text: 'ext' }),
-            ]),
+            expect.arrayContaining([comments[0], expect.objectContaining({ time: 2, modeId: 1, color: 16777215, text: 'ext' })]),
         );
         expect(hooks.postRelatedSource).toHaveBeenCalledWith(danmakuState.effectiveApiPrefix, 42, 'https://example.com/xml', 'tok');
     });
@@ -257,10 +254,7 @@ describe('DanmakuRuntime', () => {
         release();
         await adding;
 
-        expect(hooks.engine.init).not.toHaveBeenCalledWith(
-            expect.anything(),
-            expect.arrayContaining([expect.objectContaining({ text: 'ext' })]),
-        );
+        expect(hooks.engine.init).not.toHaveBeenCalledWith(expect.anything(), expect.arrayContaining([expect.objectContaining({ text: 'ext' })]));
     });
 
     it('destroy during addSource does not init engine', async () => {
@@ -355,15 +349,8 @@ describe('DanmakuRuntime', () => {
         eventBus.emit('danmaku:send', { text: 'hello', mode: 5, color: 0xffffff });
         await vi.waitFor(() => expect(hooks.postComment).toHaveBeenCalled());
 
-        expect(hooks.postComment).toHaveBeenCalledWith(
-            danmakuState.effectiveApiPrefix,
-            42,
-            { text: 'hello', time: 12.5, mode: 5, color: 0xffffff },
-            'tok',
-        );
-        expect(hooks.engine.emit).toHaveBeenCalledWith(
-            expect.objectContaining({ text: 'hello', time: 12.5, mode: 'top' }),
-        );
+        expect(hooks.postComment).toHaveBeenCalledWith(danmakuState.effectiveApiPrefix, 42, { text: 'hello', time: 12.5, mode: 5, color: 0xffffff }, 'tok');
+        expect(hooks.engine.emit).toHaveBeenCalledWith(expect.objectContaining({ text: 'hello', time: 12.5, mode: 'top' }));
     });
 
     it('announces the match with a toast and records loaded counts', async () => {
@@ -423,10 +410,7 @@ describe('DanmakuRuntime', () => {
 
         expect(hooks.engine.init).toHaveBeenCalledWith(
             expect.anything(),
-            expect.arrayContaining([
-                expect.objectContaining({ text: 'local' }),
-                expect.objectContaining({ text: 'ext' }),
-            ]),
+            expect.arrayContaining([expect.objectContaining({ text: 'local' }), expect.objectContaining({ text: 'ext' })]),
         );
         expect(hooks.postRelatedSource).not.toHaveBeenCalled();
     });
@@ -442,9 +426,7 @@ describe('DanmakuRuntime', () => {
     });
 
     it('records a readable load error and clears it after a successful retry', async () => {
-        vi.mocked(hooks.fetcher.fetch).mockRejectedValueOnce(
-            new DanmakuError('HTTP 429: {"errorCode":429,"errorMessage":"代理今日回源配额已达到保护上限"}', ErrorCode.HttpError),
-        );
+        vi.mocked(hooks.fetcher.fetch).mockRejectedValueOnce(new DanmakuError('HTTP 429: {"errorCode":429,"errorMessage":"代理今日回源配额已达到保护上限"}', ErrorCode.HttpError));
         await runtime.start();
         expect(danmakuState.loadError).toBe('代理今日回源配额已达到保护上限（HTTP 429）');
 
@@ -533,6 +515,84 @@ describe('DanmakuRuntime', () => {
         vi.advanceTimersByTime(10000);
         expect(hooks.engine.init).toHaveBeenCalledTimes(3);
         vi.useRealTimers();
+    });
+
+    it('retries mounting and emits loaded only after the engine is ready', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        const loaded = vi.fn();
+        eventBus.on('danmaku:loaded', loaded);
+        vi.mocked(hooks.getMedia).mockReturnValue({ video: null, container: null });
+
+        await runtime.start();
+
+        expect(loaded).not.toHaveBeenCalled();
+        expect(danmakuState.loadedSource).toBeNull();
+        expect(danmakuState.loadError).toContain('自动重试');
+
+        const video = document.createElement('video');
+        const container = document.createElement('div');
+        vi.mocked(hooks.getMedia).mockReturnValue({ video, container });
+        await vi.advanceTimersByTimeAsync(3000);
+
+        expect(loaded).toHaveBeenCalledTimes(1);
+        expect(danmakuState.loadedSource).toBe('online');
+        expect(danmakuState.loadError).toBeNull();
+        vi.useRealTimers();
+    });
+
+    it('retries local XML without falling back to online matching', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        danmakuState.useXmlDanmaku = true;
+        vi.mocked(hooks.getLocalComments!).mockResolvedValue([{ time: 1, modeId: 1, color: 0, text: 'local' }]);
+        vi.mocked(hooks.getMedia).mockReturnValue({ video: null, container: null });
+
+        await runtime.start();
+
+        expect(hooks.matcher.match).not.toHaveBeenCalled();
+        expect(danmakuState.loadedSource).toBeNull();
+
+        const video = document.createElement('video');
+        const container = document.createElement('div');
+        vi.mocked(hooks.getMedia).mockReturnValue({ video, container });
+        await vi.advanceTimersByTimeAsync(3000);
+
+        expect(hooks.matcher.match).not.toHaveBeenCalled();
+        expect(danmakuState.loadedSource).toBe('local');
+        vi.useRealTimers();
+    });
+
+    it('does not report an added source as successful when the engine cannot mount', async () => {
+        await runtime.start();
+        const toasts: string[] = [];
+        eventBus.on('ui:toast', ({ message }) => toasts.push(message));
+        vi.mocked(hooks.getMedia).mockReturnValue({ video: null, container: null });
+        vi.mocked(hooks.getExtComments!).mockResolvedValue([{ cid: 2, p: '2,1,16777215,u', m: 'ext' }]);
+
+        await runtime.addSource('https://example.com/xml');
+
+        expect(toasts).not.toContain('已增加 1 条弹幕');
+        expect(danmakuState.loadError).toContain('自动重试');
+    });
+
+    it('refetches when the plugin fallback setting changes', async () => {
+        await runtime.start();
+        vi.mocked(hooks.fetcher.fetch).mockClear();
+
+        danmakuState.update({ xmlFallback: false });
+
+        await vi.waitFor(() => expect(hooks.fetcher.fetch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    });
+
+    it('updates source stats after sending a danmaku', async () => {
+        hooks.auth.isLoggedIn = true;
+        hooks.auth.token = 'tok';
+        await runtime.start();
+        expect(danmakuState.sourceStats?.total).toBe(1);
+
+        eventBus.emit('danmaku:send', { text: 'hello', mode: 1, color: 0xffffff });
+        await vi.waitFor(() => expect(hooks.postComment).toHaveBeenCalled());
+
+        expect(danmakuState.sourceStats).toEqual({ total: 2, bilibili: 0, gamer: 0, dandanplay: 2, other: 0 });
     });
 });
 

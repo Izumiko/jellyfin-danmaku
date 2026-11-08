@@ -394,5 +394,14 @@ describe('EpisodeMatcher', () => {
             const result = await matcher.match(createJellyfinItem({ IndexNumber: 4 }));
             expect(result?.episodeId).toBe(11);
         });
+
+        it('prefixes tvseries episode titles with SxxExx like ede.js', async () => {
+            vi.mocked(Storage.getEpisodeCache).mockResolvedValue(null);
+            vi.mocked(searchEpisodes).mockResolvedValue(createSearchResponse(1));
+
+            const result = await matcher.match(createJellyfinItem({ IndexNumber: 1, ParentIndexNumber: 1 }));
+
+            expect(result?.episodeTitle).toBe('S1E1 第1集');
+        });
     });
 });

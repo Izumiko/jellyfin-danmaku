@@ -77,9 +77,7 @@ export class EpisodeMatcher {
                     logger.info('matcher', `Using animeId ${remembered.animeId}: ${anime.animeTitle}`);
                     // 沿用首次匹配学到的集数偏移，保证「前一集偏移多少，后面就偏移多少」
                     let episodeIndex =
-                        remembered.episodeIndexOffset !== undefined
-                            ? jellyfinEpisodeNumber(item) - 1 + remembered.episodeIndexOffset
-                            : selectEpisodeIndex(anime, item.IndexNumber);
+                        remembered.episodeIndexOffset !== undefined ? jellyfinEpisodeNumber(item) - 1 + remembered.episodeIndexOffset : selectEpisodeIndex(anime, item.IndexNumber);
                     if (!anime.episodes[episodeIndex]) {
                         episodeIndex = selectEpisodeIndex(anime, item.IndexNumber);
                     }
@@ -112,8 +110,7 @@ export class EpisodeMatcher {
             let searchedName = animeName;
             let searchResult = await searchEpisodes(this.deps.apiPrefix, animeName);
             if (!searchResult.animes || searchResult.animes.length === 0) {
-                const originalTitle =
-                    (await this.deps.getSeriesOriginalTitle?.(item)) || item.OriginalTitle;
+                const originalTitle = (await this.deps.getSeriesOriginalTitle?.(item)) || item.OriginalTitle;
                 if (originalTitle && originalTitle !== animeName) {
                     logger.info('matcher', `Retrying with series OriginalTitle: ${originalTitle}`);
                     searchedName = originalTitle;
@@ -181,6 +178,11 @@ export class EpisodeMatcher {
             animeTitle: anime.animeTitle,
             episodeTitle: episode.episodeTitle,
         };
+
+        // 与 ede.js 一致：电视剧标题前加 SxxExx，便于在面板/通知里确认匹配到的集数。
+        const season = item.ParentIndexNumber ?? 1;
+        const prefix = anime.type === 'tvseries' ? `S${season}E${episodeIndex + 1}` : anime.type;
+        result.episodeTitle = `${prefix} ${episode.episodeTitle}`.trim();
 
         await Storage.setSeasonAnime(seasonId, {
             animeId: anime.animeId,

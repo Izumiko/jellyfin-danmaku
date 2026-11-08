@@ -1,24 +1,24 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build:all && cp dist/jellyfin-danmaku.user.js dist/ede.user.js",
-  "outputDirectory": "dist",
-  "headers": [
-    {
-      "source": "/(.*)\\.js",
-      "headers": [
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "buildCommand": "pnpm run build:all",
+    "outputDirectory": "dist",
+    "headers": [
         {
-          "key": "Cache-Control",
-          "value": "no-cache"
-        },
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
+            "source": "/(.*)\\.js",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache"
+                },
+                {
+                    "key": "Content-Type",
+                    "value": "application/javascript"
+                },
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }

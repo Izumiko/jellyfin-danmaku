@@ -1,13 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import {
-    EPISODE_CACHE_STORE,
-    idbClear,
-    idbDelete,
-    idbGet,
-    idbPut,
-    resetDanmakuDb,
-} from '@/core/idb';
+import { EPISODE_CACHE_STORE, idbClear, idbDelete, idbGet, idbPut, resetDanmakuDb } from '@/core/idb';
 
 describe('idb episode-cache store', () => {
     beforeEach(() => {

@@ -44,11 +44,16 @@
         font-family: var(--danmaku-font);
         font-size: 0.875rem;
         line-height: 1.43;
-        box-shadow: 0 3px 5px -1px rgba(0, 0, 0, 0.2), 0 6px 10px rgba(0, 0, 0, 0.14), 0 1px 18px rgba(0, 0, 0, 0.12);
+        box-shadow:
+            0 3px 5px -1px rgba(0, 0, 0, 0.2),
+            0 6px 10px rgba(0, 0, 0, 0.14),
+            0 1px 18px rgba(0, 0, 0, 0.12);
         pointer-events: none;
         opacity: 0;
         transform: translate(-50%, 8px);
-        transition: opacity 200ms, transform 200ms;
+        transition:
+            opacity 200ms,
+            transform 200ms;
         overflow-wrap: anywhere;
     }
 

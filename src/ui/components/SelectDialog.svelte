@@ -1,19 +1,15 @@
 <script lang="ts">
     import '../styles/variables.css';
 
-    let {
-        title,
-        options,
-        defaultIndex = 0,
-        onConfirm,
-        onCancel,
-    } = $props<{
+    type Props = {
         title: string;
         options: string[];
         defaultIndex: number;
         onConfirm: (index: number) => void;
         onCancel: () => void;
-    }>();
+    };
+
+    let { title, options, defaultIndex = 0, onConfirm, onCancel }: Props = $props();
 
     function stopPlayerGestures(e: Event) {
         e.stopPropagation();
@@ -30,8 +26,10 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="dialog-backdrop" role="dialog" aria-modal="true" tabindex="-1">
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
         class="dialog-panel"
+        role="document"
         onpointerdown={stopPlayerGestures}
         onpointerup={stopPlayerGestures}
         onmousedown={stopPlayerGestures}

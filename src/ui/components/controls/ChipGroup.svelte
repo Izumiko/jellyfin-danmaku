@@ -68,7 +68,10 @@
         font: inherit;
         font-size: 0.85rem;
         cursor: pointer;
-        transition: background-color 150ms, color 150ms, border-color 150ms;
+        transition:
+            background-color 150ms,
+            color 150ms,
+            border-color 150ms;
     }
 
     button:hover {

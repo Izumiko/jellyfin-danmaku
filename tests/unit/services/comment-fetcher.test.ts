@@ -49,10 +49,7 @@ describe('CommentFetcher', () => {
 
     describe('fetch', () => {
         it('should fetch online comments by default', async () => {
-            vi.mocked(getComments).mockResolvedValue([
-                createDanDanPlayComment(1.0, 'hello'),
-                createDanDanPlayComment(2.0, 'world'),
-            ]);
+            vi.mocked(getComments).mockResolvedValue([createDanDanPlayComment(1.0, 'hello'), createDanDanPlayComment(2.0, 'world')]);
             vi.mocked(getRelatedSources).mockResolvedValue([]);
 
             const result = await fetcher.fetch(123, 'item-456');
@@ -62,9 +59,7 @@ describe('CommentFetcher', () => {
         });
 
         it('should use local XML when enabled and available', async () => {
-            const localComments: RawComment[] = [
-                { time: 1.0, modeId: 1, color: 16777215, text: 'local' },
-            ];
+            const localComments: RawComment[] = [{ time: 1.0, modeId: 1, color: 16777215, text: 'local' }];
 
             vi.mocked(getLocalXmlDanmaku).mockResolvedValue(localComments);
 
@@ -77,9 +72,7 @@ describe('CommentFetcher', () => {
 
         it('should fallback to online when local XML fails', async () => {
             vi.mocked(getLocalXmlDanmaku).mockRejectedValue(new Error('No XML'));
-            vi.mocked(getComments).mockResolvedValue([
-                createDanDanPlayComment(1.0, 'fallback'),
-            ]);
+            vi.mocked(getComments).mockResolvedValue([createDanDanPlayComment(1.0, 'fallback')]);
             vi.mocked(getRelatedSources).mockResolvedValue([]);
 
             const xmlFetcher = new CommentFetcher({ ...defaultDeps, useXmlDanmaku: true });
@@ -90,15 +83,9 @@ describe('CommentFetcher', () => {
         });
 
         it('should fetch related sources', async () => {
-            vi.mocked(getComments).mockResolvedValue([
-                createDanDanPlayComment(1.0, 'main'),
-            ]);
-            vi.mocked(getRelatedSources).mockResolvedValue([
-                { url: 'https://bilibili.com/video/test', shift: 0 },
-            ]);
-            vi.mocked(getExtComments).mockResolvedValue([
-                createDanDanPlayComment(2.0, 'related'),
-            ]);
+            vi.mocked(getComments).mockResolvedValue([createDanDanPlayComment(1.0, 'main')]);
+            vi.mocked(getRelatedSources).mockResolvedValue([{ url: 'https://bilibili.com/video/test', shift: 0 }]);
+            vi.mocked(getExtComments).mockResolvedValue([createDanDanPlayComment(2.0, 'related')]);
 
             const result = await fetcher.fetch(123, 'item-456');
 
@@ -124,11 +111,7 @@ describe('CommentFetcher', () => {
             await filteredFetcher.fetch(123, 'item-456');
 
             // Should not fetch bilibili source
-            expect(getExtComments).not.toHaveBeenCalledWith(
-                expect.anything(),
-                'https://bilibili.com/video/test',
-                expect.anything(),
-            );
+            expect(getExtComments).not.toHaveBeenCalledWith(expect.anything(), 'https://bilibili.com/video/test', expect.anything());
         });
 
         it('rethrows on total failure', async () => {
@@ -148,20 +131,14 @@ describe('CommentFetcher', () => {
 
         it('applies related source shift to comment times', async () => {
             vi.mocked(getComments).mockResolvedValue([]);
-            vi.mocked(getRelatedSources).mockResolvedValue([
-                { url: 'https://other.com/a', shift: 5 },
-            ]);
-            vi.mocked(getExtComments).mockResolvedValue([
-                { cid: 1, p: '1,1,16777215,u', m: 'shifted' },
-            ]);
+            vi.mocked(getRelatedSources).mockResolvedValue([{ url: 'https://other.com/a', shift: 5 }]);
+            vi.mocked(getExtComments).mockResolvedValue([{ cid: 1, p: '1,1,16777215,u', m: 'shifted' }]);
             const result = await fetcher.fetch(123, 'item-456');
             expect(result[0]?.time).toBe(6);
         });
 
         it('keeps main comments when one ext source fails', async () => {
-            vi.mocked(getComments).mockResolvedValue([
-                { cid: 1, p: '1,1,16777215,u', m: 'main' },
-            ]);
+            vi.mocked(getComments).mockResolvedValue([{ cid: 1, p: '1,1,16777215,u', m: 'main' }]);
             vi.mocked(getRelatedSources).mockResolvedValue([
                 { url: 'https://other.com/bad', shift: 0 },
                 { url: 'https://other.com/ok', shift: 0 },

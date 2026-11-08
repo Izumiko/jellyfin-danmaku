@@ -183,9 +183,7 @@ export class Storage {
             // 3. 迁移 ede.js 的逐集匹配和逐集时间偏移（偏移在下方第 4 步单独处理）：
             //    _episode_id_rel_<seasonId>_<episode>
             //    _episode_id_rel_<seasonId>_<episode>_offset
-            for (const key of keys.filter(
-                (key) => key.startsWith(LEGACY_EPISODE_PREFIX) && !key.endsWith('_offset'),
-            )) {
+            for (const key of keys.filter((key) => key.startsWith(LEGACY_EPISODE_PREFIX) && !key.endsWith('_offset'))) {
                 const rest = key.slice(LEGACY_EPISODE_PREFIX.length);
                 const sep = rest.lastIndexOf('_');
                 const raw = localStorage.getItem(key);
@@ -325,17 +323,9 @@ export class Storage {
                 tokenExpire: number | string;
                 userName?: string;
             };
-            const tokenExpire =
-                typeof parsed.tokenExpire === 'number'
-                    ? parsed.tokenExpire
-                    : new Date(parsed.tokenExpire).getTime();
+            const tokenExpire = typeof parsed.tokenExpire === 'number' ? parsed.tokenExpire : new Date(parsed.tokenExpire).getTime();
 
-            const validSession =
-                parsed.isLogin === true &&
-                typeof parsed.token === 'string' &&
-                parsed.token.length > 0 &&
-                Number.isFinite(tokenExpire) &&
-                tokenExpire > 0;
+            const validSession = parsed.isLogin === true && typeof parsed.token === 'string' && parsed.token.length > 0 && Number.isFinite(tokenExpire) && tokenExpire > 0;
 
             const status: DanDanPlayStatus = validSession
                 ? {

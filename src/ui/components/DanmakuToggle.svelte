@@ -6,15 +6,7 @@
     let useFontAwesome = $state(false);
 
     const toggleTitle = $derived(danmakuState.danmakuSwitch ? '关闭弹幕' : '开启弹幕');
-    const toggleIcon = $derived(
-        useFontAwesome
-            ? danmakuState.danmakuSwitch
-                ? 'fa-comment'
-                : 'fa-comment-slash'
-            : danmakuState.danmakuSwitch
-              ? 'comment'
-              : 'comments_disabled',
-    );
+    const toggleIcon = $derived(useFontAwesome ? (danmakuState.danmakuSwitch ? 'fa-comment' : 'fa-comment-slash') : danmakuState.danmakuSwitch ? 'comment' : 'comments_disabled');
     const settingsIcon = $derived(useFontAwesome ? 'fa-sliders' : 'tune');
 
     onMount(() => {
@@ -29,9 +21,11 @@
     }
 </script>
 
+<!-- svelte-ignore attribute_avoid_is -->
 <button type="button" class="paper-icon-button-light autoSize" is="paper-icon-button-light" title={toggleTitle} aria-label={toggleTitle} onclick={toggle}>
     <span class="xlargePaperIconButton material-icons {toggleIcon}" aria-hidden="true"></span>
 </button>
+<!-- svelte-ignore attribute_avoid_is -->
 <button
     type="button"
     class="paper-icon-button-light autoSize"

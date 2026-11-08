@@ -86,37 +86,6 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: n
     return debounced;
 }
 
-/**
- * throttle
- */
-export function throttle<T extends (...args: unknown[]) => void>(fn: T, interval: number): T {
-    let lastTime = 0;
-
-    return function (this: unknown, ...args: unknown[]) {
-        const now = Date.now();
-        if (now - lastTime >= interval) {
-            lastTime = now;
-            fn.apply(this, args);
-        }
-    } as T;
-}
-
-/**
- * clamp - 将值限制在范围内
- */
-export function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
-
-/**
- * parseFloatOfRange - 解析浮点数并 clamp
- */
-export function parseFloatOfRange(str: string, min: number, max: number): number {
-    const value = parseFloat(str);
-    if (isNaN(value)) return min;
-    return clamp(value, min, max);
-}
-
 /** Insert `node` before `reference`, even if `reference` is nested under `container`. */
 export function insertBeforeRef(container: Element, node: Node, reference: Element | null): void {
     if (reference?.parentNode) {

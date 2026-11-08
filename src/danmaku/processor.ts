@@ -134,12 +134,7 @@ export function filterByMode(comments: RawComment[], filter: ModeFilter): RawCom
 /**
  * 密度限制
  */
-export function limitDensity(
-    comments: RawComment[],
-    limit: DensityLimit,
-    bucketSize: number,
-    lines = 1,
-): RawComment[] {
+export function limitDensity(comments: RawComment[], limit: DensityLimit, bucketSize: number, lines = 1): RawComment[] {
     if (limit === DensityLimit.Unlimited) return comments;
 
     const scrollLimit = (9 - limit * 2) * lines;

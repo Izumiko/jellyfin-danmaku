@@ -4,7 +4,7 @@
 
 ## 🛠️ 2.0 TypeScript 重构版
 
-- 源码迁移到 `src/`（TypeScript + Svelte 5），通过 `bun run build:all` 构建
+- 源码迁移到 `src/`（TypeScript + Svelte 5），通过 `pnpm run build:all` 构建
 - 产物：`ede.user.js`（与旧地址兼容，可用于 Tampermonkey 和 `<script>` 引用）、`jellyfin-danmaku.user.js`（同上）、`ede.min.js`（仅用于 `<script>` 引用）
 - 剧集匹配记录与偏移改存 IndexedDB，首次运行会自动迁移旧版 localStorage 数据与设置
 - 发送弹幕功能已恢复：播放控制栏新增「发送弹幕」按钮，首次使用需登录弹弹Play
@@ -12,12 +12,13 @@
 ### 开发
 
 ```bash
-bun install
-bun run test        # 单元测试
-bun run typecheck   # 类型检查
-bun run check       # svelte-check
-bun run lint
-bun run build:all   # 输出到 dist/
+pnpm install
+pnpm run test        # 单元测试
+pnpm run typecheck   # 类型检查
+pnpm run check       # svelte-check
+pnpm run lint
+pnpm run format:check # 检查格式
+pnpm run build:all   # 输出到 dist/（含 ede.user.js）
 ```
 
 ## 🆕 v1.62.0 更新：弹幕屏蔽 / 相似弹幕合并 / 第三方 API 适配
@@ -26,7 +27,7 @@ bun run build:all   # 输出到 dist/
 
 ### 新增功能
 
-- **弹幕屏蔽**（侧边栏新增「屏蔽」标签页）：关键词 / 正则 / 发送者 / 颜色四类规则，各自独立开关（2.0 中随「设置备份」一起导出、导入）
+- **弹幕屏蔽**（侧边栏新增「屏蔽」标签页）：关键词 / 正则 / 发送者 / 颜色四类规则，各自独立开关（2.0 中可单独导出 / 导入 / 清空，也随「设置备份」一起备份）
   - 关键词默认按「包含」匹配；需要正则时写成 `/正则/flags` 或 `re:正则`
 - **相似弹幕合并**：同一时间窗内相似度超过阈值的弹幕合并为一条并标注 `[xN]`（默认关闭，阈值可调）
 - **正文清理**：去掉第三方 API 拼在弹幕正文尾部的 B 站点赞数（如 `🤍 28`）

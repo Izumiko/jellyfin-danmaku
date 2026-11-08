@@ -78,6 +78,19 @@ describe('Sidebar', () => {
         expect(danmakuState.curEpOffset).toBe(0.3);
     });
 
+    it('clears the block rule fields from the block tab', () => {
+        danmakuState.update({ blockKeywords: 'spam', blockUsers: 'bot', blockColors: 'ff0000' });
+        openTab('屏蔽');
+        const button = [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === '清空规则')!;
+
+        button.click();
+        flushSync();
+
+        expect(danmakuState.blockKeywords).toBe('');
+        expect(danmakuState.blockUsers).toBe('');
+        expect(danmakuState.blockColors).toBe('');
+    });
+
     it('closes on Escape and keeps the key away from player hotkeys', () => {
         const documentListener = vi.fn();
         document.addEventListener('keydown', documentListener);

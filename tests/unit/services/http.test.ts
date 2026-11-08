@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { request, get, post } from '@/services/http';
-import { DanmakuError, ErrorCode } from '@/types/index';
+import { DanmakuError } from '@/types/index';
 
 describe('http', () => {
     beforeEach(() => {
@@ -97,38 +97,36 @@ describe('http', () => {
         });
 
         it('should throw timeout error', async () => {
-            global.fetch = vi.fn(() =>
-                new Promise((_, reject) =>
-                    setTimeout(() => {
-                        const error = new Error('Timeout');
-                        error.name = 'AbortError';
-                        reject(error);
-                    }, 100)
-                )
+            global.fetch = vi.fn(
+                () =>
+                    new Promise((_, reject) =>
+                        setTimeout(() => {
+                            const error = new Error('Timeout');
+                            error.name = 'AbortError';
+                            reject(error);
+                        }, 100),
+                    ),
             );
 
-            await expect(
-                request('https://example.com/api', { timeout: 10, retries: 0 }),
-            ).rejects.toThrow('timeout');
+            await expect(request('https://example.com/api', { timeout: 10, retries: 0 })).rejects.toThrow('timeout');
         });
 
         it('should handle abort signal', async () => {
-            global.fetch = vi.fn(() =>
-                new Promise((_, reject) => {
-                    setTimeout(() => {
-                        const error = new Error('Aborted');
-                        error.name = 'AbortError';
-                        reject(error);
-                    }, 100);
-                }),
+            global.fetch = vi.fn(
+                () =>
+                    new Promise((_, reject) => {
+                        setTimeout(() => {
+                            const error = new Error('Aborted');
+                            error.name = 'AbortError';
+                            reject(error);
+                        }, 100);
+                    }),
             );
 
             const controller = new AbortController();
             controller.abort();
 
-            await expect(
-                request('https://example.com/api', { signal: controller.signal }),
-            ).rejects.toThrow('cancelled');
+            await expect(request('https://example.com/api', { signal: controller.signal })).rejects.toThrow('cancelled');
         });
     });
 
@@ -143,10 +141,7 @@ describe('http', () => {
             );
 
             await get<{ data: string }>('https://example.com/api');
-            expect(fetch).toHaveBeenCalledWith(
-                'https://example.com/api',
-                expect.objectContaining({ method: 'GET' }),
-            );
+            expect(fetch).toHaveBeenCalledWith('https://example.com/api', expect.objectContaining({ method: 'GET' }));
         });
     });
 });

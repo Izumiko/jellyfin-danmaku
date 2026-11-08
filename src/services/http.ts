@@ -21,9 +21,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         // 合并外部信号和超时信号，并在本次请求结束后移除监听器。
-        const combined = externalSignal
-            ? createCombinedSignal(externalSignal, controller.signal)
-            : { signal: controller.signal, cleanup: () => {} };
+        const combined = externalSignal ? createCombinedSignal(externalSignal, controller.signal) : { signal: controller.signal, cleanup: () => {} };
         const combinedSignal = combined.signal;
 
         try {
@@ -105,10 +103,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
 /**
  * 创建组合的 AbortSignal
  */
-function createCombinedSignal(
-    signal1: AbortSignal,
-    signal2: AbortSignal,
-): { signal: AbortSignal; cleanup: () => void } {
+function createCombinedSignal(signal1: AbortSignal, signal2: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
     const controller = new AbortController();
 
     const abort = () => controller.abort();

@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-    preProcessDanmaku,
-    deduplicateComments,
-    filterBySource,
-    filterByMode,
-    limitDensity,
-    formatComment,
-} from '@/danmaku/processor';
+import { preProcessDanmaku, deduplicateComments, filterBySource, filterByMode, limitDensity, formatComment } from '@/danmaku/processor';
 import { DensityLimit } from '@/types/index';
 import type { RawComment, ProcessingConfig } from '@/types/index';
 
@@ -46,10 +39,7 @@ describe('processor', () => {
         });
 
         it('should keep comments with same text but different time', () => {
-            const comments = [
-                createComment({ time: 1.0, text: 'hello' }),
-                createComment({ time: 2.0, text: 'hello' }),
-            ];
+            const comments = [createComment({ time: 1.0, text: 'hello' }), createComment({ time: 2.0, text: 'hello' })];
 
             const result = deduplicateComments(comments);
             expect(result).toHaveLength(2);
@@ -58,11 +48,7 @@ describe('processor', () => {
 
     describe('filterBySource', () => {
         it('should filter Bilibili comments when disabled', () => {
-            const comments = [
-                createComment({ user: '[BiliBili]user1' }),
-                createComment({ user: '[Gamer]user2' }),
-                createComment({ user: '[DanDanPlay]user3' }),
-            ];
+            const comments = [createComment({ user: '[BiliBili]user1' }), createComment({ user: '[Gamer]user2' }), createComment({ user: '[DanDanPlay]user3' })];
 
             const result = filterBySource(comments, { bilibili: false, gamer: true, dandanplay: true, other: true });
             expect(result).toHaveLength(2);
@@ -70,10 +56,7 @@ describe('processor', () => {
         });
 
         it('should filter by Gamer source', () => {
-            const comments = [
-                createComment({ user: '[BiliBili]user1' }),
-                createComment({ user: '[Gamer]user2' }),
-            ];
+            const comments = [createComment({ user: '[BiliBili]user1' }), createComment({ user: '[Gamer]user2' })];
 
             const result = filterBySource(comments, { bilibili: true, gamer: false, dandanplay: true, other: true });
             expect(result).toHaveLength(1);
@@ -138,10 +121,7 @@ describe('processor', () => {
         });
 
         it('should filter top mode (5)', () => {
-            const comments = [
-                createComment({ modeId: 1 }),
-                createComment({ modeId: 5 }),
-            ];
+            const comments = [createComment({ modeId: 1 }), createComment({ modeId: 5 })];
 
             const result = filterByMode(comments, { scroll: true, top: false, bottom: true });
             expect(result).toHaveLength(1);
@@ -151,27 +131,21 @@ describe('processor', () => {
 
     describe('limitDensity', () => {
         it('should not limit when set to unlimited', () => {
-            const comments = Array.from({ length: 20 }, (_, i) =>
-                createComment({ time: i * 0.1, modeId: 1 }),
-            );
+            const comments = Array.from({ length: 20 }, (_, i) => createComment({ time: i * 0.1, modeId: 1 }));
 
             const result = limitDensity(comments, DensityLimit.Unlimited, 1);
             expect(result).toHaveLength(20);
         });
 
         it('should limit density for low setting', () => {
-            const comments = Array.from({ length: 20 }, (_, i) =>
-                createComment({ time: i * 0.1, modeId: 1 }),
-            );
+            const comments = Array.from({ length: 20 }, (_, i) => createComment({ time: i * 0.1, modeId: 1 }));
 
             const result = limitDensity(comments, DensityLimit.Low, 1);
             expect(result.length).toBeLessThan(20);
         });
 
         it('should make higher density-limit levels stricter', () => {
-            const comments = Array.from({ length: 30 }, (_, i) =>
-                createComment({ time: i * 0.01, modeId: 1, text: `c${i}` }),
-            );
+            const comments = Array.from({ length: 30 }, (_, i) => createComment({ time: i * 0.01, modeId: 1, text: `c${i}` }));
 
             const low = limitDensity(comments, DensityLimit.Low, 1, 2);
             const high = limitDensity(comments, DensityLimit.High, 1, 2);

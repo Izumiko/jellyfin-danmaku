@@ -1,9 +1,6 @@
 import type { BlockRules, DanmakuConfig, RawComment } from '../types/index';
 
-type BlockConfig = Pick<
-    DanmakuConfig,
-    'blockKeywords' | 'blockUsers' | 'blockColors' | 'blockEnableKeywords' | 'blockEnableUsers' | 'blockEnableColors'
->;
+type BlockConfig = Pick<DanmakuConfig, 'blockKeywords' | 'blockUsers' | 'blockColors' | 'blockEnableKeywords' | 'blockEnableUsers' | 'blockEnableColors'>;
 
 /** 拆分规则文本：每行一条，忽略空行与 # 注释 */
 export function parseRuleLines(text: string): string[] {

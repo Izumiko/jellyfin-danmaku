@@ -4,7 +4,17 @@ import type { DanmakuConfig } from '../types/index';
 
 const BACKUP_APP = 'jellyfin-danmaku';
 const BACKUP_VERSION = 3;
-const LEGACY_ONLY_KEYS = ['danmakuopacity', 'danmakuspeed', 'danmakusize', 'danmakuheight', 'danmakuFilter', 'danmakuModeFilter', 'useAnitOverlap', 'danmakuBlockKeywords', 'danmakuBlockUsers'];
+const LEGACY_ONLY_KEYS = [
+    'danmakuopacity',
+    'danmakuspeed',
+    'danmakusize',
+    'danmakuheight',
+    'danmakuFilter',
+    'danmakuModeFilter',
+    'useAnitOverlap',
+    'danmakuBlockKeywords',
+    'danmakuBlockUsers',
+];
 
 /** 备份不包含逐集偏移（运行时值，按集存在 IndexedDB） */
 type BackupSettings = Omit<DanmakuConfig, 'curEpOffset'>;

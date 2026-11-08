@@ -1,8 +1,24 @@
 # ede.js → TypeScript 功能等价状态
 
-> 更新：2026-09-23  
-> 基线：`jellyfin/ede.js`（3769 行）→ `typescript/src/**`  
-> 2026-10-10 审查轮次已执行全部自动化检查，详见下节。
+> 更新：2026-11-08  
+> 基线：`jellyfin/ede.js`（5400 行）→ `typescript/src/**`  
+> 2026-10-10 审查轮次已执行全部自动化检查；2026-11-08 修复了初始化容错、重复注入、屏蔽规则独立导入导出等缺口。
+
+## 2026-11-08 缺口修复
+
+| 缺口 | 修复 | 验证 |
+|---|---|---|
+| 播放器容器/video 晚出现时只失败一次且没有提示 | `DanmakuRuntime` 失败后 3 秒重试，最多 3 次；成功后才发 `danmaku:loaded`、清空 `loadError` | `runtime.test.ts` 覆盖在线/本地 XML/增加弹幕源 |
+| 本地 XML 初始化失败被当成已加载 | `tryLoadLocal` 新增 `failed` 状态，回到 Runtime 排队重试，不错误回退/停止 | `runtime.test.ts` |
+| 同一页面重复注入会挂两套 UI/引擎 | 新增 `core/boot-guard.ts`，`main.ts` 用全局标记保证只启动一次；启动失败释放标记 | `boot-guard.test.ts` |
+| 屏蔽规则缺少原版的独立导入/导出/清空 | 新增 `core/block-backup.ts` + 「屏蔽」标签页按钮，兼容 ede.js 的 0/1 与字符串格式 | `block-backup.test.ts` |
+| `xmlFallback` 切换后不即时生效 | 加入 `REFETCH_KEYS` | `runtime.test.ts` |
+| 发送弹幕后来源统计不更新 | 发送成功后重算 `sourceStats` | `runtime.test.ts` |
+| 电视剧标题缺少 `SxxExx` 前缀 | `EpisodeMatcher.commit` 按 ede.js 补前缀 | `episode-matcher.test.ts` |
+| CI 不覆盖 `typescript` 分支、缺 build/format/coverage | CI 增加 `typescript` 触发分支、`format:check`、`build:all`、`test:coverage`；覆盖率阈值 60% | `.github/workflows/DEPLOY.yml`、`vitest.config.ts` |
+| 本地 `build:all` 不生成 `ede.user.js` | 新增 `tools/copy-userscript.mjs`，构建后自动复制 | 构建输出 |
+
+当前验证：**23 个测试文件 / 201 个测试通过**，`typecheck`、`svelte-check`（0 错误 / 0 警告）、`lint`、`format:check`、`build:all` 全部通过；覆盖率约 **67.7%**。
 
 ## 2026-10-11 同步 ede.js v1.62.0（PR #101 及后续修复 1b0b6e6、9967db0）
 
@@ -31,7 +47,7 @@
 
 ## 2026-10-10 审查与修复
 
-本轮已执行完整验证：`vitest`（149 通过）、`typecheck`、`svelte-check`（0 错误）、`lint`、`build:all` 全部通过。修复内容：
+本轮已执行完整验证：`vitest`（当前 201 通过）、`typecheck`、`svelte-check`（0 错误 / 0 警告）、`lint`、`build:all` 全部通过。修复内容：
 
 1. **用户脚本沙箱**：原构建声明 `@grant GM_addStyle`，脚本管理器会进入沙箱，`window.ApiClient` 与 XHR 拦截器失效。改为 `@grant none` 并直接插入 `<style>`；`@name`/`@namespace`/`@updateURL` 沿用 ede.js，老用户可原地升级。
 2. **发布流程**：DEPLOY 工作流和 `vercel.json` 仍复制已删除的 `ede.js`。改为构建 `dist/`，并额外发布 `ede.user.js`（兼容 Tampermonkey 更新地址与服务端 `<script>` 注入）。
@@ -49,7 +65,7 @@
 
 ## 当前结论
 
-TypeScript 分支的主体重构已经从“架构搭好但存在用户可感知缺口”推进到“原版主要功能均已有对应实现，进入实机兼容验证阶段”。
+TypeScript 分支的主体重构已经从“架构搭好但存在用户可感知缺口”推进到“原版主要功能均已有对应实现，进入实机兼容验证阶段”。2026-11-08 已补齐初始化重试、重复注入保护与屏蔽规则独立导入导出；实机验证仍是当前主要未完成项。
 
 早期 `PROGRESS.md` 中的“100% 完成/生产就绪”结论不应再作为验证依据。后续应以本文件和实际 Jellyfin 环境测试结果为准。
 

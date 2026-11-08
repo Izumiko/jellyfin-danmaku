@@ -17,13 +17,7 @@
     <span class="label">{label}</span>
     <div class="group">
         {#each options as option (option.value)}
-            <button
-                type="button"
-                role="radio"
-                aria-checked={option.value === value}
-                class:selected={option.value === value}
-                onclick={() => onchange(option.value)}
-            >
+            <button type="button" role="radio" aria-checked={option.value === value} class:selected={option.value === value} onclick={() => onchange(option.value)}>
                 {option.label}
             </button>
         {/each}
@@ -58,7 +52,9 @@
         font: inherit;
         font-size: 0.85rem;
         cursor: pointer;
-        transition: background-color 150ms, color 150ms;
+        transition:
+            background-color 150ms,
+            color 150ms;
     }
 
     button:first-child {

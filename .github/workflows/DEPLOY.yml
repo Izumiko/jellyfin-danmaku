@@ -3,23 +3,36 @@ on:
   pull_request:
     branches:
     - jellyfin
+    - typescript
     paths:
     - "src/**"
     - "build/**"
     - "public/**"
     - "tests/**"
+    - "tools/**"
     - "package.json"
-    - "bun.lock"
+    - "pnpm-lock.yaml"
+    - "vitest.config.ts"
+    - "tsconfig*.json"
+    - "eslint.config.js"
+    - ".prettierrc.json"
     - ".github/workflows/DEPLOY.yml"
   push:
     branches:
     - jellyfin
+    - typescript
     paths:
     - "src/**"
     - "build/**"
     - "public/**"
+    - "tests/**"
+    - "tools/**"
     - "package.json"
-    - "bun.lock"
+    - "pnpm-lock.yaml"
+    - "vitest.config.ts"
+    - "tsconfig*.json"
+    - "eslint.config.js"
+    - ".prettierrc.json"
     - ".github/workflows/DEPLOY.yml"
   workflow_dispatch:
 jobs:
@@ -28,18 +41,27 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 26
+        cache: pnpm
     - name: Install
-      run: bun install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
     - name: Typecheck
-      run: bun run typecheck
+      run: pnpm run typecheck
     - name: Svelte check
-      run: bun run check
+      run: pnpm run check
     - name: Lint
-      run: bun run lint
-    - name: Test
-      run: bun run test
+      run: pnpm run lint
+    - name: Format check
+      run: pnpm run format:check
+    - name: Test with coverage
+      run: pnpm run test:coverage
+    - name: Build
+      run: pnpm run build:all
   release:
     needs: check
     runs-on: ubuntu-latest
@@ -47,15 +69,17 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 26
+        cache: pnpm
     - name: Install
-      run: bun install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
     - name: Build
-      run: |
-        bun run build:all
-        # 兼容旧安装地址：Tampermonkey 的 @updateURL 和服务端 <script> 注入都指向 ede.user.js
-        cp dist/jellyfin-danmaku.user.js dist/ede.user.js
+      run: pnpm run build:all
     - name: Deploy github pages
       uses: peaceiris/actions-gh-pages@v4
       with:

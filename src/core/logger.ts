@@ -29,13 +29,7 @@ class Logger {
             }
         })();
 
-        if (
-            last &&
-            last.level === level &&
-            last.module === module &&
-            last.message === message &&
-            sameData
-        ) {
+        if (last && last.level === level && last.module === module && last.message === message && sameData) {
             // 与 ede.js 的 DebugInfo 行为一致：连续重复日志合并为 X2 / X3...
             last.repeat = (last.repeat ?? 1) + 1;
             last.timestamp = now;

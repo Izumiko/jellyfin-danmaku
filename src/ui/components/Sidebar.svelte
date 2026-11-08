@@ -11,6 +11,7 @@
     import { eventBus } from '../../core/event-bus';
     import { BLOCK_KEYS, DEFAULT_CONFIG, DISPLAY_KEYS, FILTER_KEYS } from '../../core/config';
     import { exportSettings, parseSettingsBackup } from '../../core/backup';
+    import { exportBlockRules, parseBlockRulesBackup } from '../../core/block-backup';
     import { parseRuleLines } from '../../danmaku/shield';
     import { buildMisakaPrefix, splitMisakaPrefix, testApiConnection } from '../../services/misaka';
     import { showInputDialog, showTextDialog } from '../dialogs';
@@ -44,6 +45,7 @@
     let apiTestLines = $state<string[]>([]);
     let apiTesting = $state(false);
     let backupMessage = $state('');
+    let blockMessage = $state('');
 
     const update = (patch: Partial<DanmakuConfig>) => danmakuState.update(patch);
     const percent = (v: number) => `${Math.round(v * 100)}%`;
@@ -110,6 +112,27 @@
         } catch (error) {
             backupMessage = `导入失败：${error instanceof Error ? error.message : String(error)}`;
         }
+    }
+
+    async function exportBlockRulesFile() {
+        await showTextDialog('导出屏蔽规则（可复制保存）', exportBlockRules(danmakuState.toConfig()), true);
+    }
+
+    async function importBlockRulesFile() {
+        const text = await showTextDialog('粘贴屏蔽规则 JSON，然后点导入');
+        if (!text) return;
+        try {
+            const patch = parseBlockRulesBackup(text);
+            update(patch);
+            blockMessage = `已导入 ${Object.keys(patch).length} 项屏蔽规则`;
+        } catch (error) {
+            blockMessage = `导入失败：${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+
+    function clearBlockRules() {
+        update({ blockKeywords: '', blockUsers: '', blockColors: '' });
+        blockMessage = '已清空屏蔽规则';
     }
 
     function setOffset(value: number) {
@@ -237,11 +260,7 @@
                     {#if danmakuState.loadError && !danmakuState.loading}
                         <button type="button" class="button contained" onclick={() => eventBus.emit('danmaku:reload', { reason: 'refresh' })}>重试</button>
                     {/if}
-                    <button
-                        type="button"
-                        class="button {danmakuState.loadError ? 'outlined' : 'contained'}"
-                        onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}
-                    >
+                    <button type="button" class="button {danmakuState.loadError ? 'outlined' : 'contained'}" onclick={() => eventBus.emit('danmaku:reload', { reason: 'search' })}>
                         手动匹配
                     </button>
                     <button type="button" class="button outlined" onclick={handleAddSource}>增加弹幕源</button>
@@ -257,13 +276,7 @@
                 <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset - 1)}>−1s</button>
                 <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset - 0.1)}>−0.1</button>
                 <label class="offset-value">
-                    <input
-                        type="number"
-                        step="0.1"
-                        value={danmakuState.curEpOffset}
-                        aria-label="偏移秒数"
-                        onchange={(e) => setOffset(Number(e.currentTarget.value))}
-                    />
+                    <input type="number" step="0.1" value={danmakuState.curEpOffset} aria-label="偏移秒数" onchange={(e) => setOffset(Number(e.currentTarget.value))} />
                     <span>秒</span>
                 </label>
                 <button type="button" class="button outlined small" onclick={() => setOffset(danmakuState.curEpOffset + 0.1)}>+0.1</button>
@@ -291,12 +304,7 @@
                 ]}
                 onchange={(v) => update({ densityLimit: v })}
             />
-            <SwitchRow
-                label="防重叠"
-                description="丢弃会与已有弹幕重叠的弹幕"
-                checked={danmakuState.useAntiOverlap}
-                onchange={(v) => update({ useAntiOverlap: v })}
-            />
+            <SwitchRow label="防重叠" description="丢弃会与已有弹幕重叠的弹幕" checked={danmakuState.useAntiOverlap} onchange={(v) => update({ useAntiOverlap: v })} />
             <TextField label="字体" value={danmakuState.fontFamily} placeholder="sans-serif" onchange={(v) => update({ fontFamily: v.trim() || DEFAULT_CONFIG.fontFamily })} />
             <TextField label="字体选项" value={danmakuState.fontOptions} placeholder="如 bold、italic" onchange={(v) => update({ fontOptions: v.trim() })} />
             <div class="footer-actions">
@@ -334,7 +342,18 @@
 
         {#if activeTab === 'block'}
             <p class="hint">每行一条规则，# 开头为注释。关键词按「包含」匹配，同时匹配正文和发送者；写成 /正则/i 或 re:正则 按正则匹配。</p>
-            <SwitchRow label="屏蔽关键词" description="{parseRuleLines(danmakuState.blockKeywords).length} 条规则" checked={danmakuState.blockEnableKeywords} onchange={(v) => update({ blockEnableKeywords: v })} />
+            <div class="row-actions">
+                <button type="button" class="button outlined" onclick={exportBlockRulesFile}>导出规则</button>
+                <button type="button" class="button outlined" onclick={importBlockRulesFile}>导入规则</button>
+                <button type="button" class="button text" onclick={clearBlockRules}>清空规则</button>
+            </div>
+            {#if blockMessage}<p class="hint">{blockMessage}</p>{/if}
+            <SwitchRow
+                label="屏蔽关键词"
+                description="{parseRuleLines(danmakuState.blockKeywords).length} 条规则"
+                checked={danmakuState.blockEnableKeywords}
+                onchange={(v) => update({ blockEnableKeywords: v })}
+            />
             <TextAreaField
                 label="关键词 / 正则"
                 value={danmakuState.blockKeywords}
@@ -342,7 +361,12 @@
                 disabled={!danmakuState.blockEnableKeywords}
                 onchange={(v) => update({ blockKeywords: v })}
             />
-            <SwitchRow label="屏蔽发送者" description="{parseRuleLines(danmakuState.blockUsers).length} 条规则" checked={danmakuState.blockEnableUsers} onchange={(v) => update({ blockEnableUsers: v })} />
+            <SwitchRow
+                label="屏蔽发送者"
+                description="{parseRuleLines(danmakuState.blockUsers).length} 条规则"
+                checked={danmakuState.blockEnableUsers}
+                onchange={(v) => update({ blockEnableUsers: v })}
+            />
             <TextAreaField
                 label="发送者（包含即屏蔽）"
                 value={danmakuState.blockUsers}
@@ -363,14 +387,17 @@
                 checked={danmakuState.stripLikeSuffix}
                 onchange={(v) => update({ stripLikeSuffix: v })}
             />
-            <SwitchRow
-                label="合并相似弹幕"
-                description="2 秒内相似的弹幕合并为一条并标注 [xN]"
-                checked={danmakuState.mergeSimilar}
-                onchange={(v) => update({ mergeSimilar: v })}
-            />
+            <SwitchRow label="合并相似弹幕" description="2 秒内相似的弹幕合并为一条并标注 [xN]" checked={danmakuState.mergeSimilar} onchange={(v) => update({ mergeSimilar: v })} />
             {#if danmakuState.mergeSimilar}
-                <SliderField label="相似度阈值" value={danmakuState.mergeThreshold} min={50} max={100} step={1} format={(v) => `${v}%`} oninput={(v) => update({ mergeThreshold: v })} />
+                <SliderField
+                    label="相似度阈值"
+                    value={danmakuState.mergeThreshold}
+                    min={50}
+                    max={100}
+                    step={1}
+                    format={(v) => `${v}%`}
+                    oninput={(v) => update({ mergeThreshold: v })}
+                />
             {/if}
             {#if danmakuState.blockedCount > 0}
                 <p class="hint">当前已屏蔽 {danmakuState.blockedCount} 条</p>
@@ -422,13 +449,7 @@
                     onchange={(v) => update({ xmlFallback: v })}
                 />
             {/if}
-            <TextField
-                label="CORS 代理"
-                value={danmakuState.customCorsProxy}
-                placeholder="留空使用默认"
-                type="url"
-                onchange={(v) => update({ customCorsProxy: v.trim() })}
-            />
+            <TextField label="CORS 代理" value={danmakuState.customCorsProxy} placeholder="留空使用默认" type="url" onchange={(v) => update({ customCorsProxy: v.trim() })} />
             <TextField
                 label="API 地址"
                 value={danmakuState.customApiPrefix}
@@ -564,7 +585,9 @@
         font-size: 0.9rem;
         font-weight: 500;
         cursor: pointer;
-        transition: color 150ms, border-color 150ms;
+        transition:
+            color 150ms,
+            border-color 150ms;
     }
 
     .tabs button:hover {
@@ -658,7 +681,9 @@
         font-size: 0.9rem;
         font-weight: 500;
         cursor: pointer;
-        transition: background-color 150ms, box-shadow 150ms;
+        transition:
+            background-color 150ms,
+            box-shadow 150ms;
     }
 
     .button:disabled {
@@ -670,7 +695,10 @@
         border: none;
         background: var(--danmaku-primary);
         color: var(--danmaku-on-primary);
-        box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 1px 5px rgba(0, 0, 0, 0.12);
+        box-shadow:
+            0 3px 1px -2px rgba(0, 0, 0, 0.2),
+            0 2px 2px rgba(0, 0, 0, 0.14),
+            0 1px 5px rgba(0, 0, 0, 0.12);
     }
 
     .button.contained:hover:not(:disabled) {

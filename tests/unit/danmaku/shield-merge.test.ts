@@ -26,10 +26,7 @@ const enabledRules = {
 describe('block rules', () => {
     it('matches plain keywords, /regex/ and re: rules against text and sender', () => {
         const rules = parseBlockRules({ ...enabledRules, blockKeywords: '# 注释\n剧透\n/^前方.*能$/i\nre:\\d{6,}\n[gamer]' });
-        const { comments, blocked } = applyBlockRules(
-            [raw('不要剧透啊'), raw('前方高能'), raw('电话 1234567'), raw('正常弹幕'), raw('来自巴哈', { user: '[Gamer]x' })],
-            rules,
-        );
+        const { comments, blocked } = applyBlockRules([raw('不要剧透啊'), raw('前方高能'), raw('电话 1234567'), raw('正常弹幕'), raw('来自巴哈', { user: '[Gamer]x' })], rules);
         expect(comments.map((c) => c.text)).toEqual(['正常弹幕', '来自巴哈']);
         expect(blocked).toBe(3);
     });
@@ -130,10 +127,7 @@ describe('preProcessWithReport', () => {
             mergeThreshold: 85,
             blockRules: parseBlockRules({ ...enabledRules, blockKeywords: '剧透' }),
         };
-        const { comments, blocked } = preProcessWithReport(
-            [raw('好耶 🤍 12', { time: 1 }), raw('好耶', { time: 1.5 }), raw('别剧透', { time: 2 })],
-            config,
-        );
+        const { comments, blocked } = preProcessWithReport([raw('好耶 🤍 12', { time: 1 }), raw('好耶', { time: 1.5 }), raw('别剧透', { time: 2 })], config);
         expect(blocked).toBe(1);
         expect(comments.map((c) => c.text)).toEqual(['好耶 [x2]']);
     });

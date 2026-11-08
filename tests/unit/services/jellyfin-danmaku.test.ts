@@ -3,15 +3,11 @@ import { buildLocalDanmakuUrl, parseXmlDanmaku } from '@/services/jellyfin/danma
 
 describe('buildLocalDanmakuUrl', () => {
     it('rewrites /web/index.html subpath', () => {
-        expect(
-            buildLocalDanmakuUrl('https://jf.example', '/jellyfin/web/index.html', 'abc'),
-        ).toBe('https://jf.example/jellyfin/api/danmu/abc/raw');
+        expect(buildLocalDanmakuUrl('https://jf.example', '/jellyfin/web/index.html', 'abc')).toBe('https://jf.example/jellyfin/api/danmu/abc/raw');
     });
 
     it('rewrites /web/ without index.html', () => {
-        expect(
-            buildLocalDanmakuUrl('https://jf.example', '/web/', 'abc'),
-        ).toBe('https://jf.example/api/danmu/abc/raw');
+        expect(buildLocalDanmakuUrl('https://jf.example', '/web/', 'abc')).toBe('https://jf.example/api/danmu/abc/raw');
     });
 });
 

@@ -31,7 +31,9 @@
         border-radius: 4px 4px 0 0;
         background: var(--danmaku-input-bg);
         border-bottom: 1px solid var(--danmaku-text-secondary);
-        transition: background-color 150ms, opacity 150ms;
+        transition:
+            background-color 150ms,
+            opacity 150ms;
     }
 
     .textarea-field:hover {

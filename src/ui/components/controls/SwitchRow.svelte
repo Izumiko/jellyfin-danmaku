@@ -77,7 +77,9 @@
         border-radius: 7px;
         background: var(--danmaku-text);
         opacity: 0.38;
-        transition: background-color 150ms, opacity 150ms;
+        transition:
+            background-color 150ms,
+            opacity 150ms;
     }
 
     .thumb {
@@ -88,7 +90,10 @@
         height: 20px;
         border-radius: 50%;
         background: #e0e0e0;
-        box-shadow: 0 2px 1px -1px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.12);
+        box-shadow:
+            0 2px 1px -1px rgba(0, 0, 0, 0.2),
+            0 1px 1px rgba(0, 0, 0, 0.14),
+            0 1px 3px rgba(0, 0, 0, 0.12);
         transition: transform 150ms;
     }
 

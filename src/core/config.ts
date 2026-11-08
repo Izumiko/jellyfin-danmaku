@@ -151,36 +151,21 @@ export function validateConfigValue<K extends keyof DanmakuConfig>(key: K, value
 export function mergeConfig(partial: Partial<DanmakuConfig> | unknown): DanmakuConfig {
     const input = partial && typeof partial === 'object' ? (partial as Partial<DanmakuConfig>) : {};
 
-    const numberOr = (value: unknown, fallback: number): number =>
-        typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-    const booleanOr = (value: unknown, fallback: boolean): boolean =>
-        typeof value === 'boolean' ? value : fallback;
-    const stringOr = (value: unknown, fallback: string): string =>
-        typeof value === 'string' ? value : fallback;
+    const numberOr = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+    const booleanOr = (value: unknown, fallback: boolean): boolean => (typeof value === 'boolean' ? value : fallback);
+    const stringOr = (value: unknown, fallback: string): string => (typeof value === 'string' ? value : fallback);
 
-    const source =
-        input.sourceFilter && typeof input.sourceFilter === 'object'
-            ? input.sourceFilter
-            : DEFAULT_CONFIG.sourceFilter;
-    const mode =
-        input.modeFilter && typeof input.modeFilter === 'object'
-            ? input.modeFilter
-            : DEFAULT_CONFIG.modeFilter;
+    const source = input.sourceFilter && typeof input.sourceFilter === 'object' ? input.sourceFilter : DEFAULT_CONFIG.sourceFilter;
+    const mode = input.modeFilter && typeof input.modeFilter === 'object' ? input.modeFilter : DEFAULT_CONFIG.modeFilter;
 
     const chConvert = Math.max(0, Math.min(2, Math.floor(numberOr(input.chConvert, DEFAULT_CONFIG.chConvert)))) as ChConvertMode;
-    const densityLimit = Math.max(
-        0,
-        Math.min(3, Math.floor(numberOr(input.densityLimit, DEFAULT_CONFIG.densityLimit))),
-    ) as DensityLimit;
+    const densityLimit = Math.max(0, Math.min(3, Math.floor(numberOr(input.densityLimit, DEFAULT_CONFIG.densityLimit)))) as DensityLimit;
 
     return {
         opacity: validateConfigValue('opacity', numberOr(input.opacity, DEFAULT_CONFIG.opacity)),
         speed: validateConfigValue('speed', numberOr(input.speed, DEFAULT_CONFIG.speed)),
         fontSize: validateConfigValue('fontSize', numberOr(input.fontSize, DEFAULT_CONFIG.fontSize)),
-        heightRatio: validateConfigValue(
-            'heightRatio',
-            numberOr(input.heightRatio, DEFAULT_CONFIG.heightRatio),
-        ),
+        heightRatio: validateConfigValue('heightRatio', numberOr(input.heightRatio, DEFAULT_CONFIG.heightRatio)),
         fontFamily: stringOr(input.fontFamily, DEFAULT_CONFIG.fontFamily),
         fontOptions: stringOr(input.fontOptions, DEFAULT_CONFIG.fontOptions),
         danmakuSwitch: booleanOr(input.danmakuSwitch, DEFAULT_CONFIG.danmakuSwitch),

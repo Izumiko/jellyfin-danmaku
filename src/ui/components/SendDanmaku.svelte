@@ -15,11 +15,7 @@
     let useFontAwesome = $state(false);
 
     const disabled = $derived(!danmakuState.episodeInfo || danmakuState.loading);
-    const iconClass = $derived(
-        useFontAwesome
-            ? 'xlargePaperIconButton material-icons fa-paper-plane'
-            : 'xlargePaperIconButton material-icons send',
-    );
+    const iconClass = $derived(useFontAwesome ? 'xlargePaperIconButton material-icons fa-paper-plane' : 'xlargePaperIconButton material-icons send');
 
     onMount(() => {
         const sample = document.querySelector('.material-icons');
@@ -116,22 +112,17 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<button
-    type="button"
-    class="paper-icon-button-light autoSize"
-    is="paper-icon-button-light"
-    title="发送弹幕"
-    aria-label="发送弹幕"
-    {disabled}
-    onclick={openDialog}
->
+<!-- svelte-ignore attribute_avoid_is -->
+<button type="button" class="paper-icon-button-light autoSize" is="paper-icon-button-light" title="发送弹幕" aria-label="发送弹幕" {disabled} onclick={openDialog}>
     <span class={iconClass} aria-hidden="true"></span>
 </button>
 
 {#if open}
     <div class="dialog-backdrop" role="dialog" aria-modal="true">
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
             class="dialog-panel"
+            role="document"
             onkeydown={stopHotkeys}
             onpointerdown={stopPlayerGestures}
             onpointerup={stopPlayerGestures}
@@ -155,14 +146,8 @@
                         <label><input type="radio" name="send-mode" value={5} bind:group={mode} />顶部</label>
                     </div>
 
-                    <input
-                        class="text-input"
-                        bind:value={text}
-                        placeholder="请输入弹幕内容"
-                        maxlength="300"
-                        autofocus
-                        onkeydown={stopHotkeys}
-                    />
+                    <!-- svelte-ignore a11y_autofocus -->
+                    <input class="text-input" bind:value={text} placeholder="请输入弹幕内容" maxlength="300" autofocus onkeydown={stopHotkeys} />
 
                     {#if errorMessage}
                         <div class="error-message">{errorMessage}</div>
@@ -186,12 +171,7 @@
                     </label>
                     <label class="field">
                         <span>密码</span>
-                        <input
-                            type="password"
-                            bind:value={password}
-                            autocomplete="current-password"
-                            onkeydown={stopHotkeys}
-                        />
+                        <input type="password" bind:value={password} autocomplete="current-password" onkeydown={stopHotkeys} />
                     </label>
 
                     {#if errorMessage}

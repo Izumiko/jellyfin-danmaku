@@ -6,12 +6,12 @@
 - 浏览器：`mcr.microsoft.com/playwright`（自带 Chromium 及系统依赖）
 
 ```bash
-bun run build:userscript
-bun run e2e:setup              # 启动 Jellyfin、生成测试剧集、完成初始化（用户 test/test）
-MOCK=1 bun run e2e             # 截图，弹弹Play API 用合成数据
-bun run e2e                    # 截图，走真实 API（受默认代理配额影响）
-MOCK=1 THEME=light TAG=light bun run e2e   # 面板打开后切换到 Light 主题
-bun run e2e:teardown           # 删除容器和网络
+pnpm run build:userscript
+pnpm run e2e:setup              # 启动 Jellyfin、生成测试剧集、完成初始化（用户 test/test）
+MOCK=1 pnpm run e2e             # 截图，弹弹Play API 用合成数据
+pnpm run e2e                    # 截图，走真实 API（受默认代理配额影响）
+MOCK=1 THEME=light TAG=light pnpm run e2e   # 面板打开后切换到 Light 主题
+pnpm run e2e:teardown           # 删除容器和网络
 ```
 
 截图输出到 `.e2e/shots/`，同时保存浏览器控制台日志 `<TAG>-console.log`。

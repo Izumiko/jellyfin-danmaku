@@ -25,15 +25,7 @@
         <span class="label">{label}</span>
         <span class="value">{format(value)}</span>
     </span>
-    <input
-        type="range"
-        {min}
-        {max}
-        {step}
-        {value}
-        style="--percent: {percent}%"
-        oninput={(e) => oninput(Number(e.currentTarget.value))}
-    />
+    <input type="range" {min} {max} {step} {value} style="--percent: {percent}%" oninput={(e) => oninput(Number(e.currentTarget.value))} />
 </label>
 
 <style>
@@ -69,11 +61,7 @@
     input::-webkit-slider-runnable-track {
         height: 4px;
         border-radius: 2px;
-        background: linear-gradient(
-            to right,
-            var(--danmaku-primary) var(--percent),
-            rgb(var(--danmaku-primary-channel) / 0.38) var(--percent)
-        );
+        background: linear-gradient(to right, var(--danmaku-primary) var(--percent), rgb(var(--danmaku-primary-channel) / 0.38) var(--percent));
     }
 
     input::-moz-range-track {

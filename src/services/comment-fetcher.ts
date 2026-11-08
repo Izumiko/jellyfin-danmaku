@@ -67,9 +67,7 @@ export class CommentFetcher {
         allComments.push(...mainComments.map(convertDanDanPlayComment));
         logger.info('fetcher', `Loaded ${mainComments.length} main comments`);
 
-        const hasBilibiliInMain =
-            this.deps.sourceFilter.bilibili &&
-            mainComments.some((comment) => classifySource(comment.p.split(',')[3]) === 'bilibili');
+        const hasBilibiliInMain = this.deps.sourceFilter.bilibili && mainComments.some((comment) => classifySource(comment.p.split(',')[3]) === 'bilibili');
 
         // 2. 获取关联源
         try {

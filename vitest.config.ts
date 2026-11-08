@@ -19,6 +19,12 @@ export default defineConfig({
             provider: 'v8',
             include: ['src/**/*.ts'],
             exclude: ['src/types/**', 'src/**/*.d.ts', 'src/**/*.svelte'],
+            thresholds: {
+                statements: 60,
+                branches: 60,
+                functions: 60,
+                lines: 60,
+            },
         },
     },
 });
